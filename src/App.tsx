@@ -181,8 +181,9 @@ function WorkspaceScreen({ user }: { user: User }) {
       const url = new URL(inviteLink)
       const workspaceId = url.searchParams.get('workspace')
       const invitationId = url.searchParams.get('invite')
-      if (!workspaceId || !invitationId) throw new Error('That invitation link is not valid.')
-      await acceptWorkspaceInvitation(user, workspaceId, invitationId)
+      const token = url.searchParams.get('token')
+      if (!workspaceId || !invitationId || !token) throw new Error('That invitation link is not valid.')
+      await acceptWorkspaceInvitation(user, workspaceId, invitationId, token)
       setInviteLink('')
       await refreshWorkspaces()
       setNotice('You joined the workspace.')
@@ -235,7 +236,7 @@ function WorkspaceScreen({ user }: { user: User }) {
           </section>
           <form className="join-another-card" onSubmit={handleAcceptInvite}>
             <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
-            <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…" /></label>
+                <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
             <button className="secondary-button" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</button>
           </form>
           </>
@@ -250,7 +251,7 @@ function WorkspaceScreen({ user }: { user: User }) {
               </form>
               <form className="onboarding-card" onSubmit={handleAcceptInvite}>
                 <span className="card-icon invite-icon">↗</span><h2>Join a workspace</h2><p>Paste the invitation link sent to your email.</p>
-                <label>Invitation link<input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…" /></label>
+                <label>Invitation link<input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
                 <button className="secondary-button" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</button>
                 {!user.emailVerified && <small className="field-help">Verify your email before accepting an invitation.</small>}
               </form>
