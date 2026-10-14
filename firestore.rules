@@ -11,6 +11,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
     }
 
+    function isOwner(workspaceId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerUid == request.auth.uid;
+    }
+
     function validWorkspace(data) {
       return data.keys().hasAll(['name', 'ownerUid', 'weekStartsOn', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['name', 'ownerUid', 'weekStartsOn', 'createdAt', 'updatedAt'])
@@ -103,6 +108,59 @@ service cloud.firestore {
           && request.resource.data.status == 'accepted'
           && request.resource.data.acceptedBy == request.auth.uid
           && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.invitationId == invitationId;
+      }
+
+      match /timeEntries/{entryId} {
+        function validTimerEntry(data) {
+          return data.keys().hasAll(['userId', 'description', 'clientName', 'projectName', 'taskName', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
+            && data.keys().hasOnly(['userId', 'description', 'clientName', 'projectName', 'taskName', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
+            && data.userId is string
+            && data.description is string
+            && data.description.size() <= 500
+            && (data.clientName == null || (data.clientName is string && data.clientName.size() <= 100))
+            && (data.projectName == null || (data.projectName is string && data.projectName.size() <= 100))
+            && (data.taskName == null || (data.taskName is string && data.taskName.size() <= 100))
+            && data.billable is bool
+            && data.startAt is timestamp
+            && data.startAt == request.time
+            && data.endAt == null
+            && data.createdAt == request.time
+            && data.updatedAt == request.time;
+        }
+
+        allow get, list: if isMember(workspaceId)
+          && (isOwner(workspaceId) || resource.data.userId == request.auth.uid);
+        allow create: if isMember(workspaceId)
+          && request.resource.data.userId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)).data.entryId == entryId
+          && validTimerEntry(request.resource.data);
+        allow update: if isMember(workspaceId)
+          && resource.data.userId == request.auth.uid
+          && resource.data.endAt == null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endAt', 'updatedAt'])
+          && request.resource.data.endAt is timestamp
+          && request.resource.data.endAt > resource.data.startAt
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+
+      match /activeTimers/{uid} {
+        allow get: if isMember(workspaceId) && request.auth.uid == uid;
+        allow list: if false;
+        allow create: if isMember(workspaceId)
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasAll(['entryId', 'startAt'])
+          && request.resource.data.keys().hasOnly(['entryId', 'startAt'])
+          && request.resource.data.entryId is string
+          && request.resource.data.startAt == request.time
+          && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/timeEntries/$(request.resource.data.entryId)).data.userId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/timeEntries/$(request.resource.data.entryId)).data.startAt == request.resource.data.startAt
+          && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/timeEntries/$(request.resource.data.entryId)).data.endAt == null;
+        allow update: if false;
+        allow delete: if isMember(workspaceId)
+          && request.auth.uid == uid
+          && get(/databases/$(database)/documents/workspaces/$(workspaceId)/timeEntries/$(resource.data.entryId)).data.userId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/timeEntries/$(resource.data.entryId)).data.endAt == request.time;
       }
 
       match /{collection}/{documentId} {

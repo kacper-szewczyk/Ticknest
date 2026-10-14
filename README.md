@@ -1,6 +1,6 @@
 # Ticknest
 
-Ticknest is an open-source time tracker designed to run in a Firebase project you control. It currently supports email/password authentication, workspace creation and switching, invitation acceptance, and the Firebase local-development workflow.
+Ticknest is an open-source time tracker designed to run in a Firebase project you control. It supports email/password authentication, workspace creation and switching, invitation acceptance, and a reload-safe start/stop timer.
 
 ## Requirements
 
@@ -56,7 +56,9 @@ Firebase web configuration is included in client-side assets; it is not a secret
 - Workspace memberships and workspace ownership are constrained by Firestore rules. The client cannot update membership roles or workspace ownership.
 - Password reset uses Firebase Auth's built-in email flow. Configure the Firebase Auth email template and authorized domains for production.
 - Account deletion removes the Firebase Authentication account. Workspace data remains in the project; a future membership-management flow will handle safe owner transfer and member removal before full data cleanup.
-- The initial rules intentionally deny application data access outside the user profile, workspace, membership, and invitation operations described above. Time-entry and catalog rules will be added with those features.
+- Time entries are stored under their workspace. The timer keeps one active slot per user and workspace; starting and stopping use Firestore transactions so concurrent starts cannot create two running entries. A failed request leaves the form values available to retry.
+- Client, project, and task fields are optional labels until the catalog management workflow is available. A continued timer creates a new entry with the previous description, labels, and billable setting.
+- Firestore rules allow members to create and stop their own entries. Other time-entry fields and ownership cannot be changed by the browser.
 
 ## Useful commands
 
