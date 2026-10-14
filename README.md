@@ -1,6 +1,6 @@
 # Ticknest
 
-Ticknest is an open-source time tracker designed to run in a Firebase project you control. This repository currently contains the initial web app scaffold and Firebase local-development setup.
+Ticknest is an open-source time tracker designed to run in a Firebase project you control. It currently supports email/password authentication, workspace creation and switching, invitation acceptance, and the Firebase local-development workflow.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ npm run dev
 
 Open <http://127.0.0.1:5173>. The Emulator Suite UI is available at <http://127.0.0.1:4000>, and the Hosting emulator serves the last production build at <http://127.0.0.1:5000>.
 
-The local project ID is `demo-ticknest`. The app connects its Firebase Auth and Firestore clients to local emulator ports when `VITE_USE_FIREBASE_EMULATORS=true`. Demo project IDs prevent accidental access to a production Firebase project during local development.
+The local project ID is `demo-ticknest`. The app connects its Firebase Auth and Firestore clients to local emulator ports when `VITE_USE_FIREBASE_EMULATORS=true`. Demo project IDs prevent accidental access to a production Firebase project during local development. The Auth emulator prints email verification and password reset links to its terminal output.
 
 ## Configure your Firebase project
 
@@ -49,9 +49,14 @@ The local project ID is `demo-ticknest`. The app connects its Firebase Auth and 
 
 Firebase web configuration is included in client-side assets; it is not a secret. Do not put service-account credentials or Firebase Admin keys in this app or commit them to the repository.
 
-## Current security posture
+## Authentication and workspace setup
 
-Firestore rules deny all reads and writes until a later feature adds workspace-aware authorization. Do not loosen these rules to make the app appear functional. The current scaffold initializes Firebase but does not yet implement authentication or time-entry features.
+- Enable Email/Password sign-in in Firebase Authentication for your project.
+- New accounts must create their first workspace or accept a valid invitation for their verified email address.
+- Workspace memberships and workspace ownership are constrained by Firestore rules. The client cannot update membership roles or workspace ownership.
+- Password reset uses Firebase Auth's built-in email flow. Configure the Firebase Auth email template and authorized domains for production.
+- Account deletion removes the Firebase Authentication account. Workspace data remains in the project; a future membership-management flow will handle safe owner transfer and member removal before full data cleanup.
+- The initial rules intentionally deny application data access outside the user profile, workspace, membership, and invitation operations described above. Time-entry and catalog rules will be added with those features.
 
 ## Useful commands
 
