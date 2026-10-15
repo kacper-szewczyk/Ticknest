@@ -13,6 +13,7 @@ import {
   registerWithEmail,
   sendPasswordReset,
   signInWithEmail,
+  signInWithGoogle,
   signOutUser,
 } from './lib/auth'
 import { auth } from './lib/firebase'
@@ -40,6 +41,10 @@ function readableError(error: unknown): string {
     'auth/weak-password': 'Choose a password with at least 6 characters.',
     'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
     'auth/requires-recent-login': 'Sign in again before deleting your account.',
+    'auth/popup-closed-by-user': 'Google sign-in was closed before it finished.',
+    'auth/popup-blocked': 'Allow pop-ups for this site, then try Google sign-in again.',
+    'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Authentication.',
+    'auth/account-exists-with-different-credential': 'An account already exists with this email. Sign in with your original method, then link Google in account settings.',
     'permission-denied': 'You do not have access to this workspace.',
   }
   return messages[code] ?? error.message
@@ -88,6 +93,19 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
     }
   }
 
+  async function handleGoogleSignIn() {
+    setError('')
+    setNotice('')
+    setPending(true)
+    try {
+      onAuthenticated(await signInWithGoogle())
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
   const isReset = mode === 'reset'
   const isSignUp = mode === 'sign-up'
 
@@ -109,6 +127,13 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
           <p className="auth-subtitle">
             {isReset ? 'We’ll email you a secure link to choose a new password.' : isSignUp ? 'Start a workspace for your team in just a moment.' : 'Sign in to continue to your workspace.'}
           </p>
+          {mode !== 'reset' && <>
+            <button className="google-button" type="button" onClick={() => void handleGoogleSignIn()} disabled={pending}>
+              <span className="google-mark" aria-hidden="true">G</span>
+              {pending ? 'Connecting…' : 'Continue with Google'}
+            </button>
+            <div className="auth-divider"><span>or use email</span></div>
+          </>}
           <form className="auth-form" onSubmit={handleSubmit}>
             {isSignUp && (
               <label>Full name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required maxLength={80} /></label>

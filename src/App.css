@@ -32,6 +32,12 @@
 .auth-form-wrap h2 { margin: 8px 0 9px; color: #24342a; font-family: Georgia, 'Times New Roman', serif; font-size: 34px; font-weight: 400; letter-spacing: -.7px; }
 .section-kicker { margin: 0 0 7px; color: #899087; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; }
 .auth-subtitle { margin: 0 0 28px; color: #7c847c; font-size: 13px; line-height: 1.6; }
+.google-button { display: flex; width: 100%; min-height: 45px; align-items: center; justify-content: center; gap: 11px; border: 1px solid #dfe4dd; border-radius: 8px; background: #fff; color: #344339; font-size: 13px; font-weight: 650; cursor: pointer; }
+.google-button:hover { background: #fafbf9; border-color: #c8d2c5; }
+.google-button:disabled { cursor: wait; opacity: .65; }
+.google-mark { display: grid; width: 20px; height: 20px; place-items: center; border: 1px solid #e2e5e0; border-radius: 50%; color: #4285f4; font-size: 13px; font-weight: 750; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: #929990; font-size: 10px; }
+.auth-divider::before, .auth-divider::after { height: 1px; flex: 1; background: #eceeea; content: ''; }
 .auth-form, .onboarding-card { display: grid; gap: 16px; }
 .auth-form label, .onboarding-card label { display: grid; gap: 7px; color: #39473c; font-size: 12px; font-weight: 600; }
 .auth-form input, .onboarding-card input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #dfe4dd; border-radius: 8px; background: #fff; color: #24342a; outline: none; }
