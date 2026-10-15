@@ -24,7 +24,7 @@ import {
   saveManualTimeEntry,
   startTimer,
   stopTimer,
-  subscribeToEntriesForDay,
+  subscribeToEntriesForRange,
   subscribeToTimeEntries,
   type TimeEntry,
 } from './lib/timeEntries'
@@ -296,7 +296,7 @@ function WorkspaceScreen({ user }: { user: User }) {
           <TimerPanel user={user} workspaceId={activeWorkspace.id} catalog={catalog} />
           {activeWorkspace.role === 'owner' && <CatalogPanel workspaceId={activeWorkspace.id} />}
           {activeWorkspace.role === 'owner' && <MemberManagementPanel workspaceId={activeWorkspace.id} currentUserId={user.uid} />}
-          <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} catalog={catalog} />
+          <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />
           <form className="join-another-card" onSubmit={handleAcceptInvite}>
             <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
                 <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
@@ -444,6 +444,30 @@ function localDayString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
+function startOfWeekString(day: string, weekStartsOn: number): string {
+  const date = new Date(`${day}T12:00:00`)
+  const offset = (date.getDay() - weekStartsOn + 7) % 7
+  date.setDate(date.getDate() - offset)
+  return localDayString(date)
+}
+
+function shiftDayString(day: string, days: number): string {
+  const date = new Date(`${day}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  return localDayString(date)
+}
+
+function formatWeekLabel(startDay: string): string {
+  const start = new Date(`${startDay}T12:00:00`)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 6)
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()
+  if (sameMonth) return `${start.toLocaleDateString(undefined, { month: 'long' })} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`
+  const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const endLabel = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return `${startLabel} – ${endLabel}`
+}
+
 function localDateTimeValue(date: Date): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
   return local.toISOString().slice(0, 16)
@@ -453,9 +477,11 @@ function dateTimeForDay(day: string, hour: number): string {
   return `${day}T${hour.toString().padStart(2, '0')}:00`
 }
 
-function TimeEntriesPanel({ user, workspaceId, isOwner, catalog }: { user: User; workspaceId: string; isOwner: boolean; catalog: Catalog }) {
-  const [day, setDay] = useState(() => localDayString(new Date()))
-  const [entries, setEntries] = useState<TimeEntry[]>([])
+function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }: { user: User; workspaceId: string; isOwner: boolean; weekStartsOn: number; catalog: Catalog }) {
+  const [today] = useState(() => localDayString(new Date()))
+  const [weekStart, setWeekStart] = useState(() => startOfWeekString(today, weekStartsOn))
+  const [entryState, setEntryState] = useState<{ workspaceId: string; weekStart: string; entries: TimeEntry[] }>({ workspaceId: '', weekStart: '', entries: [] })
+  const entries = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart ? entryState.entries : []
   const [editId, setEditId] = useState<string | null>(null)
   const [description, setDescription] = useState('')
   const [clientName, setClientName] = useState('')
@@ -465,23 +491,23 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, catalog }: { user: User;
   const [projectId, setProjectId] = useState('')
   const [taskId, setTaskId] = useState('')
   const [billable, setBillable] = useState(false)
-  const [startAt, setStartAt] = useState(() => dateTimeForDay(localDayString(new Date()), 9))
-  const [endAt, setEndAt] = useState(() => dateTimeForDay(localDayString(new Date()), 10))
+  const [editorDay, setEditorDay] = useState(today)
+  const [startAt, setStartAt] = useState(() => dateTimeForDay(today, 9))
+  const [endAt, setEndAt] = useState(() => dateTimeForDay(today, 10))
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    setEntries([])
-    return subscribeToEntriesForDay(workspaceId, user.uid, isOwner, day, setEntries, (loadError) => setError(readableError(loadError)))
-  }, [workspaceId, user.uid, isOwner, day])
+    return subscribeToEntriesForRange(workspaceId, user.uid, isOwner, weekStart, 7, (nextEntries) => setEntryState({ workspaceId, weekStart, entries: nextEntries }), (loadError) => setError(readableError(loadError)))
+  }, [workspaceId, user.uid, isOwner, weekStart])
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(interval)
   }, [])
 
-  function clearForm() {
+  function clearForm(forDay = weekStart) {
     setEditId(null)
     setDescription('')
     setClientName('')
@@ -491,8 +517,9 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, catalog }: { user: User;
     setProjectId('')
     setTaskId('')
     setBillable(false)
-    setStartAt(dateTimeForDay(day, 9))
-    setEndAt(dateTimeForDay(day, 10))
+    setEditorDay(forDay)
+    setStartAt(dateTimeForDay(forDay, 9))
+    setEndAt(dateTimeForDay(forDay, 10))
   }
 
   function beginEdit(entry: TimeEntry) {
@@ -556,25 +583,35 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, catalog }: { user: User;
     }
   }
 
-  function changeDay(value: string) {
+  function changeWeek(value: string) {
     if (!value) return
-    setDay(value)
+    const nextWeekStart = startOfWeekString(value, weekStartsOn)
+    setWeekStart(nextWeekStart)
     setError('')
     setNotice('')
-    clearForm()
-    setStartAt(dateTimeForDay(value, 9))
-    setEndAt(dateTimeForDay(value, 10))
+    clearForm(nextWeekStart)
   }
+
+  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
+  const secondsFor = (entry: TimeEntry) => entry.endAt
+    ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000))
+    : Math.max(0, Math.floor(now / 1000 - entry.startAt.toMillis() / 1000))
+  const weekTotal = entries.reduce((total, entry) => total + secondsFor(entry), 0)
 
   return (
     <section className="entries-card" aria-labelledby="entries-heading">
-      <div className="entries-heading"><div><p className="section-kicker">YOUR TIME</p><h2 id="entries-heading">Time entries</h2></div>
-        <label className="day-picker">Day<input type="date" value={day} onChange={(event) => changeDay(event.target.value)} /></label>
+      <div className="entries-heading"><div><p className="section-kicker">YOUR TIME</p><h2 id="entries-heading">Timesheet</h2></div>
+        <div className="week-navigation" aria-label="Timesheet week navigation">
+          <button className="secondary-button" type="button" aria-label="Previous week" onClick={() => changeWeek(shiftDayString(weekStart, -7))}>←</button>
+          <label className="week-picker"><span>{formatWeekLabel(weekStart)}</span><input aria-label="Choose a week" type="date" value={weekStart} onChange={(event) => changeWeek(event.target.value)} /></label>
+          <button className="secondary-button" type="button" aria-label="Next week" onClick={() => changeWeek(shiftDayString(weekStart, 7))}>→</button>
+          <button className="text-button" type="button" onClick={() => changeWeek(today)}>Today</button>
+        </div>
       </div>
       {error && <p className="form-message is-error" role="alert">{error}</p>}
       {notice && <p className="form-message is-success" role="status">{notice}</p>}
       <form className="entry-editor" onSubmit={handleSave}>
-        <h3>{editId ? 'Edit entry' : 'Add time manually'}</h3>
+        <h3>{editId ? 'Edit entry' : `Add time · ${new Date(`${editorDay}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}</h3>
         <label>Description<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} required /></label>
         <div className="entry-editor-times">
           <label>Start<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} required /></label>
@@ -586,20 +623,25 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, catalog }: { user: User;
           <label>Task<select value={taskId} onChange={(event) => { setTaskId(event.target.value); setTaskName('') }}><option value="">No task</option>{catalog.tasks.filter((item) => (!item.archived || item.id === taskId) && (!projectId || item.projectId === projectId) && (item.id === taskId || catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived))))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</select></label>
         </div>
         <div className="timer-actions"><label className="billable-control"><input type="checkbox" checked={billable} onChange={(event) => setBillable(event.target.checked)} /> Billable</label>
-          {editId && <button className="secondary-button" type="button" onClick={clearForm} disabled={pending}>Cancel</button>}
+          {editId && <button className="secondary-button" type="button" onClick={() => clearForm()} disabled={pending}>Cancel</button>}
           <button className="primary-button" type="submit" disabled={pending}>{pending ? 'Saving…' : editId ? 'Save changes' : 'Add entry'}</button>
         </div>
       </form>
-      <div className="day-entries" aria-live="polite">
-        <h3>{new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
-        {entries.length === 0 ? <p className="empty-entries">No entries for this day yet.</p> : entries.map((entry) => {
-          const duration = entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : Math.max(0, Math.floor(now / 1000 - entry.startAt.toMillis() / 1000))
-          return <article className="day-entry" key={entry.id}>
-            <div className="entry-time"><strong>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong><span>{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</span></div>
-            <div className="entry-summary"><strong>{entry.description || 'Untitled entry'}</strong><span>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</span></div>
-            <span className="entry-duration">{formatElapsed(duration)}</span>
-            <div className="entry-actions">{entry.billable && <span className="billable-tag">Billable</span>}<button className="text-button" type="button" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</button><button className="text-button danger-link" type="button" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</button></div>
-          </article>
+      <div className="timesheet-summary" aria-live="polite"><div><span>Week total</span><strong>{formatElapsed(weekTotal)}</strong></div><span>{entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week</span></div>
+      <div className="timesheet-days" aria-live="polite">
+        {weekDays.map((weekDay) => {
+          const dayEntries = entries.filter((entry) => localDayString(entry.startAt.toDate()) === weekDay).sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis())
+          const dayTotal = dayEntries.reduce((total, entry) => total + secondsFor(entry), 0)
+          const date = new Date(`${weekDay}T12:00:00`)
+          return <section className="timesheet-day" key={weekDay} aria-labelledby={`timesheet-${weekDay}`}>
+            <div className="timesheet-day-heading"><h3 id={`timesheet-${weekDay}`}><span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span><time dateTime={weekDay}>{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time></h3><div><strong>{formatElapsed(dayTotal)}</strong><button className="text-button" type="button" onClick={() => { clearForm(weekDay); setError(''); setNotice('') }}>Add entry</button></div></div>
+            {dayEntries.length === 0 ? <p className="empty-entries">No entries</p> : dayEntries.map((entry) => <article className="day-entry" key={entry.id}>
+              <div className="entry-time"><strong>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong><span>{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</span></div>
+              <div className="entry-summary"><strong>{entry.description || 'Untitled entry'}</strong><span>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</span></div>
+              <span className="entry-duration">{formatElapsed(secondsFor(entry))}</span>
+              <div className="entry-actions">{entry.endAt === null && <span className="running-entry-tag">Running</span>}{entry.billable && <span className="billable-tag">Billable</span>}<button className="text-button" type="button" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</button><button className="text-button danger-link" type="button" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</button></div>
+            </article>)}
+          </section>
         })}
       </div>
     </section>

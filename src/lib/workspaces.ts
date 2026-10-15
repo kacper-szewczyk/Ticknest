@@ -18,6 +18,7 @@ export type Workspace = {
   name: string
   ownerUid: string
   role: 'owner' | 'member'
+  weekStartsOn: number
 }
 
 export type WorkspaceMember = { uid: string; email: string; displayName: string; role: 'owner' | 'member'; status?: 'active' | 'removed'; joinedAt: unknown }
@@ -56,6 +57,7 @@ export async function loadWorkspaces(user: User): Promise<Workspace[]> {
         name: workspace.name as string,
         ownerUid: workspace.ownerUid as string,
         role: membership.data().role as Workspace['role'],
+        weekStartsOn: typeof workspace.weekStartsOn === 'number' ? workspace.weekStartsOn : 1,
       }
     }),
   )
