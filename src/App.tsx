@@ -16,7 +16,16 @@ import {
   signOutUser,
 } from './lib/auth'
 import { auth } from './lib/firebase'
-import { continueTimer, startTimer, stopTimer, subscribeToTimeEntries, type TimeEntry } from './lib/timeEntries'
+import {
+  continueTimer,
+  deleteTimeEntry,
+  saveManualTimeEntry,
+  startTimer,
+  stopTimer,
+  subscribeToEntriesForDay,
+  subscribeToTimeEntries,
+  type TimeEntry,
+} from './lib/timeEntries'
 import './App.css'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
@@ -235,6 +244,7 @@ function WorkspaceScreen({ user }: { user: User }) {
             {workspaces.length > 1 && <p className="switch-hint">Use the workspace menu above to switch between your workspaces.</p>}
           </section>
           <TimerPanel user={user} workspaceId={activeWorkspace.id} />
+          <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} />
           <form className="join-another-card" onSubmit={handleAcceptInvite}>
             <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
             <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…" /></label>
@@ -368,6 +378,163 @@ function TimerPanel({ user, workspaceId }: { user: User; workspaceId: string }) 
         const duration = entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : 0
         return <article className="recent-entry" key={entry.id}><div><strong>{entry.description || 'Untitled entry'}</strong><span>{entry.startAt.toDate().toLocaleString()} · {formatElapsed(duration)}</span></div><button className="text-button" type="button" onClick={() => void handleContinue(entry)} disabled={pending}>Continue</button></article>
       })}</div>}
+    </section>
+  )
+}
+
+function localDayString(date: Date): string {
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function localDateTimeValue(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
+function dateTimeForDay(day: string, hour: number): string {
+  return `${day}T${hour.toString().padStart(2, '0')}:00`
+}
+
+function TimeEntriesPanel({ user, workspaceId, isOwner }: { user: User; workspaceId: string; isOwner: boolean }) {
+  const [day, setDay] = useState(() => localDayString(new Date()))
+  const [entries, setEntries] = useState<TimeEntry[]>([])
+  const [editId, setEditId] = useState<string | null>(null)
+  const [description, setDescription] = useState('')
+  const [clientName, setClientName] = useState('')
+  const [projectName, setProjectName] = useState('')
+  const [taskName, setTaskName] = useState('')
+  const [billable, setBillable] = useState(false)
+  const [startAt, setStartAt] = useState(() => dateTimeForDay(localDayString(new Date()), 9))
+  const [endAt, setEndAt] = useState(() => dateTimeForDay(localDayString(new Date()), 10))
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    setEntries([])
+    return subscribeToEntriesForDay(workspaceId, user.uid, isOwner, day, setEntries, (loadError) => setError(readableError(loadError)))
+  }, [workspaceId, user.uid, isOwner, day])
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  function clearForm() {
+    setEditId(null)
+    setDescription('')
+    setClientName('')
+    setProjectName('')
+    setTaskName('')
+    setBillable(false)
+    setStartAt(dateTimeForDay(day, 9))
+    setEndAt(dateTimeForDay(day, 10))
+  }
+
+  function beginEdit(entry: TimeEntry) {
+    if (entry.endAt === null) return
+    setEditId(entry.id)
+    setDescription(entry.description)
+    setClientName(entry.clientName ?? '')
+    setProjectName(entry.projectName ?? '')
+    setTaskName(entry.taskName ?? '')
+    setBillable(entry.billable)
+    setStartAt(localDateTimeValue(entry.startAt.toDate()))
+    setEndAt(localDateTimeValue(entry.endAt.toDate()))
+    setError('')
+    setNotice('')
+  }
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setPending(true)
+    setError('')
+    setNotice('')
+    try {
+      const existing = entries.find((entry) => entry.id === editId)
+      await saveManualTimeEntry(user, workspaceId, {
+        description,
+        clientName: clientName || null,
+        projectName: projectName || null,
+        taskName: taskName || null,
+        billable,
+        startAt: new Date(startAt),
+        endAt: new Date(endAt),
+      }, existing?.userId, editId ?? undefined)
+      clearForm()
+      setNotice(editId ? 'Time entry updated.' : 'Time entry added.')
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleDelete(entry: TimeEntry) {
+    if (!window.confirm(`Delete “${entry.description || 'Untitled entry'}”?`)) return
+    setPending(true)
+    setError('')
+    setNotice('')
+    try {
+      await deleteTimeEntry(workspaceId, entry)
+      if (editId === entry.id) clearForm()
+      setNotice('Time entry deleted.')
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  function changeDay(value: string) {
+    if (!value) return
+    setDay(value)
+    setError('')
+    setNotice('')
+    clearForm()
+    setStartAt(dateTimeForDay(value, 9))
+    setEndAt(dateTimeForDay(value, 10))
+  }
+
+  return (
+    <section className="entries-card" aria-labelledby="entries-heading">
+      <div className="entries-heading"><div><p className="section-kicker">YOUR TIME</p><h2 id="entries-heading">Time entries</h2></div>
+        <label className="day-picker">Day<input type="date" value={day} onChange={(event) => changeDay(event.target.value)} /></label>
+      </div>
+      {error && <p className="form-message is-error" role="alert">{error}</p>}
+      {notice && <p className="form-message is-success" role="status">{notice}</p>}
+      <form className="entry-editor" onSubmit={handleSave}>
+        <h3>{editId ? 'Edit entry' : 'Add time manually'}</h3>
+        <label>Description<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} required /></label>
+        <div className="entry-editor-times">
+          <label>Start<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} required /></label>
+          <label>End<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required /></label>
+        </div>
+        <div className="timer-associations">
+          <label>Client<input value={clientName} onChange={(event) => setClientName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+          <label>Project<input value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+          <label>Task<input value={taskName} onChange={(event) => setTaskName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+        </div>
+        <div className="timer-actions"><label className="billable-control"><input type="checkbox" checked={billable} onChange={(event) => setBillable(event.target.checked)} /> Billable</label>
+          {editId && <button className="secondary-button" type="button" onClick={clearForm} disabled={pending}>Cancel</button>}
+          <button className="primary-button" type="submit" disabled={pending}>{pending ? 'Saving…' : editId ? 'Save changes' : 'Add entry'}</button>
+        </div>
+      </form>
+      <div className="day-entries" aria-live="polite">
+        <h3>{new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+        {entries.length === 0 ? <p className="empty-entries">No entries for this day yet.</p> : entries.map((entry) => {
+          const duration = entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : Math.max(0, Math.floor(now / 1000 - entry.startAt.toMillis() / 1000))
+          return <article className="day-entry" key={entry.id}>
+            <div className="entry-time"><strong>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong><span>{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</span></div>
+            <div className="entry-summary"><strong>{entry.description || 'Untitled entry'}</strong><span>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</span></div>
+            <span className="entry-duration">{formatElapsed(duration)}</span>
+            <div className="entry-actions">{entry.billable && <span className="billable-tag">Billable</span>}<button className="text-button" type="button" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</button><button className="text-button danger-link" type="button" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</button></div>
+          </article>
+        })}
+      </div>
     </section>
   )
 }

@@ -57,8 +57,9 @@ Firebase web configuration is included in client-side assets; it is not a secret
 - Password reset uses Firebase Auth's built-in email flow. Configure the Firebase Auth email template and authorized domains for production.
 - Account deletion removes the Firebase Authentication account. Workspace data remains in the project; a future membership-management flow will handle safe owner transfer and member removal before full data cleanup.
 - Time entries are stored under their workspace. The timer keeps one active slot per user and workspace; starting and stopping use Firestore transactions so concurrent starts cannot create two running entries. A failed request leaves the form values available to retry.
+- Members can add, review, edit, and delete their own completed entries by local day. Owners can manage completed entries across the workspace. Manual entries require a positive duration, and overlapping intervals for the same user are rejected before saving.
 - Client, project, and task fields are optional labels until the catalog management workflow is available. A continued timer creates a new entry with the previous description, labels, and billable setting.
-- Firestore rules allow members to create and stop their own entries. Other time-entry fields and ownership cannot be changed by the browser.
+- Firestore rules allow members to manage their own entries and owners to manage workspace entries. Entry ownership and audit timestamps stay fixed; running entries can only be stopped through the timer flow.
 
 ## Useful commands
 
