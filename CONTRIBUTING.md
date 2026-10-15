@@ -4,7 +4,7 @@ Thanks for helping improve Ticknest. Keep changes focused and follow the [coding
 
 ## Set up the project
 
-Use Node.js 20.19+, 22.12+, or 24.x and npm. Java JDK 11+ is required to run the Firebase emulators. Follow the [local development instructions](README.md#quick-start) and [Firebase setup guide](docs/operations.md#configure-your-firebase-project). Use the demo project and local emulators for development; do not connect development work to real user data.
+Use Node.js 22.12+ or 24.x and npm. Java JDK 11+ is required to run the Firebase emulators. Follow the [local development instructions](README.md#quick-start) and [Firebase setup guide](docs/operations.md#configure-your-firebase-project). Use the demo project and local emulators for development; do not connect development work to real user data.
 
 ## Propose a change
 

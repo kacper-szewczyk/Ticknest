@@ -22,7 +22,7 @@ Hosting serves the `dist/` build, while deployment also publishes Firestore rule
 
 ### Local development
 
-Use Node.js 20.19+, 22.12+, or 24.x, npm, and Java JDK 11+. Copy `.env.example` to `.env.local` and keep `VITE_USE_FIREBASE_EMULATORS=true`. The configured `demo-ticknest` project ID routes Auth, Firestore, Functions, and Hosting to local emulators; verification and password reset links are printed by the Auth emulator.
+Use Node.js 22.12+ or 24.x, npm, and Java JDK 11+. Copy `.env.example` to `.env.local` and keep `VITE_USE_FIREBASE_EMULATORS=true`. The configured `demo-ticknest` project ID routes Auth, Firestore, Functions, and Hosting to local emulators; verification and password reset links are printed by the Auth emulator.
 
 ```sh
 npm install
