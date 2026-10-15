@@ -68,7 +68,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     <div className="members-heading"><div><p className="section-kicker">TEAM ACCESS</p><h2 id="members-heading">Workspace members</h2></div><span>{members.filter((member) => member.status !== 'removed').length} {members.filter((member) => member.status !== 'removed').length === 1 ? 'member' : 'members'}</span></div>
     {error && <p className="form-message is-error" role="alert">{error}</p>}
     {notice && <p className="form-message is-success" role="status">{notice}</p>}
-    <form className="invite-form" onSubmit={(event) => void invite(event)}>
+    <form className="invite-form" onSubmit={(event) => void invite(event)} aria-busy={pending}>
       <label>Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required maxLength={254} placeholder="teammate@example.com" /></label>
       <button className="primary-button" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create invitation'}</button>
     </form>

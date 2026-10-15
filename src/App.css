@@ -208,6 +208,21 @@
 .loading-screen { display: grid; min-height: 100vh; place-items: center; color: #6f7b70; font-size: 13px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
+/* Keep narrow screens usable without shrinking controls below comfortable touch sizes. */
+.app-shell, .auth-layout, .workspace-main, .timer-card, .entries-card, .reports-card,
+.catalog-card, .members-card, .welcome-card, .onboarding-card { min-width: 0; }
+.invite-link-box input, .join-another-card input { overflow-wrap: anywhere; }
+.primary-button, .secondary-button, .stop-button { min-height: 44px; }
+.text-button { min-height: 44px; }
+body :is(.auth-subtitle, .auth-links, .invite-help, .report-timezone, .report-detail-heading > span,
+  .report-group span, .report-entry > div > span, .entry-summary span, .recent-entry span,
+  .field-help, .catalog-record span, .catalog-record small, .member-row span, .week-picker,
+  .timesheet-day-heading h3 time, .empty-entries, .switch-hint, .account-actions,
+  .workspace-badge, .timesheet-summary) { color: #59665b; }
+body :is(.catalog-record > div:first-child, .member-row > div, .welcome-card h1, .onboarding-heading h1) {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 760px) {
   .auth-layout { grid-template-columns: 1fr; }
   .auth-aside { min-height: auto; padding: 24px 24px 26px; }
@@ -219,6 +234,10 @@
   .workspace-main, .topbar { width: calc(100% - 36px); }
   .workspace-main { padding-top: 30px; }
   .welcome-card { margin-top: 28px; }
+  .report-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-filters input, .report-filters select, .report-summary-heading select { width: 100%; min-height: 44px; font-size: 13px; }
+  .timer-associations { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .entry-editor-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {
@@ -246,4 +265,28 @@
   .catalog-heading { align-items: flex-start; flex-direction: column; }
   .catalog-form { grid-template-columns: 1fr; }
   .invite-form, .invite-link-box { align-items: stretch; flex-direction: column; }
+  .timer-associations, .entry-editor-times { grid-template-columns: 1fr; }
+  .report-summary-heading { align-items: flex-start; flex-direction: column; }
+  .report-totals > div { min-width: 0; }
+  .report-group { grid-template-columns: minmax(0, 1fr) auto; }
+  .report-group b { grid-column: 2; }
+  .report-entry { align-items: flex-start; }
+  .report-entry > div:first-child { min-width: 0; }
+  .week-navigation { flex-wrap: wrap; }
+  .week-picker { min-width: 0; }
+  .day-entry { min-width: 0; }
+  .entry-actions { flex-wrap: wrap; }
+  .catalog-record, .member-row { min-width: 0; }
+  .catalog-record-actions { flex: 0 0 auto; }
+}
+
+@media (max-width: 380px) {
+  .workspace-main, .topbar { width: calc(100% - 24px); }
+  .timer-card, .entries-card, .reports-card, .catalog-card, .members-card { padding: 18px 14px; }
+  .report-filters { grid-template-columns: 1fr; }
+  .timer-actions { flex-wrap: wrap; }
+  .week-navigation { gap: 4px; }
+  .day-entry { grid-template-columns: 54px minmax(0, 1fr); }
+  .entry-duration { grid-column: 2; }
+  .entry-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
