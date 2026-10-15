@@ -22,6 +22,7 @@ import { db } from './firebase'
 export type TimeEntry = {
   id: string
   userId: string
+  userDisplayName?: string
   description: string
   clientName: string | null
   projectName: string | null
@@ -147,6 +148,7 @@ export async function startTimer(user: User, workspaceId: string, details: Timer
     if (active.exists()) throw new Error('You already have a running timer in this workspace. Stop it before starting another.')
     transaction.set(entryRef, {
       userId: user.uid,
+      userDisplayName: user.displayName?.trim() || user.email || user.uid,
       ...details,
       startAt: serverTimestamp(),
       endAt: null,
@@ -193,7 +195,11 @@ export async function saveManualTimeEntry(
     updatedAt: serverTimestamp(),
   }
   if (entryId) await updateDoc(entryRef, values)
-  else await setDoc(entryRef, { ...values, createdAt: serverTimestamp() })
+  else await setDoc(entryRef, {
+    ...values,
+    userDisplayName: user.displayName?.trim() || user.email || user.uid,
+    createdAt: serverTimestamp(),
+  })
   return entryRef.id
 }
 
