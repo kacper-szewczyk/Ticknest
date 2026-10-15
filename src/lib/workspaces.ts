@@ -1,10 +1,13 @@
 import {
+  collection,
   collectionGroup,
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   where,
+  type Unsubscribe,
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import type { User } from 'firebase/auth'
@@ -16,6 +19,9 @@ export type Workspace = {
   ownerUid: string
   role: 'owner' | 'member'
 }
+
+export type WorkspaceMember = { uid: string; email: string; displayName: string; role: 'owner' | 'member'; status?: 'active' | 'removed'; joinedAt: unknown }
+export type WorkspaceInvitation = { id: string; email: string; role: 'member'; status: 'pending' | 'accepted' | 'revoked'; expiresAt: { toDate(): Date } }
 
 function activeWorkspaceKey(uid: string): string {
   return `ticknest.activeWorkspace.${uid}`
@@ -29,12 +35,18 @@ export function saveActiveWorkspaceId(uid: string, workspaceId: string): void {
   window.localStorage.setItem(activeWorkspaceKey(uid), workspaceId)
 }
 
+export function subscribeToMembershipStatus(workspaceId: string, uid: string, onRemoved: () => void): Unsubscribe {
+  return onSnapshot(doc(db, 'workspaces', workspaceId, 'members', uid), (snapshot) => {
+    if (snapshot.exists() && snapshot.data().status === 'removed') onRemoved()
+  })
+}
+
 export async function loadWorkspaces(user: User): Promise<Workspace[]> {
   const memberships = await getDocs(
     query(collectionGroup(db, 'members'), where('uid', '==', user.uid)),
   )
   const workspaces = await Promise.all(
-    memberships.docs.map(async (membership) => {
+    memberships.docs.filter((membership) => membership.data().status !== 'removed').map(async (membership) => {
       const workspaceRef = doc(db, 'workspaces', membership.ref.parent.parent!.id)
       const workspaceSnapshot = await getDoc(workspaceRef)
       if (!workspaceSnapshot.exists()) return null
@@ -78,4 +90,31 @@ export async function acceptWorkspaceInvitation(
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   await acceptInvitationCall({ workspaceId, invitationId, token, displayName: user.displayName ?? '', timezone })
   saveActiveWorkspaceId(user.uid, workspaceId)
+}
+
+export function subscribeToWorkspaceMembers(workspaceId: string, onChange: (members: WorkspaceMember[]) => void, onError: (error: Error) => void): Unsubscribe {
+  return onSnapshot(collection(db, 'workspaces', workspaceId, 'members'), (snapshot) => {
+    onChange(snapshot.docs.map((item) => ({ uid: item.id, ...item.data() }) as WorkspaceMember))
+  }, onError)
+}
+
+export function subscribeToWorkspaceInvitations(workspaceId: string, onChange: (invitations: WorkspaceInvitation[]) => void, onError: (error: Error) => void): Unsubscribe {
+  return onSnapshot(query(collection(db, 'workspaces', workspaceId, 'invitations'), where('status', '==', 'pending')), (snapshot) => {
+    onChange(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as WorkspaceInvitation))
+  }, onError)
+}
+
+export async function createWorkspaceInvitation(workspaceId: string, email: string): Promise<{ invitationId: string; token: string; expiresAt: number }> {
+  const call = httpsCallable<{ workspaceId: string; email: string }, { invitationId: string; token: string; expiresAt: number }>(functions, 'createWorkspaceInvitation')
+  return (await call({ workspaceId, email })).data
+}
+
+export async function revokeWorkspaceInvitation(workspaceId: string, invitationId: string): Promise<void> {
+  const call = httpsCallable<{ workspaceId: string; invitationId: string }, { invitationId: string }>(functions, 'revokeWorkspaceInvitation')
+  await call({ workspaceId, invitationId })
+}
+
+export async function removeWorkspaceMember(workspaceId: string, memberUid: string): Promise<void> {
+  const call = httpsCallable<{ workspaceId: string; memberUid: string }, { memberUid: string }>(functions, 'removeWorkspaceMember')
+  await call({ workspaceId, memberUid })
 }

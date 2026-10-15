@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
@@ -98,6 +98,7 @@ export const createWorkspace = onCall(FUNCTION_OPTIONS, async (request) => {
       email: user.email,
       displayName,
       role: 'owner',
+      status: 'active',
       joinedAt: now,
     })
     transaction.set(
@@ -147,7 +148,9 @@ export const acceptWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request
     if (!workspaceSnapshot.exists || !invitationSnapshot.exists) {
       throw new HttpsError('not-found', 'This invitation is no longer available.')
     }
-    if (memberSnapshot.exists) throw new HttpsError('already-exists', 'You already belong to this workspace.')
+    if (memberSnapshot.exists && memberSnapshot.data()?.status !== 'removed') {
+      throw new HttpsError('already-exists', 'You already belong to this workspace.')
+    }
 
     const invitation = invitationSnapshot.data()
     const expiresAt = invitation?.expiresAt
@@ -165,11 +168,12 @@ export const acceptWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request
     }
 
     const now = FieldValue.serverTimestamp()
-    transaction.create(memberRef, {
+    transaction.set(memberRef, {
       uid: user.uid,
       email: user.email,
       displayName,
       role: 'member',
+      status: 'active',
       joinedAt: now,
     })
     transaction.update(invitationRef, { status: 'accepted', acceptedBy: user.uid, acceptedAt: now })
@@ -187,6 +191,103 @@ export const acceptWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request
   })
 
   return { workspaceId }
+})
+
+export const createWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const email = getRequiredText(data, 'email', 254).toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new HttpsError('invalid-argument', 'Enter a valid email address.')
+  }
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const ownerRef = workspaceRef.collection('members').doc(user.uid)
+  const membersQuery = workspaceRef.collection('members').where('email', '==', email)
+  const invitationsQuery = workspaceRef.collection('invitations').where('email', '==', email)
+  const invitationRef = workspaceRef.collection('invitations').doc()
+  const token = randomBytes(32).toString('base64url')
+  const now = Timestamp.now()
+  const expiresAt = Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1000)
+
+  await db.runTransaction(async (transaction) => {
+    const [owner, members, invitations] = await Promise.all([
+      transaction.get(ownerRef),
+      transaction.get(membersQuery),
+      transaction.get(invitationsQuery),
+    ])
+    if (!owner.exists || owner.data()?.role !== 'owner' || owner.data()?.status === 'removed') {
+      throw new HttpsError('permission-denied', 'Only the workspace owner can manage members.')
+    }
+    if (members.docs.some((member) => member.data().status !== 'removed')) {
+      throw new HttpsError('already-exists', 'This person is already a workspace member.')
+    }
+    if (invitations.docs.some((invitation) => invitation.data().status === 'pending')) {
+      throw new HttpsError('already-exists', 'A pending invitation already exists for this email.')
+    }
+    transaction.create(invitationRef, {
+      email,
+      role: 'member',
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      expiresAt,
+      status: 'pending',
+      createdBy: user.uid,
+      createdAt: FieldValue.serverTimestamp(),
+    })
+  })
+  return { invitationId: invitationRef.id, token, expiresAt: expiresAt.toMillis() }
+})
+
+export const revokeWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const invitationId = getDocumentId(data, 'invitationId')
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const ownerRef = workspaceRef.collection('members').doc(user.uid)
+  const invitationRef = workspaceRef.collection('invitations').doc(invitationId)
+  await db.runTransaction(async (transaction) => {
+    const [owner, invitation] = await Promise.all([transaction.get(ownerRef), transaction.get(invitationRef)])
+    if (!owner.exists || owner.data()?.role !== 'owner' || owner.data()?.status === 'removed') {
+      throw new HttpsError('permission-denied', 'Only the workspace owner can manage members.')
+    }
+    if (!invitation.exists || invitation.data()?.status !== 'pending') {
+      throw new HttpsError('failed-precondition', 'This invitation is no longer pending.')
+    }
+    transaction.update(invitationRef, { status: 'revoked', revokedAt: FieldValue.serverTimestamp() })
+  })
+  return { invitationId }
+})
+
+export const removeWorkspaceMember = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const memberUid = getDocumentId(data, 'memberUid')
+  if (memberUid === user.uid) throw new HttpsError('failed-precondition', 'The workspace owner cannot remove themselves.')
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const ownerRef = workspaceRef.collection('members').doc(user.uid)
+  const memberRef = workspaceRef.collection('members').doc(memberUid)
+  const timerRef = workspaceRef.collection('activeTimers').doc(memberUid)
+  await db.runTransaction(async (transaction) => {
+    const [owner, member, timer] = await Promise.all([transaction.get(ownerRef), transaction.get(memberRef), transaction.get(timerRef)])
+    if (!owner.exists || owner.data()?.role !== 'owner' || owner.data()?.status === 'removed') {
+      throw new HttpsError('permission-denied', 'Only the workspace owner can manage members.')
+    }
+    if (!member.exists || member.data()?.role !== 'member') {
+      throw new HttpsError('not-found', 'This workspace member no longer exists.')
+    }
+    if (timer.exists && typeof timer.data()?.entryId === 'string') {
+      const entryRef = workspaceRef.collection('timeEntries').doc(timer.data()!.entryId as string)
+      const entry = await transaction.get(entryRef)
+      if (entry.exists && entry.data()?.endAt == null) {
+        transaction.update(entryRef, { endAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() })
+      }
+    }
+    transaction.update(memberRef, { status: 'removed', removedAt: FieldValue.serverTimestamp() })
+    if (timer.exists) transaction.delete(timerRef)
+  })
+  return { memberUid }
 })
 
 function matchesTokenHash(token: string, expectedHash: string): boolean {

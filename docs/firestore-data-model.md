@@ -8,7 +8,7 @@ Ticknest stores each workspace's business data under its workspace document. Fir
 | --- | --- | --- |
 | `users/{uid}` | `displayName`, `email`, `timezone`, `createdAt`, `updatedAt` | Private profile; a user can read and update only their own profile. The email is a display copy, not an identity authority. |
 | `workspaces/{workspaceId}` | `name`, `ownerUid`, `weekStartsOn`, `createdAt`, `updatedAt` | `ownerUid` is assigned by a trusted callable function and cannot be changed from the browser. |
-| `workspaces/{workspaceId}/members/{uid}` | `uid`, `email`, `displayName`, `role`, `joinedAt` | Role is `owner` or `member`. Callable functions are the only writers. Member records are immutable from clients. |
+| `workspaces/{workspaceId}/members/{uid}` | `uid`, `email`, `displayName`, `role`, `status`, `joinedAt`, optional `removedAt` | Role is `owner` or `member`; status is `active` or `removed`. Callable functions are the only writers. Removed member records remain as historical attribution, while security rules deny them workspace access. |
 | `workspaces/{workspaceId}/invitations/{invitationId}` | `email`, `role`, `tokenHash`, `expiresAt`, `status`, `createdBy`, `createdAt`, optional `acceptedBy`, `acceptedAt`, `revokedAt` | Invitation writes are reserved for trusted functions. The accept flow verifies the authenticated, verified email and single-use expiration in a transaction. |
 | `workspaces/{workspaceId}/clients/{clientId}` | `name`, `archived`, `createdAt`, `updatedAt` | Owners manage records; all members can read them. |
 | `workspaces/{workspaceId}/projects/{projectId}` | `name`, `clientId`, `description`, `color`, `estimateMinutes`, `archived`, `createdAt`, `updatedAt` | `clientId` is optional and workspace-scoped. |
@@ -19,7 +19,7 @@ All audit timestamps are written with server timestamps. Workspace and associati
 
 ## Trusted writes
 
-The browser must not write workspace owner identity, membership role or membership documents, or invitation documents. `createWorkspace` and `acceptWorkspaceInvitation` are callable Cloud Functions that derive the user ID and email from the verified Firebase Auth token, validate request fields, and commit related documents in a Firestore transaction. Firebase Admin credentials remain in the managed function runtime.
+The browser must not write workspace owner identity, membership role or membership documents, or invitation documents. Callable Cloud Functions derive the user ID and email from the verified Firebase Auth token. `createWorkspace`, `createWorkspaceInvitation`, `revokeWorkspaceInvitation`, `removeWorkspaceMember`, and `acceptWorkspaceInvitation` validate authority and write membership/invitation state through trusted code. Firebase Admin credentials remain in the managed function runtime. Invitation tokens are single-use, high-entropy values; only their SHA-256 hashes are stored, and invitations expire after seven days.
 
 Cloud Functions deployment currently requires Firebase's Blaze plan and a linked billing account. The plan has a no-cost usage quota, but exceeding its included usage can incur charges. See Firebase's [pricing-plan documentation](https://firebase.google.com/docs/projects/billing/firebase-pricing-plans).
 

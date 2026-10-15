@@ -6,6 +6,7 @@ import {
   getSavedWorkspaceId,
   loadWorkspaces,
   saveActiveWorkspaceId,
+  subscribeToMembershipStatus,
   type Workspace,
 } from './lib/workspaces'
 import {
@@ -30,6 +31,7 @@ import {
 import './App.css'
 import { subscribeToCatalog, type Catalog } from './lib/catalog'
 import { CatalogPanel } from './CatalogPanel'
+import { MemberManagementPanel } from './MemberManagementPanel'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
 
@@ -199,6 +201,15 @@ function WorkspaceScreen({ user }: { user: User }) {
   }
 
   useEffect(() => {
+    if (!activeId) return
+    return subscribeToMembershipStatus(activeId, user.uid, () => {
+      void refreshWorkspaces().catch((loadError: unknown) => setError(readableError(loadError)))
+    })
+    // Follow the currently selected workspace membership.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, user.uid])
+
+  useEffect(() => {
     void refreshWorkspaces().catch((loadError: unknown) => setError(readableError(loadError)))
     // Initial membership load for this authenticated account.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,6 +295,7 @@ function WorkspaceScreen({ user }: { user: User }) {
           </section>
           <TimerPanel user={user} workspaceId={activeWorkspace.id} catalog={catalog} />
           {activeWorkspace.role === 'owner' && <CatalogPanel workspaceId={activeWorkspace.id} />}
+          {activeWorkspace.role === 'owner' && <MemberManagementPanel workspaceId={activeWorkspace.id} currentUserId={user.uid} />}
           <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} catalog={catalog} />
           <form className="join-another-card" onSubmit={handleAcceptInvite}>
             <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
