@@ -4,7 +4,7 @@ Ticknest is an open-source time tracker that you deploy into a Firebase project 
 
 ## Quick start
 
-Requirements: Node.js 20.19+, 22.12+, or 24.x, npm, Java JDK 11+ for the Firebase emulators, and a Firebase project for deployment. Cloud Functions deployment requires the Firebase Blaze plan and a linked Cloud Billing account.
+Requirements: Node.js 22.12+ or 24.x, npm, Java JDK 11+ for the Firebase emulators, and a Firebase project for deployment. Cloud Functions deployment requires the Firebase Blaze plan and a linked Cloud Billing account.
 
 ```sh
 npm install

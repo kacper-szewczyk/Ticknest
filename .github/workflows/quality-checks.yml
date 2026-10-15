@@ -3,14 +3,19 @@ name: Quality checks
 on:
   pull_request:
   push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   app:
-    name: App lint and typecheck
+    name: App lint, typecheck, and build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -18,7 +23,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
@@ -27,6 +32,8 @@ jobs:
         run: npm run lint
       - name: Typecheck app
         run: npm run typecheck
+      - name: Build app
+        run: npm run build
 
   functions:
     name: Functions lint and typecheck
@@ -37,7 +44,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: functions/package-lock.json
       - name: Install Functions dependencies
