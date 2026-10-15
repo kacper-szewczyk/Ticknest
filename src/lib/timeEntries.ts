@@ -87,6 +87,29 @@ export function subscribeToEntriesForDay(
   }, onError)
 }
 
+export function subscribeToEntriesForRange(
+  workspaceId: string,
+  userId: string,
+  isOwner: boolean,
+  startDay: string,
+  dayCount: number,
+  onEntries: (entries: TimeEntry[]) => void,
+  onError: (error: Error) => void,
+): () => void {
+  const [start] = localDayBounds(startDay)
+  const end = new Date(start)
+  end.setDate(end.getDate() + dayCount)
+  const filters: QueryConstraint[] = [
+    ...(isOwner ? [] : [where('userId', '==', userId)]),
+    where('startAt', '>=', Timestamp.fromDate(start)),
+    where('startAt', '<', Timestamp.fromDate(end)),
+    orderBy('startAt', 'desc'),
+  ]
+  return onSnapshot(query(entriesPath(workspaceId), ...filters), (snapshot) => {
+    onEntries(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry))
+  }, onError)
+}
+
 async function assertNoOverlap(
   workspaceId: string,
   userId: string,
