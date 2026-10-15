@@ -101,6 +101,7 @@
 .report-group span { color: #858c84; font-size: 10px; }
 .report-group b { color: #344539; font-variant-numeric: tabular-nums; font-size: 11px; }
 .report-detail-heading { padding-top: 16px; border-top: 1px solid #e8e9e4; }
+.report-detail-actions { display: flex; align-items: center; gap: 12px; }
 .report-details { margin-top: 8px; }
 .report-entry { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 2px; border-bottom: 1px solid #eef0eb; }
 .report-entry > div:first-child { display: grid; gap: 5px; min-width: 0; }
