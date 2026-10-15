@@ -32,6 +32,7 @@ import './App.css'
 import { subscribeToCatalog, type Catalog } from './lib/catalog'
 import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
+import { ReportsPanel } from './ReportsPanel'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
 
@@ -297,6 +298,7 @@ function WorkspaceScreen({ user }: { user: User }) {
           {activeWorkspace.role === 'owner' && <CatalogPanel workspaceId={activeWorkspace.id} />}
           {activeWorkspace.role === 'owner' && <MemberManagementPanel workspaceId={activeWorkspace.id} currentUserId={user.uid} />}
           <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />
+          <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} catalog={catalog} />
           <form className="join-another-card" onSubmit={handleAcceptInvite}>
             <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
                 <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
