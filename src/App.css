@@ -52,6 +52,29 @@
 
 .workspace-main { width: min(960px, calc(100% - 64px)); min-height: calc(100vh - 78px); margin: 0 auto; padding: 48px 0 30px; }
 .welcome-card { max-width: 750px; margin: 90px auto 0; padding: clamp(28px, 6vw, 58px); border: 1px solid #e5e9e1; border-radius: 22px; background: rgba(255,255,255,.82); box-shadow: 0 22px 70px rgba(47, 64, 49, .06); }
+.timer-card { max-width: 750px; margin: 18px auto 0; padding: clamp(22px, 4vw, 34px); border: 1px solid #e5e9e1; border-radius: 18px; background: rgba(255,255,255,.9); }
+.timer-heading, .timer-actions, .running-timer, .recent-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.timer-heading h2 { margin: 5px 0 0; color: #24342a; font-family: Georgia, 'Times New Roman', serif; font-size: 27px; font-weight: 400; }
+.timer-clock { color: #254332; font-variant-numeric: tabular-nums; font-size: clamp(27px, 5vw, 38px); font-weight: 600; letter-spacing: 1px; }
+.timer-form { display: grid; gap: 15px; margin-top: 22px; }
+.timer-form label { display: grid; gap: 7px; color: #39473c; font-size: 12px; font-weight: 600; }
+.timer-form input:not([type="checkbox"]) { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #dfe4dd; border-radius: 8px; background: #fff; color: #24342a; }
+.timer-form input:focus { border-color: #67866a; outline: 0; box-shadow: 0 0 0 3px rgba(103, 134, 106, .14); }
+.timer-associations { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.timer-actions { justify-content: flex-end; }
+.billable-control { display: flex !important; align-items: center; gap: 8px !important; margin-right: auto; }
+.billable-control input { accent-color: #254332; }
+.running-timer { margin-top: 22px; padding: 17px; border: 1px solid #dce9d8; border-radius: 12px; background: #f7faf4; }
+.running-timer strong, .recent-entry strong { color: #27382c; font-size: 13px; }
+.running-timer p { margin: 6px 0 0; color: #7c847c; font-size: 11px; }
+.billable-tag { display: inline-block; margin-top: 8px; padding: 3px 7px; border-radius: 999px; background: #e7f0e2; color: #416b4c; font-size: 10px; }
+.stop-button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: #984b3e; color: white; font-size: 12px; font-weight: 650; cursor: pointer; }
+.stop-button:disabled { cursor: wait; opacity: .65; }
+.recent-entries { margin-top: 25px; border-top: 1px solid #e8e9e4; }
+.recent-entries h3 { margin: 18px 0 8px; color: #526052; font-size: 11px; font-weight: 700; }
+.recent-entry { padding: 10px 0; border-bottom: 1px solid #eef0eb; }
+.recent-entry > div { display: grid; gap: 5px; }
+.recent-entry span { color: #858c84; font-size: 10px; }
 .welcome-card h1, .onboarding-heading h1 { margin: 12px 0; color: #17271f; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(38px, 6vw, 58px); font-weight: 400; letter-spacing: -2px; line-height: 1.06; }
 .welcome-card > p:not(.section-kicker), .onboarding-heading > p:not(.section-kicker) { color: #737d73; font-size: 14px; line-height: 1.6; }
 .workspace-badge { display: inline-flex; align-items: center; gap: 9px; margin-top: 18px; padding: 9px 12px; border: 1px solid #e2e9dd; border-radius: 999px; background: #f6f9f3; color: #516452; font-size: 11px; }
@@ -93,4 +116,6 @@
   .onboarding-grid { grid-template-columns: 1fr; }
   .onboarding-card > p { min-height: auto; }
   .account-actions { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .timer-associations { grid-template-columns: 1fr; gap: 10px; }
+  .running-timer { align-items: flex-start; flex-direction: column; }
 }

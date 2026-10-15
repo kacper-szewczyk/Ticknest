@@ -16,6 +16,7 @@ import {
   signOutUser,
 } from './lib/auth'
 import { auth } from './lib/firebase'
+import { continueTimer, startTimer, stopTimer, subscribeToTimeEntries, type TimeEntry } from './lib/timeEntries'
 import './App.css'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
@@ -234,6 +235,7 @@ function WorkspaceScreen({ user }: { user: User }) {
             <div className="workspace-badge"><span className="status-dot" /> {activeWorkspace.role === 'owner' ? 'Workspace owner' : 'Workspace member'}</div>
             {workspaces.length > 1 && <p className="switch-hint">Use the workspace menu above to switch between your workspaces.</p>}
           </section>
+          <TimerPanel user={user} workspaceId={activeWorkspace.id} />
           <form className="join-another-card" onSubmit={handleAcceptInvite}>
             <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
                 <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
@@ -261,6 +263,113 @@ function WorkspaceScreen({ user }: { user: User }) {
         <div className="account-actions"><button className="text-button danger-link" onClick={() => void handleDeleteAccount()} disabled={pending}>Delete account</button><span>Workspace data stays in the Firebase project selected by its owner.</span></div>
       </main>
     </div>
+  )
+}
+
+function formatElapsed(seconds: number): string {
+  const hours = Math.floor(seconds / 3600).toString().padStart(2, '0')
+  const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+  const remainder = (seconds % 60).toString().padStart(2, '0')
+  return `${hours}:${minutes}:${remainder}`
+}
+
+function TimerPanel({ user, workspaceId }: { user: User; workspaceId: string }) {
+  const [entries, setEntries] = useState<TimeEntry[]>([])
+  const [description, setDescription] = useState('')
+  const [clientName, setClientName] = useState('')
+  const [projectName, setProjectName] = useState('')
+  const [taskName, setTaskName] = useState('')
+  const [billable, setBillable] = useState(false)
+  const [now, setNow] = useState(Date.now())
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => subscribeToTimeEntries(workspaceId, user.uid, setEntries, (loadError) => setError(readableError(loadError))), [workspaceId, user.uid])
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  const runningEntry = entries.find((entry) => entry.endAt === null)
+  const recentEntries = entries.filter((entry) => entry.endAt !== null).slice(0, 5)
+
+  async function handleStart(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setPending(true)
+    setError('')
+    try {
+      await startTimer(user, workspaceId, {
+        description: description.trim(),
+        clientName: clientName.trim() || null,
+        projectName: projectName.trim() || null,
+        taskName: taskName.trim() || null,
+        billable,
+      })
+      setDescription('')
+      setClientName('')
+      setProjectName('')
+      setTaskName('')
+      setBillable(false)
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleStop(entryId: string) {
+    setPending(true)
+    setError('')
+    try {
+      await stopTimer(user, workspaceId, entryId)
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleContinue(entry: TimeEntry) {
+    setPending(true)
+    setError('')
+    try {
+      await continueTimer(user, workspaceId, entry)
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  const elapsed = runningEntry?.startAt ? Math.max(0, Math.floor(now / 1000 - runningEntry.startAt.toMillis() / 1000)) : 0
+
+  return (
+    <section className="timer-card" aria-labelledby="timer-heading">
+      <div className="timer-heading"><div><p className="section-kicker">TIME TRACKING</p><h2 id="timer-heading">Timer</h2></div>
+        {runningEntry && <span className="timer-clock" aria-label={`Elapsed time ${formatElapsed(elapsed)}`}>{formatElapsed(elapsed)}</span>}
+      </div>
+      {error && <p className="form-message is-error" role="alert">{error}</p>}
+      {runningEntry ? (
+        <div className="running-timer">
+          <div><strong>{runningEntry.description || 'Untitled entry'}</strong><p>{[runningEntry.clientName, runningEntry.projectName, runningEntry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}</p>{runningEntry.billable && <span className="billable-tag">Billable</span>}</div>
+          <button className="stop-button" type="button" onClick={() => void handleStop(runningEntry.id)} disabled={pending}>{pending ? 'Saving…' : 'Stop timer'}</button>
+        </div>
+      ) : (
+        <form className="timer-form" onSubmit={handleStart}>
+          <label className="timer-description">What are you working on?<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} placeholder="e.g. Prepare project proposal" required /></label>
+          <div className="timer-associations">
+            <label>Client<input value={clientName} onChange={(event) => setClientName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+            <label>Project<input value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+            <label>Task<input value={taskName} onChange={(event) => setTaskName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+          </div>
+          <div className="timer-actions"><label className="billable-control"><input type="checkbox" checked={billable} onChange={(event) => setBillable(event.target.checked)} /> Billable</label><button className="primary-button" type="submit" disabled={pending}>{pending ? 'Starting…' : 'Start timer'}</button></div>
+        </form>
+      )}
+      {recentEntries.length > 0 && <div className="recent-entries"><h3>Recent entries</h3>{recentEntries.map((entry) => {
+        const duration = entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : 0
+        return <article className="recent-entry" key={entry.id}><div><strong>{entry.description || 'Untitled entry'}</strong><span>{entry.startAt.toDate().toLocaleString()} · {formatElapsed(duration)}</span></div><button className="text-button" type="button" onClick={() => void handleContinue(entry)} disabled={pending}>Continue</button></article>
+      })}</div>}
+    </section>
   )
 }
 
