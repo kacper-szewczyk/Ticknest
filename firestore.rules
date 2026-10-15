@@ -227,7 +227,7 @@ service cloud.firestore {
       match /timeEntries/{entryId} {
         function validEntry(data) {
           return data.keys().hasAll(['userId', 'description', 'clientName', 'projectName', 'taskName', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
-            && data.keys().hasOnly(['userId', 'description', 'clientName', 'projectName', 'taskName', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
+            && data.keys().hasOnly(['userId', 'description', 'clientName', 'projectName', 'taskName', 'clientId', 'projectId', 'taskId', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
             && data.userId is string
             && data.description is string
             && data.description.size() > 0
@@ -235,6 +235,9 @@ service cloud.firestore {
             && (data.clientName == null || (data.clientName is string && data.clientName.size() <= 100))
             && (data.projectName == null || (data.projectName is string && data.projectName.size() <= 100))
             && (data.taskName == null || (data.taskName is string && data.taskName.size() <= 100))
+            && (data.get('clientId', null) == null || (data.get('clientId', null) is string && data.get('clientId', null).size() <= 128))
+            && (data.get('projectId', null) == null || (data.get('projectId', null) is string && data.get('projectId', null).size() <= 128))
+            && (data.get('taskId', null) == null || (data.get('taskId', null) is string && data.get('taskId', null).size() <= 128))
             && data.billable is bool
             && data.startAt is timestamp
             && (data.endAt == null || (data.endAt is timestamp && data.endAt > data.startAt));
@@ -251,6 +254,24 @@ service cloud.firestore {
         allow create: if isMember(workspaceId)
           && request.resource.data.userId == request.auth.uid
           && validEntryCreate(request.resource.data)
+          && (request.resource.data.get('clientId', null) != null || request.resource.data.clientName == null)
+          && (request.resource.data.get('projectId', null) != null || request.resource.data.projectName == null)
+          && (request.resource.data.get('taskId', null) != null || request.resource.data.taskName == null)
+          && (request.resource.data.get('clientId', null) == null
+            || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(request.resource.data.get('clientId', null)))
+              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(request.resource.data.get('clientId', null))).data.archived == false
+              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(request.resource.data.get('clientId', null))).data.name == request.resource.data.clientName))
+          && (request.resource.data.get('projectId', null) == null
+            || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null)))
+              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.archived == false
+              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.name == request.resource.data.projectName
+              && (get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.clientId == null
+                || get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.clientId == request.resource.data.get('clientId', null))))
+          && (request.resource.data.get('taskId', null) == null
+            || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null)))
+              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.archived == false
+              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.name == request.resource.data.taskName
+              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.projectId == request.resource.data.get('projectId', null)))
           && (
             request.resource.data.endAt == null
               ? request.resource.data.startAt == request.time

@@ -28,6 +28,8 @@ import {
   type TimeEntry,
 } from './lib/timeEntries'
 import './App.css'
+import { subscribeToCatalog, type Catalog } from './lib/catalog'
+import { CatalogPanel } from './CatalogPanel'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
 
@@ -173,6 +175,12 @@ function WorkspaceScreen({ user }: { user: User }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [catalog, setCatalog] = useState<Catalog>({ clients: [], projects: [], tasks: [] })
+
+  useEffect(() => {
+    if (!activeId) return
+    return subscribeToCatalog(activeId, setCatalog, (loadError) => setError(readableError(loadError)))
+  }, [activeId])
 
   async function refreshWorkspaces() {
     const found = await loadWorkspaces(user)
@@ -269,8 +277,9 @@ function WorkspaceScreen({ user }: { user: User }) {
             <div className="workspace-badge"><span className="status-dot" /> {activeWorkspace.role === 'owner' ? 'Workspace owner' : 'Workspace member'}</div>
             {workspaces.length > 1 && <p className="switch-hint">Use the workspace menu above to switch between your workspaces.</p>}
           </section>
-          <TimerPanel user={user} workspaceId={activeWorkspace.id} />
-          <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} />
+          <TimerPanel user={user} workspaceId={activeWorkspace.id} catalog={catalog} />
+          {activeWorkspace.role === 'owner' && <CatalogPanel workspaceId={activeWorkspace.id} />}
+          <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} catalog={catalog} />
           <form className="join-another-card" onSubmit={handleAcceptInvite}>
             <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
                 <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
@@ -308,7 +317,7 @@ function formatElapsed(seconds: number): string {
   return `${hours}:${minutes}:${remainder}`
 }
 
-function TimerPanel({ user, workspaceId }: { user: User; workspaceId: string }) {
+function TimerPanel({ user, workspaceId, catalog }: { user: User; workspaceId: string; catalog: Catalog }) {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [description, setDescription] = useState('')
   const [clientName, setClientName] = useState('')
@@ -335,9 +344,12 @@ function TimerPanel({ user, workspaceId }: { user: User; workspaceId: string }) 
     try {
       await startTimer(user, workspaceId, {
         description: description.trim(),
-        clientName: clientName.trim() || null,
-        projectName: projectName.trim() || null,
-        taskName: taskName.trim() || null,
+        clientId: clientName || null,
+        projectId: projectName || null,
+        taskId: taskName || null,
+        clientName: catalog.clients.find((item) => item.id === clientName)?.name ?? null,
+        projectName: catalog.projects.find((item) => item.id === projectName)?.name ?? null,
+        taskName: catalog.tasks.find((item) => item.id === taskName)?.name ?? null,
         billable,
       })
       setDescription('')
@@ -393,9 +405,9 @@ function TimerPanel({ user, workspaceId }: { user: User; workspaceId: string }) 
         <form className="timer-form" onSubmit={handleStart}>
           <label className="timer-description">What are you working on?<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} placeholder="e.g. Prepare project proposal" required /></label>
           <div className="timer-associations">
-            <label>Client<input value={clientName} onChange={(event) => setClientName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
-            <label>Project<input value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
-            <label>Task<input value={taskName} onChange={(event) => setTaskName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+            <label>Client<select value={clientName} onChange={(event) => { setClientName(event.target.value); setProjectName(''); setTaskName('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+            <label>Project<select value={projectName} onChange={(event) => { setProjectName(event.target.value); setTaskName('') }}><option value="">No project</option>{catalog.projects.filter((item) => !item.archived && (!clientName || item.clientId === clientName) && (!item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+            <label>Task<select value={taskName} onChange={(event) => setTaskName(event.target.value)}><option value="">No task</option>{catalog.tasks.filter((item) => !item.archived && (!projectName || item.projectId === projectName) && catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived)))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
           </div>
           <div className="timer-actions"><label className="billable-control"><input type="checkbox" checked={billable} onChange={(event) => setBillable(event.target.checked)} /> Billable</label><button className="primary-button" type="submit" disabled={pending}>{pending ? 'Starting…' : 'Start timer'}</button></div>
         </form>
@@ -424,7 +436,7 @@ function dateTimeForDay(day: string, hour: number): string {
   return `${day}T${hour.toString().padStart(2, '0')}:00`
 }
 
-function TimeEntriesPanel({ user, workspaceId, isOwner }: { user: User; workspaceId: string; isOwner: boolean }) {
+function TimeEntriesPanel({ user, workspaceId, isOwner, catalog }: { user: User; workspaceId: string; isOwner: boolean; catalog: Catalog }) {
   const [day, setDay] = useState(() => localDayString(new Date()))
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [editId, setEditId] = useState<string | null>(null)
@@ -432,6 +444,9 @@ function TimeEntriesPanel({ user, workspaceId, isOwner }: { user: User; workspac
   const [clientName, setClientName] = useState('')
   const [projectName, setProjectName] = useState('')
   const [taskName, setTaskName] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [projectId, setProjectId] = useState('')
+  const [taskId, setTaskId] = useState('')
   const [billable, setBillable] = useState(false)
   const [startAt, setStartAt] = useState(() => dateTimeForDay(localDayString(new Date()), 9))
   const [endAt, setEndAt] = useState(() => dateTimeForDay(localDayString(new Date()), 10))
@@ -455,6 +470,9 @@ function TimeEntriesPanel({ user, workspaceId, isOwner }: { user: User; workspac
     setClientName('')
     setProjectName('')
     setTaskName('')
+    setClientId('')
+    setProjectId('')
+    setTaskId('')
     setBillable(false)
     setStartAt(dateTimeForDay(day, 9))
     setEndAt(dateTimeForDay(day, 10))
@@ -467,6 +485,9 @@ function TimeEntriesPanel({ user, workspaceId, isOwner }: { user: User; workspac
     setClientName(entry.clientName ?? '')
     setProjectName(entry.projectName ?? '')
     setTaskName(entry.taskName ?? '')
+    setClientId(entry.clientId ?? '')
+    setProjectId(entry.projectId ?? '')
+    setTaskId(entry.taskId ?? '')
     setBillable(entry.billable)
     setStartAt(localDateTimeValue(entry.startAt.toDate()))
     setEndAt(localDateTimeValue(entry.endAt.toDate()))
@@ -483,9 +504,12 @@ function TimeEntriesPanel({ user, workspaceId, isOwner }: { user: User; workspac
       const existing = entries.find((entry) => entry.id === editId)
       await saveManualTimeEntry(user, workspaceId, {
         description,
-        clientName: clientName || null,
-        projectName: projectName || null,
-        taskName: taskName || null,
+        clientId: clientId || null,
+        projectId: projectId || null,
+        taskId: taskId || null,
+        clientName: catalog.clients.find((item) => item.id === clientId)?.name ?? (clientName || null),
+        projectName: catalog.projects.find((item) => item.id === projectId)?.name ?? (projectName || null),
+        taskName: catalog.tasks.find((item) => item.id === taskId)?.name ?? (taskName || null),
         billable,
         startAt: new Date(startAt),
         endAt: new Date(endAt),
@@ -540,9 +564,9 @@ function TimeEntriesPanel({ user, workspaceId, isOwner }: { user: User; workspac
           <label>End<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required /></label>
         </div>
         <div className="timer-associations">
-          <label>Client<input value={clientName} onChange={(event) => setClientName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
-          <label>Project<input value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
-          <label>Task<input value={taskName} onChange={(event) => setTaskName(event.target.value)} maxLength={100} placeholder="Optional" /></label>
+          <label>Client<select value={clientId} onChange={(event) => { setClientId(event.target.value); setClientName(''); setProjectName(''); setTaskName(''); setProjectId(''); setTaskId('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived || item.id === clientId).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</select></label>
+          <label>Project<select value={projectId} onChange={(event) => { setProjectId(event.target.value); setProjectName(''); setTaskName(''); setTaskId('') }}><option value="">No project</option>{catalog.projects.filter((item) => (!item.archived || item.id === projectId) && (!clientId || item.clientId === clientId) && (item.id === projectId || !item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</select></label>
+          <label>Task<select value={taskId} onChange={(event) => { setTaskId(event.target.value); setTaskName('') }}><option value="">No task</option>{catalog.tasks.filter((item) => (!item.archived || item.id === taskId) && (!projectId || item.projectId === projectId) && (item.id === taskId || catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived))))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</select></label>
         </div>
         <div className="timer-actions"><label className="billable-control"><input type="checkbox" checked={billable} onChange={(event) => setBillable(event.target.checked)} /> Billable</label>
           {editId && <button className="secondary-button" type="button" onClick={clearForm} disabled={pending}>Cancel</button>}
