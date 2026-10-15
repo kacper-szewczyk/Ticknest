@@ -38,8 +38,11 @@ function readableError(error: unknown): string {
     'auth/email-already-in-use': 'An account already exists for this email. Sign in instead.',
     'auth/invalid-credential': 'The email or password is incorrect.',
     'auth/invalid-email': 'Enter a valid email address.',
+    'auth/network-request-failed': 'Ticknest couldn’t reach Firebase Authentication. Check your internet connection and try again. If you use a VPN, firewall, or privacy extension, make sure it allows this site to connect to Firebase.',
     'auth/weak-password': 'Choose a password with at least 6 characters.',
     'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
+    'auth/user-disabled': 'This account is disabled. Contact the workspace administrator.',
+    'auth/unauthorized-domain': 'This site is not authorized for Firebase sign-in. Add its domain in Firebase Authentication settings.',
     'auth/requires-recent-login': 'Sign in again before deleting your account.',
     'auth/popup-closed-by-user': 'Google sign-in was closed before it finished.',
     'auth/popup-blocked': 'Allow pop-ups for this site, then try Google sign-in again.',
@@ -47,7 +50,9 @@ function readableError(error: unknown): string {
     'auth/account-exists-with-different-credential': 'An account already exists with this email. Sign in with your original method, then link Google in account settings.',
     'permission-denied': 'You do not have access to this workspace.',
   }
-  return messages[code] ?? error.message
+  if (messages[code]) return messages[code]
+  if (code.startsWith('auth/')) return 'We couldn’t sign you in. Please try again. If the problem continues, check the Firebase Authentication settings.'
+  return error.message
 }
 
 function Brand() {
