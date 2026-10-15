@@ -1,29 +1,20 @@
 import {
-  collection,
   collectionGroup,
   doc,
   getDoc,
   getDocs,
   query,
-  runTransaction,
-  serverTimestamp,
   where,
-  type Timestamp,
 } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
 import type { User } from 'firebase/auth'
-import { db } from './firebase'
+import { db, functions } from './firebase'
 
 export type Workspace = {
   id: string
   name: string
   ownerUid: string
   role: 'owner' | 'member'
-}
-
-type Invitation = {
-  email: string
-  status: 'pending' | 'accepted' | 'revoked'
-  expiresAt: Timestamp
 }
 
 function activeWorkspaceKey(uid: string): string {
@@ -60,84 +51,31 @@ export async function loadWorkspaces(user: User): Promise<Workspace[]> {
 }
 
 export async function createWorkspace(user: User, name: string): Promise<string> {
-  const workspaceRef = doc(collection(db, 'workspaces'))
-  const profileRef = doc(db, 'users', user.uid)
-  const memberRef = doc(db, 'workspaces', workspaceRef.id, 'members', user.uid)
-
-  await runTransaction(db, async (transaction) => {
-    transaction.set(workspaceRef, {
-      name: name.trim(),
-      ownerUid: user.uid,
-      weekStartsOn: 1,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    transaction.set(memberRef, {
-      uid: user.uid,
-      email: user.email?.toLowerCase() ?? '',
-      displayName: user.displayName ?? '',
-      role: 'owner',
-      joinedAt: serverTimestamp(),
-    })
-    transaction.set(
-      profileRef,
-      {
-        displayName: user.displayName ?? '',
-        email: user.email?.toLowerCase() ?? '',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        createdAt: serverTimestamp(),
-      },
-      { merge: true },
-    )
-  })
-
-  saveActiveWorkspaceId(user.uid, workspaceRef.id)
-  return workspaceRef.id
+  const createWorkspaceCall = httpsCallable<
+    { name: string; displayName: string; timezone: string },
+    { workspaceId: string }
+  >(functions, 'createWorkspace')
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const result = await createWorkspaceCall({ name, displayName: user.displayName ?? '', timezone })
+  saveActiveWorkspaceId(user.uid, result.data.workspaceId)
+  return result.data.workspaceId
 }
 
 export async function acceptWorkspaceInvitation(
   user: User,
   workspaceId: string,
   invitationId: string,
+  token: string,
 ): Promise<void> {
   if (!user.emailVerified || !user.email) {
     throw new Error('Verify your email address before accepting a workspace invitation.')
   }
 
-  const invitationRef = doc(db, 'workspaces', workspaceId, 'invitations', invitationId)
-  const memberRef = doc(db, 'workspaces', workspaceId, 'members', user.uid)
-
-  await runTransaction(db, async (transaction) => {
-    const invitationSnapshot = await transaction.get(invitationRef)
-    if (!invitationSnapshot.exists()) throw new Error('This invitation is no longer available.')
-
-    const invitation = invitationSnapshot.data() as Invitation
-    if (invitation.email !== user.email?.toLowerCase()) {
-      throw new Error('Sign in with the email address that received this invitation.')
-    }
-    if (invitation.status !== 'pending' || invitation.expiresAt.toMillis() <= Date.now()) {
-      throw new Error('This invitation has expired or has already been used.')
-    }
-
-    transaction.set(memberRef, {
-      uid: user.uid,
-      email: user.email.toLowerCase(),
-      displayName: user.displayName ?? '',
-      role: 'member',
-      joinedAt: serverTimestamp(),
-    })
-    transaction.update(invitationRef, { status: 'accepted', acceptedBy: user.uid })
-    transaction.set(
-      doc(db, 'users', user.uid),
-      {
-        displayName: user.displayName ?? '',
-        email: user.email.toLowerCase(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    )
-  })
-
+  const acceptInvitationCall = httpsCallable<
+    { workspaceId: string; invitationId: string; token: string; displayName: string; timezone: string },
+    { workspaceId: string }
+  >(functions, 'acceptWorkspaceInvitation')
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  await acceptInvitationCall({ workspaceId, invitationId, token, displayName: user.displayName ?? '', timezone })
   saveActiveWorkspaceId(user.uid, workspaceId)
 }

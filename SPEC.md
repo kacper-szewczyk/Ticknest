@@ -110,6 +110,7 @@ The interface must be responsive and usable on desktop and mobile web. Keyboard 
 - Cloud Firestore for application data.
 - Firebase Hosting for the built web application.
 - Use a trusted server-side component (Cloud Functions or equivalent) for invitation creation/acceptance, membership changes, and any operation requiring privileged access. Never ship Firebase Admin credentials to the browser.
+- Trusted Firebase Cloud Functions require the deployer's project to use the Blaze plan with a linked billing account, even when usage stays within the included no-cost quota. Document this deployment requirement and the possibility of usage charges.
 - Use Firestore transactions for timer start/stop and membership-sensitive updates. Enforce the one-running-entry-per-user/workspace invariant in the trusted operation, not only in the UI.
 - Use Firebase Emulator Suite for local development and rule verification.
 - Avoid requiring paid Firebase products for the core self-hosted deployment. Clearly document any optional feature that requires a billable Firebase plan and provide a deployment path for the chosen invitation mechanism.

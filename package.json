@@ -11,12 +11,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "emulators": "firebase emulators:start --project demo-ticknest",
+    "emulators": "npm --prefix functions run build && firebase emulators:start --only auth,firestore,functions,hosting --project demo-ticknest",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:firebase": "firebase deploy --only hosting,firestore:rules,firestore:indexes,functions",
     "lint": "oxlint",
-    "typecheck": "tsc -b --pretty"
+    "typecheck": "tsc -b --pretty",
+    "lint:functions": "npm --prefix functions run lint",
+    "typecheck:functions": "npm --prefix functions run build"
   },
   "dependencies": {
     "firebase": "^13.0.0",

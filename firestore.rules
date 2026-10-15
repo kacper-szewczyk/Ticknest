@@ -6,14 +6,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function memberPath(workspaceId, uid) {
+      return /databases/$(database)/documents/workspaces/$(workspaceId)/members/$(uid);
+    }
+
     function isMember(workspaceId) {
-      return signedIn()
-        && exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+      return signedIn() && exists(memberPath(workspaceId, request.auth.uid));
     }
 
     function isOwner(workspaceId) {
-      return signedIn()
-        && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerUid == request.auth.uid;
+      return isMember(workspaceId)
+        && get(memberPath(workspaceId, request.auth.uid)).data.role == 'owner';
     }
 
     function validWorkspace(data) {
@@ -28,86 +31,197 @@ service cloud.firestore {
         && data.weekStartsOn <= 6
         && data.createdAt == request.time
         && data.updatedAt == request.time;
-    }
 
-    function validProfile(data) {
+    function validUserProfile(data) {
       return data.keys().hasOnly(['displayName', 'email', 'timezone', 'createdAt', 'updatedAt'])
         && data.displayName is string
         && data.displayName.size() <= 80
         && data.email == request.auth.token.email
-        && data.timezone is string;
+        && data.timezone is string
+        && data.timezone.size() <= 100;
     }
 
-    // Required for the user's collection-group query across workspace memberships.
-    // The query must constrain uid == request.auth.uid; rules are not filters.
-    match /{path=**}/members/{memberId} {
-      allow get, list: if signedIn() && resource.data.uid == request.auth.uid;
+    function validName(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 120;
+    }
+
+    function validCreateTimestamps(data) {
+      return data.createdAt == request.time && data.updatedAt == request.time;
+    }
+
+    function validUpdateTimestamps(data) {
+      return data.createdAt == resource.data.createdAt && data.updatedAt == request.time;
+    }
+
+    function optionalText(value, maxLength) {
+      return value == null || (value is string && value.size() <= maxLength);
+    }
+
+    function optionalNonNegativeInt(value) {
+      return value == null || (value is int && value >= 0);
+    }
+
+    function validEntry(data) {
+      return data.keys().hasAll([
+          'userId', 'userDisplayName', 'description', 'clientId', 'projectId', 'taskId',
+          'clientName', 'projectName', 'taskName', 'startAt', 'endAt', 'durationSeconds',
+          'billable', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'userDisplayName', 'description', 'clientId', 'projectId', 'taskId',
+          'clientName', 'projectName', 'taskName', 'startAt', 'endAt', 'durationSeconds',
+          'billable', 'createdAt', 'updatedAt'
+        ])
+        && data.userId is string
+        && data.userDisplayName is string
+        && data.userDisplayName.size() <= 80
+        && data.description is string
+        && data.description.size() <= 1000
+        && optionalText(data.clientId, 128)
+        && optionalText(data.projectId, 128)
+        && optionalText(data.taskId, 128)
+        && optionalText(data.clientName, 120)
+        && optionalText(data.projectName, 120)
+        && optionalText(data.taskName, 120)
+        && data.startAt is timestamp
+        && (data.endAt == null || (data.endAt is timestamp && data.endAt > data.startAt))
+        && (
+          (data.endAt == null && data.durationSeconds == null)
+          || (data.endAt is timestamp && data.durationSeconds is int && data.durationSeconds > 0)
+        )
+        && data.billable is bool;
     }
 
     match /users/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list: if false;
-      allow create: if signedIn() && request.auth.uid == uid && validProfile(request.resource.data);
+      allow create: if signedIn() && request.auth.uid == uid && validUserProfile(request.resource.data);
       allow update: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'email', 'timezone', 'updatedAt'])
-        && validProfile(request.resource.data);
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['displayName', 'email', 'timezone', 'updatedAt'])
+        && validUserProfile(request.resource.data);
       allow delete: if signedIn() && request.auth.uid == uid;
+    }
 
+    // Collection-group query used to discover the current user's workspaces.
+    match /{path=**}/members/{memberId} {
+      allow get, list: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /workspaces/{workspaceId} {
       allow get: if isMember(workspaceId);
       allow list: if false;
-      allow create: if signedIn()
-        && validWorkspace(request.resource.data)
-        && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.role == 'owner'
-        && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.uid == request.auth.uid;
-      allow update, delete: if false;
+      // Workspace creation and owner identity are written by trusted callable code.
+      allow create, delete: if false;
+      allow update: if isOwner(workspaceId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'weekStartsOn', 'updatedAt'])
+        && validName(request.resource.data)
+        && request.resource.data.weekStartsOn is int
+        && request.resource.data.weekStartsOn >= 0
+        && request.resource.data.weekStartsOn <= 6
+        && validUpdateTimestamps(request.resource.data);
 
       match /members/{uid} {
-        allow get, list: if signedIn() && request.auth.uid == resource.data.uid;
-        allow create: if signedIn()
-          && request.auth.uid == uid
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'joinedAt', 'invitationId'])
-          && request.resource.data.email == request.auth.token.email
-          && request.resource.data.displayName is string
-          && request.resource.data.joinedAt == request.time
-          && (
-            (
-              request.resource.data.role == 'owner'
-              && !('invitationId' in request.resource.data)
-              && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerUid == request.auth.uid
-            )
-            ||
-            (
-              request.resource.data.role == 'member'
-              && request.resource.data.invitationId is string
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)).data.email == request.auth.token.email
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)).data.status == 'pending'
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)).data.expiresAt > request.time
-              && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)).data.status == 'accepted'
-              && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/invitations/$(request.resource.data.invitationId)).data.acceptedBy == request.auth.uid
-            )
-          );
-        allow update, delete: if false;
+        allow get, list: if isMember(workspaceId);
+        allow create, update, delete: if false;
       }
 
       match /invitations/{invitationId} {
-        allow get: if signedIn()
-          && resource.data.email == request.auth.token.email
-          && request.auth.token.email_verified == true;
-        allow list, create, delete: if false;
-        allow update: if signedIn()
-          && request.auth.token.email_verified == true
-          && resource.data.email == request.auth.token.email
-          && resource.data.status == 'pending'
-          && resource.data.expiresAt > request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedBy'])
-          && request.resource.data.status == 'accepted'
-          && request.resource.data.acceptedBy == request.auth.uid
-          && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.invitationId == invitationId;
+        allow get: if isOwner(workspaceId)
+          || (signedIn()
+            && request.auth.token.email_verified == true
+            && resource.data.email == request.auth.token.email);
+        allow list: if isOwner(workspaceId);
+        allow create, update, delete: if false;
+      }
+
+      match /clients/{clientId} {
+        allow read: if isMember(workspaceId);
+        allow create: if isOwner(workspaceId)
+          && request.resource.data.keys().hasAll(['name', 'archived', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['name', 'archived', 'createdAt', 'updatedAt'])
+          && validName(request.resource.data)
+          && request.resource.data.archived is bool
+          && validCreateTimestamps(request.resource.data);
+        allow update: if isOwner(workspaceId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'archived', 'updatedAt'])
+          && validName(request.resource.data)
+          && request.resource.data.archived is bool
+          && validUpdateTimestamps(request.resource.data);
+        allow delete: if isOwner(workspaceId);
+      }
+
+      match /projects/{projectId} {
+        allow read: if isMember(workspaceId);
+        allow create: if isOwner(workspaceId)
+          && request.resource.data.keys().hasAll([
+            'name', 'clientId', 'description', 'color', 'estimateMinutes', 'archived', 'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.keys().hasOnly([
+            'name', 'clientId', 'description', 'color', 'estimateMinutes', 'archived', 'createdAt', 'updatedAt'
+          ])
+          && validName(request.resource.data)
+          && optionalText(request.resource.data.clientId, 128)
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 1000
+          && request.resource.data.color is string
+          && request.resource.data.color.size() <= 32
+          && optionalNonNegativeInt(request.resource.data.estimateMinutes)
+          && request.resource.data.archived is bool
+          && validCreateTimestamps(request.resource.data);
+        allow update: if isOwner(workspaceId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'clientId', 'description', 'color', 'estimateMinutes', 'archived', 'updatedAt'
+          ])
+          && validName(request.resource.data)
+          && optionalText(request.resource.data.clientId, 128)
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 1000
+          && request.resource.data.color is string
+          && request.resource.data.color.size() <= 32
+          && optionalNonNegativeInt(request.resource.data.estimateMinutes)
+          && request.resource.data.archived is bool
+          && validUpdateTimestamps(request.resource.data);
+        allow delete: if isOwner(workspaceId);
+      }
+
+      match /tasks/{taskId} {
+        allow read: if isMember(workspaceId);
+        allow create: if isOwner(workspaceId)
+          && request.resource.data.keys().hasAll(['name', 'projectId', 'estimateMinutes', 'archived', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['name', 'projectId', 'estimateMinutes', 'archived', 'createdAt', 'updatedAt'])
+          && validName(request.resource.data)
+          && request.resource.data.projectId is string
+          && request.resource.data.projectId.size() > 0
+          && optionalNonNegativeInt(request.resource.data.estimateMinutes)
+          && request.resource.data.archived is bool
+          && validCreateTimestamps(request.resource.data);
+        allow update: if isOwner(workspaceId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'projectId', 'estimateMinutes', 'archived', 'updatedAt'])
+          && validName(request.resource.data)
+          && request.resource.data.projectId is string
+          && request.resource.data.projectId.size() > 0
+          && optionalNonNegativeInt(request.resource.data.estimateMinutes)
+          && request.resource.data.archived is bool
+          && validUpdateTimestamps(request.resource.data);
+        allow delete: if isOwner(workspaceId);
+      }
+
+      match /timeEntries/{entryId} {
+        allow read: if isMember(workspaceId);
+        allow create: if isMember(workspaceId)
+          && request.resource.data.userId == request.auth.uid
+          && validEntry(request.resource.data)
+          && validCreateTimestamps(request.resource.data);
+        allow update: if isMember(workspaceId)
+          && (isOwner(workspaceId) || resource.data.userId == request.auth.uid)
+          && request.resource.data.userId == resource.data.userId
+          && validEntry(request.resource.data)
+          && validUpdateTimestamps(request.resource.data);
+        allow delete: if isMember(workspaceId)
+          && (isOwner(workspaceId) || resource.data.userId == request.auth.uid);
       }
 
       match /timeEntries/{entryId} {
