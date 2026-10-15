@@ -669,7 +669,12 @@ function App() {
   }), [])
 
   if (!authReady) return <main className="loading-screen" role="status">Loading your Ticknest account…</main>
-  return user ? <WorkspaceScreen user={user} /> : <AuthScreen onAuthenticated={setUser} />
+  return (
+    <>
+      {user ? <WorkspaceScreen user={user} /> : <AuthScreen onAuthenticated={setUser} />}
+      <footer className="app-footer">Ticknest v{__APP_VERSION__}</footer>
+    </>
+  )
 }
 
 export default App
