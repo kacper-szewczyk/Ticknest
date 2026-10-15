@@ -13,7 +13,9 @@ const records = <T extends { id: string }>(snapshot: { docs: Array<{ id: string;
 export function subscribeToCatalog(workspaceId: string, onChange: (catalog: Catalog) => void, onError: (error: Error) => void): Unsubscribe {
   const catalog: Catalog = { clients: [], projects: [], tasks: [] }
   const stops = (['clients', 'projects', 'tasks'] as const).map((group) => onSnapshot(path(workspaceId, group), (snapshot) => {
-    catalog[group] = records<Catalog[typeof group][number]>(snapshot)
+    if (group === 'clients') catalog.clients = records<Client>(snapshot)
+    else if (group === 'projects') catalog.projects = records<Project>(snapshot)
+    else catalog.tasks = records<Task>(snapshot)
     onChange({ ...catalog })
   }, onError))
   return () => stops.forEach((stop) => stop())
