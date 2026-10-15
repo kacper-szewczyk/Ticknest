@@ -11,7 +11,9 @@ service cloud.firestore {
     }
 
     function isMember(workspaceId) {
-      return signedIn() && exists(memberPath(workspaceId, request.auth.uid));
+      return signedIn()
+        && exists(memberPath(workspaceId, request.auth.uid))
+        && get(memberPath(workspaceId, request.auth.uid)).data.get('status', 'active') != 'removed';
     }
 
     function isOwner(workspaceId) {
