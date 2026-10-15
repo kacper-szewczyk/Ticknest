@@ -5,7 +5,10 @@ Run the Auth, Firestore, and Functions emulators with `npm run emulators`, then 
 | Operation | Unauthenticated | Non-member | Workspace member | Workspace owner |
 | --- | --- | --- | --- | --- |
 | Read workspace document | Deny | Deny | Allow | Allow |
-| Read workspace clients/projects/tasks/time entries | Deny | Deny | Allow | Allow |
+| Read workspace clients/projects/tasks | Deny | Deny | Allow | Allow |
+| Read own time entries (direct get and query constrained to `userId == auth.uid`) | Deny | Deny | Allow | Allow |
+| Read another member's time entry (direct get) | Deny | Deny | Deny | Allow |
+| Query another member's time entries (`userId != auth.uid`) | Deny | Deny | Deny | Allow |
 | Query own memberships (`members` group, `uid == auth.uid`) | Deny | Allow only own matching records | Allow only own matching records | Allow only own matching records |
 | Read another member's membership in a known workspace | Deny | Deny | Allow | Allow |
 | Create or change a membership or its role from a web client | Deny | Deny | Deny | Deny |
@@ -19,4 +22,4 @@ Run the Auth, Firestore, and Functions emulators with `npm run emulators`, then 
 | Update/delete another user's time entry | Deny | Deny | Deny | Allow |
 | Access a collection or workspace outside the caller's membership | Deny | Deny | Deny | Deny |
 
-Also verify boundary validation: unknown fields, oversized names/descriptions, invalid enum values, malformed timestamps, negative estimates, and completed entries with an end at or before the start must be denied. Verify the callable flows separately in the Functions emulator: only an active workspace owner can create or revoke invitations and remove members; invitation acceptance requires a matching verified email, pending status, and unexpired invitation; repeated acceptance is denied; the owner cannot remove themselves or another owner. After removal, the former member must lose workspace reads and writes, while the owner can still read the retained membership identity and historical time entries.
+For time-entry reads, verify that a member can directly get and query their own entries but cannot directly get another member's entry or run an unconstrained query over the collection. An owner can directly get and query entries for every member. Also verify boundary validation: unknown fields, oversized names/descriptions, invalid enum values, malformed timestamps, negative estimates, and completed entries with an end at or before the start must be denied. Verify the callable flows separately in the Functions emulator: only an active workspace owner can create or revoke invitations and remove members; invitation acceptance requires a matching verified email, pending status, and unexpired invitation; repeated acceptance is denied; the owner cannot remove themselves or another owner. After removal, the former member must lose workspace reads and writes, while the owner can still read the retained membership identity and historical time entries.
