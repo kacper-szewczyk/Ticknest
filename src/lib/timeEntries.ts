@@ -26,12 +26,15 @@ export type TimeEntry = {
   clientName: string | null
   projectName: string | null
   taskName: string | null
+  clientId?: string | null
+  projectId?: string | null
+  taskId?: string | null
   billable: boolean
   startAt: Timestamp
   endAt: Timestamp | null
 }
 
-export type TimerDetails = Pick<TimeEntry, 'description' | 'clientName' | 'projectName' | 'taskName' | 'billable'>
+export type TimerDetails = Pick<TimeEntry, 'description' | 'clientName' | 'projectName' | 'taskName' | 'billable'> & Pick<TimeEntry, 'clientId' | 'projectId' | 'taskId'>
 export type ManualEntryInput = TimerDetails & { startAt: Date; endAt: Date }
 
 function entriesPath(workspaceId: string) {
@@ -158,6 +161,9 @@ export async function saveManualTimeEntry(
     clientName: input.clientName?.trim() || null,
     projectName: input.projectName?.trim() || null,
     taskName: input.taskName?.trim() || null,
+    clientId: input.clientId ?? null,
+    projectId: input.projectId ?? null,
+    taskId: input.taskId ?? null,
     billable: input.billable,
     startAt: Timestamp.fromDate(input.startAt),
     endAt: Timestamp.fromDate(input.endAt),
@@ -196,6 +202,9 @@ export async function continueTimer(user: User, workspaceId: string, entry: Time
     clientName: entry.clientName,
     projectName: entry.projectName,
     taskName: entry.taskName,
+    clientId: entry.clientId ?? null,
+    projectId: entry.projectId ?? null,
+    taskId: entry.taskId ?? null,
     billable: entry.billable,
   })
 }
