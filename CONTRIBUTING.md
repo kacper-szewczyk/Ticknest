@@ -15,6 +15,19 @@ Use Node.js 20.19+, 22.12+, or 24.x and npm. Java JDK 11+ is required to run the
 
 For bug reports, include clear reproduction steps, expected and actual behavior, browser and Node.js versions where relevant, and sanitized error output. Remove names, email addresses, workspace data, invite links, tokens, and credentials from screenshots, logs, and example data.
 
+## Commit messages and releases
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please), so commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `fix: …` publishes a patch release.
+- `feat: …` publishes a minor release.
+- `feat!: …` or a `BREAKING CHANGE:` footer publishes a major release.
+- `docs:`, `chore:`, `ci:`, `refactor:`, `test:` and similar do not trigger a release on their own.
+
+Each merge to `main` updates an open release pull request that bumps the version in `package.json`, updates `CHANGELOG.md`, and creates a GitHub release with a `vX.Y.Z` tag once it merges. Auto-merge is enabled on that pull request, so it merges by itself after the required checks pass. The current version appears in the app footer.
+
+Maintainers: the release workflow needs a `RELEASE_PLEASE_TOKEN` repository secret (a fine-grained token with Contents and Pull requests read/write access), "Allow auto-merge" enabled in the repository settings, and the Quality checks jobs marked as required status checks on `main`.
+
 ## Security and privacy
 
 Never commit secrets, service-account keys, real Firebase project identifiers where they expose private environments, or personal/workspace data. Do not add analytics or telemetry without an explicit product decision and user disclosure. Report a suspected vulnerability privately through the repository's GitHub security advisory feature rather than opening a public issue.
