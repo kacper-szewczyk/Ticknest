@@ -3,35 +3,59 @@ name: Release
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+
+# One release run at a time, so two quick merges cannot race to merge or tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
   pull-requests: write
 
-concurrency:
-  group: release
-  cancel-in-progress: false
-
 jobs:
   release-please:
     name: Prepare release
     runs-on: ubuntu-latest
+    outputs:
+      pr: ${{ steps.release.outputs.pr }}
     steps:
-      # A personal access token (or GitHub App token) is required so the release
-      # pull request triggers the Quality checks workflow; pull requests opened
-      # with the default GITHUB_TOKEN do not start other workflows.
-      - name: Create or update release pull request
-        id: release
+      - id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      - name: Enable auto-merge on release pull request
-        if: steps.release.outputs.pr != ''
+  # The release PR is opened with GITHUB_TOKEN, which never triggers CI, so check it here.
+  check-release-pr:
+    name: Check release PR
+    needs: release-please
+    if: needs.release-please.outputs.pr != ''
+    permissions:
+      contents: read
+    uses: ./.github/workflows/quality-checks.yml
+    with:
+      ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+
+  merge-release-pr:
+    name: Merge release PR
+    needs: [release-please, check-release-pr]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Squash-merge the release PR
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
-        run: gh pr merge "$PR_NUMBER" --auto --squash --repo "$GITHUB_REPOSITORY"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ fromJSON(needs.release-please.outputs.pr).number }}
+        run: gh pr merge "$PR" --squash --repo "$GITHUB_REPOSITORY"
+
+  # A merge made with GITHUB_TOKEN does not trigger a new push run, so tag and publish the
+  # release from this run.
+  publish-release:
+    name: Publish release
+    needs: merge-release-pr
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

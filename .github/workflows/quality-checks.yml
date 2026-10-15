@@ -4,6 +4,14 @@ on:
   pull_request:
   push:
   workflow_dispatch:
+  # Called by release.yml to check the release PR, which GitHub does not run CI on
+  # because release-please opens it with GITHUB_TOKEN.
+  workflow_call:
+    inputs:
+      ref:
+        description: Branch or commit to check (defaults to the triggering ref).
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -15,6 +23,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,6 +44,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

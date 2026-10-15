@@ -24,9 +24,9 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 - `feat!: …` or a `BREAKING CHANGE:` footer publishes a major release.
 - `docs:`, `chore:`, `ci:`, `refactor:`, `test:` and similar do not trigger a release on their own.
 
-Each merge to `main` updates an open release pull request that bumps the version in `package.json`, updates `CHANGELOG.md`, and creates a GitHub release with a `vX.Y.Z` tag once it merges. Auto-merge is enabled on that pull request, so it merges by itself after the required checks pass. The current version appears in the app footer.
+Pull requests are squash-merged, so the PR title becomes the commit on `main`; a check enforces that it is a valid Conventional Commit.
 
-Maintainers: the release workflow needs a `RELEASE_PLEASE_TOKEN` repository secret (a fine-grained token with Contents and Pull requests read/write access), "Allow auto-merge" enabled in the repository settings, and the Quality checks jobs marked as required status checks on `main`.
+Each merge to `main` opens or updates a release pull request that bumps the version in `package.json`, updates `CHANGELOG.md`, and tags a `vX.Y.Z` GitHub release. The release workflow runs the quality checks against that pull request itself and merges it once they pass. The current version appears in the app footer.
 
 ## Security and privacy
 
