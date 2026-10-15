@@ -144,7 +144,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
             </button>
             <div className="auth-divider"><span>or use email</span></div>
           </>}
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={handleSubmit} aria-busy={pending}>
             {isSignUp && (
               <label>Full name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required maxLength={80} /></label>
             )}
@@ -309,12 +309,12 @@ function WorkspaceScreen({ user }: { user: User }) {
           <section className="onboarding-wrap">
             <div className="onboarding-heading"><p className="section-kicker">ONE LAST STEP</p><h1>Set up your workspace</h1><p>Hi {user.displayName?.split(' ')[0] ?? 'there'} — create a new workspace or join one you’ve been invited to.</p></div>
             <div className="onboarding-grid">
-              <form className="onboarding-card" onSubmit={handleCreate}>
+              <form className="onboarding-card" onSubmit={handleCreate} aria-busy={pending}>
                 <span className="card-icon">✳</span><h2>Create a workspace</h2><p>You’ll be the owner and can invite people later.</p>
                 <label>Workspace name<input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} required maxLength={80} placeholder="e.g. Acme Studio" /></label>
                 <button className="primary-button" type="submit" disabled={pending}>Create workspace</button>
               </form>
-              <form className="onboarding-card" onSubmit={handleAcceptInvite}>
+              <form className="onboarding-card" onSubmit={handleAcceptInvite} aria-busy={pending}>
                 <span className="card-icon invite-icon">↗</span><h2>Join a workspace</h2><p>Paste the invitation link sent to your email.</p>
                 <label>Invitation link<input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
                 <button className="secondary-button" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</button>
@@ -421,7 +421,7 @@ function TimerPanel({ user, workspaceId, catalog }: { user: User; workspaceId: s
           <button className="stop-button" type="button" onClick={() => void handleStop(runningEntry.id)} disabled={pending}>{pending ? 'Saving…' : 'Stop timer'}</button>
         </div>
       ) : (
-        <form className="timer-form" onSubmit={handleStart}>
+        <form className="timer-form" onSubmit={handleStart} aria-busy={pending}>
           <label className="timer-description">What are you working on?<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} placeholder="e.g. Prepare project proposal" required /></label>
           <div className="timer-associations">
             <label>Client<select value={clientName} onChange={(event) => { setClientName(event.target.value); setProjectName(''); setTaskName('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
@@ -612,7 +612,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
       </div>
       {error && <p className="form-message is-error" role="alert">{error}</p>}
       {notice && <p className="form-message is-success" role="status">{notice}</p>}
-      <form className="entry-editor" onSubmit={handleSave}>
+      <form className="entry-editor" onSubmit={handleSave} aria-busy={pending}>
         <h3>{editId ? 'Edit entry' : `Add time · ${new Date(`${editorDay}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}</h3>
         <label>Description<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} required /></label>
         <div className="entry-editor-times">
