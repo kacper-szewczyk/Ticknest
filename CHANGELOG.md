@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.1.0...ticknest-v1.2.0) (2026-10-17)
+
+
+### Features
+
+* add fixed sidebar navigation ([#56](https://github.com/kacper-szewczyk/Ticknest/issues/56)) ([42756ff](https://github.com/kacper-szewczyk/Ticknest/commit/42756ff51fdb4d481dd3180feaaca3f1470a588a))
+
 ## [1.1.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.0.0...ticknest-v1.1.0) (2026-10-17)
 
 
