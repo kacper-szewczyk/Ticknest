@@ -11,6 +11,8 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import {
@@ -45,9 +47,11 @@ import { subscribeToCatalog, type Catalog } from './lib/catalog'
 import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
+import { TimesheetDashboard } from './TimesheetDashboard'
 import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
+type WorkspaceView = 'workspace' | 'dashboard'
 
 function readableError(error: unknown): string {
   if (!(error instanceof Error)) return 'Something went wrong. Please try again.'
@@ -199,6 +203,7 @@ function WorkspaceScreen({ user }: { user: User }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [catalog, setCatalog] = useState<Catalog>({ clients: [], projects: [], tasks: [] })
+  const [view, setView] = useState<WorkspaceView>('workspace')
 
   useEffect(() => {
     if (!activeId) return
@@ -296,11 +301,21 @@ function WorkspaceScreen({ user }: { user: User }) {
           <Button size="small" onClick={() => void signOutUser()}>Sign out</Button>
         </Stack>
       </Box>
-      <Box component="main" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'min(960px, calc(100% - 64px))' }, minHeight: 'calc(100vh - 78px)', mx: 'auto', pt: { xs: 3.75, md: 6 }, pb: 3.75 }}>
+      {activeWorkspace && (
+        <Box component="nav" aria-label="Workspace views" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'min(1120px, calc(100% - 64px))' }, mx: 'auto', borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={view} onChange={(_, value: WorkspaceView) => setView(value)} sx={{ minHeight: 44, '& .MuiTab-root': { minHeight: 44, px: 0, mr: 3, minWidth: 0 } }}>
+            <Tab value="workspace" label="Workspace" />
+            <Tab value="dashboard" label="Timesheet dashboard" />
+          </Tabs>
+        </Box>
+      )}
+      <Box component="main" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: activeWorkspace && view === 'dashboard' ? 'min(1120px, calc(100% - 64px))' : 'min(960px, calc(100% - 64px))' }, minHeight: 'calc(100vh - 78px)', mx: 'auto', pt: { xs: 3.75, md: 6 }, pb: 3.75 }}>
         {error && <FormMessage severity="error">{error}</FormMessage>}
         {notice && <FormMessage severity="success">{notice}</FormMessage>}
         {!user.emailVerified && <EmailVerificationNotice user={user} />}
-        {activeWorkspace ? (
+        {activeWorkspace && view === 'dashboard' ? (
+          <TimesheetDashboard key={activeWorkspace.id} user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />
+        ) : activeWorkspace ? (
           <>
           <Paper component="section" variant="outlined" sx={{ maxWidth: 750, mx: 'auto', mt: { xs: 3.5, md: 11 }, p: 'clamp(28px, 6vw, 58px)', borderRadius: '22px', bgcolor: 'rgba(255,255,255,.82)', boxShadow: '0 22px 70px rgba(47, 64, 49, .06)' }}>
             <Typography variant="overline" component="p">YOUR WORKSPACE</Typography>
