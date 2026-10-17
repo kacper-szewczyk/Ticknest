@@ -1,4 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import Avatar from '@mui/material/Avatar'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import {
   createWorkspaceInvitation,
   removeWorkspaceMember,
@@ -8,6 +16,7 @@ import {
   type WorkspaceInvitation,
   type WorkspaceMember,
 } from './lib/workspaces'
+import { EmptyText, FormMessage, ListRow, SectionCard, SectionHeading } from './ui'
 
 export function MemberManagementPanel({ workspaceId, currentUserId }: { workspaceId: string; currentUserId: string }) {
   const [members, setMembers] = useState<WorkspaceMember[]>([])
@@ -64,18 +73,34 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     catch { setNotice('Select and copy the invitation link below.') }
   }
 
-  return <section className="members-card" aria-labelledby="members-heading">
-    <div className="members-heading"><div><p className="section-kicker">TEAM ACCESS</p><h2 id="members-heading">Workspace members</h2></div><span>{members.filter((member) => member.status !== 'removed').length} {members.filter((member) => member.status !== 'removed').length === 1 ? 'member' : 'members'}</span></div>
-    {error && <p className="form-message is-error" role="alert">{error}</p>}
-    {notice && <p className="form-message is-success" role="status">{notice}</p>}
-    <form className="invite-form" onSubmit={(event) => void invite(event)} aria-busy={pending}>
-      <label>Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required maxLength={254} placeholder="teammate@example.com" /></label>
-      <button className="primary-button" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create invitation'}</button>
-    </form>
-    <p className="invite-help">We’ll create a secure, single-use link. Copy it and send it to the invited email address.</p>
-    {invitationUrl && <div className="invite-link-box"><label>Invitation link<input value={invitationUrl} readOnly onFocus={(event) => event.currentTarget.select()} /></label><button className="secondary-button" type="button" onClick={() => void copyLink()}>Copy link</button></div>}
-    {invitations.length > 0 && <div className="member-group"><h3>Pending invitations</h3>{invitations.map((invitation) => <article className="member-row" key={invitation.id}><div><strong>{invitation.email}</strong><span>Expires {invitation.expiresAt.toDate().toLocaleDateString()}</span></div><button className="text-button danger-link" type="button" onClick={() => void revoke(invitation)} disabled={pending}>Revoke</button></article>)}</div>}
-    <div className="member-group"><h3>People with access</h3>{members.filter((member) => member.status !== 'removed').map((member) => <article className="member-row" key={member.uid}><div className="member-identity"><span className="member-avatar" aria-hidden="true">{(member.displayName || member.email || '?').slice(0, 1).toUpperCase()}</span><span><strong>{member.displayName || member.email}</strong><span>{member.email} · {member.role === 'owner' ? 'Owner' : 'Member'}</span></span></div>{member.role === 'member' && member.uid !== currentUserId && <button className="text-button danger-link" type="button" onClick={() => void remove(member)} disabled={pending}>Remove</button>}</article>)}{members.filter((member) => member.status !== 'removed').length === 0 && <p className="empty-entries">Loading members…</p>}</div>
-    {members.some((member) => member.status === 'removed') && <div className="member-group"><h3>Past members</h3>{members.filter((member) => member.status === 'removed').map((member) => <article className="member-row is-removed" key={member.uid}><div><strong>{member.displayName || member.email}</strong><span>{member.email} · Removed</span></div></article>)}</div>}
-  </section>
+  const activeMembers = members.filter((member) => member.status !== 'removed')
+  const pastMembers = members.filter((member) => member.status === 'removed')
+
+  return <SectionCard labelledBy="members-heading">
+    <SectionHeading id="members-heading" kicker="TEAM ACCESS" title="Workspace members" action={<Chip label={`${activeMembers.length} ${activeMembers.length === 1 ? 'member' : 'members'}`} />} />
+    {error && <FormMessage severity="error">{error}</FormMessage>}
+    {notice && <FormMessage severity="success">{notice}</FormMessage>}
+    <Stack component="form" direction={{ xs: 'column', sm: 'row' }} spacing={1.25} onSubmit={(event) => void invite(event)} aria-busy={pending} sx={{ mt: 2.5, alignItems: { sm: 'flex-start' } }}>
+      <TextField label="Email address" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required placeholder="teammate@example.com" helperText="We’ll create a secure, single-use link. Copy it and send it to the invited email address." slotProps={{ htmlInput: { maxLength: 254 } }} />
+      <Button variant="contained" type="submit" disabled={pending} sx={{ flex: '0 0 auto' }}>{pending ? 'Creating…' : 'Create invitation'}</Button>
+    </Stack>
+    {invitationUrl && <Paper variant="outlined" sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' }, gap: 1.25, mt: 1.75, p: 1.5, bgcolor: '#f7faf4' }}>
+      <TextField label="Invitation link" value={invitationUrl} onFocus={(event) => event.target.select()} slotProps={{ htmlInput: { readOnly: true } }} />
+      <Button variant="outlined" onClick={() => void copyLink()} sx={{ flex: '0 0 auto' }}>Copy link</Button>
+    </Paper>}
+    {invitations.length > 0 && <Box sx={{ mt: 2.75 }}><Typography variant="h3">Pending invitations</Typography>{invitations.map((invitation) => <ListRow key={invitation.id}>
+      <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0, overflowWrap: 'anywhere' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{invitation.email}</Typography><Typography variant="caption" color="text.secondary">Expires {invitation.expiresAt.toDate().toLocaleDateString()}</Typography></Box>
+      <Button size="small" color="error" onClick={() => void revoke(invitation)} disabled={pending}>Revoke</Button>
+    </ListRow>)}</Box>}
+    <Box sx={{ mt: 2.75 }}><Typography variant="h3">People with access</Typography>{activeMembers.map((member) => <ListRow key={member.uid}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
+        <Avatar aria-hidden="true" sx={{ width: 32, height: 32, bgcolor: '#eaf1e7', color: 'primary.light', fontSize: 13, fontWeight: 700 }}>{(member.displayName || member.email || '?').slice(0, 1).toUpperCase()}</Avatar>
+        <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{member.displayName || member.email}</Typography><Typography variant="caption" color="text.secondary" noWrap>{member.email} · {member.role === 'owner' ? 'Owner' : 'Member'}</Typography></Box>
+      </Stack>
+      {member.role === 'member' && member.uid !== currentUserId && <Button size="small" color="error" onClick={() => void remove(member)} disabled={pending}>Remove</Button>}
+    </ListRow>)}{activeMembers.length === 0 && <EmptyText>Loading members…</EmptyText>}</Box>
+    {pastMembers.length > 0 && <Box sx={{ mt: 2.75 }}><Typography variant="h3">Past members</Typography>{pastMembers.map((member) => <ListRow key={member.uid}>
+      <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0, overflowWrap: 'anywhere' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{member.displayName || member.email}</Typography><Typography variant="caption" color="text.secondary">{member.email} · Removed</Typography></Box>
+    </ListRow>)}</Box>}
+  </SectionCard>
 }

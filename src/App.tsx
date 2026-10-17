@@ -1,5 +1,18 @@
 import { onAuthStateChanged, sendEmailVerification, type User } from 'firebase/auth'
 import { useEffect, useState, type FormEvent } from 'react'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
+import Divider from '@mui/material/Divider'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import {
   acceptWorkspaceInvitation,
   createWorkspace,
@@ -28,11 +41,11 @@ import {
   subscribeToTimeEntries,
   type TimeEntry,
 } from './lib/timeEntries'
-import './App.css'
 import { subscribeToCatalog, type Catalog } from './lib/catalog'
 import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
+import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
 
@@ -65,12 +78,12 @@ function readableError(error: unknown): string {
 
 function Brand() {
   return (
-    <a className="brand" href="/" aria-label="Ticknest home">
-      <span className="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M5 13.5 9.2 18 19 6" /></svg>
-      </span>
+    <Link href="/" aria-label="Ticknest home" underline="none" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.25, color: '#17271f', fontSize: 20, fontWeight: 700, letterSpacing: '-0.8px' }}>
+      <Box component="span" aria-hidden="true" sx={{ display: 'grid', width: 30, height: 30, placeItems: 'center', borderRadius: '10px', bgcolor: '#213b2c' }}>
+        <Box component="svg" viewBox="0 0 24 24" fill="none" sx={{ width: 19, stroke: '#e9f2df', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2.5 }}><path d="M5 13.5 9.2 18 19 6" /></Box>
+      </Box>
       <span>ticknest</span>
-    </a>
+    </Link>
   )
 }
 
@@ -123,55 +136,54 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
   const isSignUp = mode === 'sign-up'
 
   return (
-    <main className="auth-layout">
-      <section className="auth-aside">
+    <Box component="main" sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(300px, .92fr) 1.08fr' }, bgcolor: 'background.paper' }}>
+      <Box component="section" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: { md: '100vh' }, px: { xs: 3, md: 'clamp(32px, 7vw, 96px)' }, py: { xs: 3, md: 4.75 }, overflow: 'hidden', background: 'radial-gradient(ellipse at 20% 15%, rgba(213, 231, 213, .78), transparent 45%), #f3f5ef' }}>
         <Brand />
-        <div className="auth-promise">
-          <span className="eyebrow"><span className="eyebrow-line" /> YOUR TIME, YOUR INFRASTRUCTURE</span>
-          <h1>Make room for <span>the work that matters.</span></h1>
-          <p>Track time with a team workspace that lives in your own Firebase project.</p>
-        </div>
-        <span className="aside-footnote">Open source · Self-hosted · No seat limits</span>
-      </section>
-      <section className="auth-panel" aria-labelledby="auth-heading">
-        <div className="auth-form-wrap">
-          <p className="section-kicker">{isReset ? 'ACCOUNT RECOVERY' : 'WELCOME TO TICKNEST'}</p>
-          <h2 id="auth-heading">{isReset ? 'Reset your password' : isSignUp ? 'Create your account' : 'Welcome back'}</h2>
-          <p className="auth-subtitle">
+        <Box sx={{ maxWidth: 450, my: { xs: 5, md: 'auto' }, py: { md: 9 } }}>
+          <Typography variant="overline" component="p">YOUR TIME, YOUR INFRASTRUCTURE</Typography>
+          <Typography variant="h1" sx={{ mt: 3, mb: 2.5, fontSize: 'clamp(43px, 5vw, 74px)' }}>Make room for <Box component="span" sx={{ color: 'primary.light' }}>the work that matters.</Box></Typography>
+          <Typography color="text.secondary" sx={{ maxWidth: 360, lineHeight: 1.7 }}>Track time with a team workspace that lives in your own Firebase project.</Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>Open source · Self-hosted · No seat limits</Typography>
+      </Box>
+      <Box component="section" aria-labelledby="auth-heading" sx={{ display: 'grid', placeItems: 'center', px: { xs: 3, md: 4 }, pt: { xs: 5.5, md: 6.5 }, pb: { xs: 8, md: 6.5 } }}>
+        <Box sx={{ width: 'min(390px, 100%)' }}>
+          <Typography variant="overline" component="p">{isReset ? 'ACCOUNT RECOVERY' : 'WELCOME TO TICKNEST'}</Typography>
+          <Typography variant="h2" id="auth-heading" sx={{ fontSize: 34, mt: 1, mb: 1 }}>{isReset ? 'Reset your password' : isSignUp ? 'Create your account' : 'Welcome back'}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3.5, lineHeight: 1.6 }}>
             {isReset ? 'We’ll email you a secure link to choose a new password.' : isSignUp ? 'Start a workspace for your team in just a moment.' : 'Sign in to continue to your workspace.'}
-          </p>
+          </Typography>
           {mode !== 'reset' && <>
-            <button className="google-button" type="button" onClick={() => void handleGoogleSignIn()} disabled={pending}>
-              <span className="google-mark" aria-hidden="true">G</span>
+            <Button variant="outlined" color="inherit" fullWidth onClick={() => void handleGoogleSignIn()} disabled={pending} startIcon={<Box component="span" aria-hidden="true" sx={{ display: 'grid', width: 20, height: 20, placeItems: 'center', border: 1, borderColor: 'divider', borderRadius: '50%', color: '#4285f4', fontSize: 13, fontWeight: 750 }}>G</Box>}>
               {pending ? 'Connecting…' : 'Continue with Google'}
-            </button>
-            <div className="auth-divider"><span>or use email</span></div>
+            </Button>
+            <Divider sx={{ my: 2.25, color: 'text.secondary', fontSize: 11 }}>or use email</Divider>
           </>}
-          <form className="auth-form" onSubmit={handleSubmit} aria-busy={pending}>
+          <Stack component="form" spacing={2} onSubmit={handleSubmit} aria-busy={pending}>
             {isSignUp && (
-              <label>Full name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required maxLength={80} /></label>
+              <TextField label="Full name" size="medium" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required slotProps={{ htmlInput: { maxLength: 80 } }} />
             )}
-            <label>Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+            <TextField label="Email address" size="medium" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
             {!isReset && (
-              <label>Password<input type="password" autoComplete={isSignUp ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} /></label>
+              <TextField label="Password" size="medium" type="password" autoComplete={isSignUp ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} required slotProps={{ htmlInput: { minLength: 6 } }} />
             )}
-            {error && <p className="form-message is-error" role="alert">{error}</p>}
-            {notice && <p className="form-message is-success" role="status">{notice}</p>}
-            <button className="primary-button" type="submit" disabled={pending}>
+            {error && <FormMessage severity="error">{error}</FormMessage>}
+            {notice && <FormMessage severity="success">{notice}</FormMessage>}
+            <Button variant="contained" size="large" type="submit" disabled={pending}>
               {pending ? 'Please wait…' : isReset ? 'Send reset link' : isSignUp ? 'Create account' : 'Sign in'}
-            </button>
-          </form>
-          <div className="auth-links">
-            {mode === 'sign-in' && <button className="text-button" onClick={() => { setError(''); setMode('reset') }}>Forgot password?</button>}
+            </Button>
+          </Stack>
+          <Box sx={{ mt: 2.75, color: 'text.secondary', fontSize: 13, textAlign: 'center' }}>
+            {mode === 'sign-in' && <Button size="small" onClick={() => { setError(''); setMode('reset') }}>Forgot password?</Button>}
             {isReset ? (
-              <p>Remembered it? <button className="text-button" onClick={() => { setError(''); setMode('sign-in') }}>Sign in</button></p>
+              <p>Remembered it? <Button size="small" onClick={() => { setError(''); setMode('sign-in') }}>Sign in</Button></p>
             ) : (
-              <p>{isSignUp ? 'Already have an account?' : 'New to Ticknest?'} <button className="text-button" onClick={() => { setError(''); setMode(isSignUp ? 'sign-in' : 'sign-up') }}>{isSignUp ? 'Sign in' : 'Create an account'}</button></p>
+              <p>{isSignUp ? 'Already have an account?' : 'New to Ticknest?'} <Button size="small" onClick={() => { setError(''); setMode(isSignUp ? 'sign-in' : 'sign-up') }}>{isSignUp ? 'Sign in' : 'Create an account'}</Button></p>
             )}
-          </div>
-        </div>
-      </section>
-    </main>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   )
 }
 
@@ -276,61 +288,68 @@ function WorkspaceScreen({ user }: { user: User }) {
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId)
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
+    <Box sx={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 12% 0%, rgba(217, 231, 221, .48), transparent 32rem), #f8f8f5' }}>
+      <Box component="header" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'min(1120px, calc(100% - 64px))' }, height: { xs: 68, sm: 78 }, mx: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider' }}>
         <Brand />
-        <div className="topbar-meta">
-          {workspaces.length > 0 && <label className="workspace-select-label"><span className="visually-hidden">Active workspace</span><select aria-label="Active workspace" value={activeId ?? ''} onChange={(event) => { setActiveId(event.target.value); saveActiveWorkspaceId(user.uid, event.target.value) }}>{workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select></label>}
-          <button className="text-button" onClick={() => void signOutUser()}>Sign out</button>
-        </div>
-      </header>
-      <main className="workspace-main">
-        {error && <p className="form-message is-error" role="alert">{error}</p>}
-        {notice && <p className="form-message is-success" role="status">{notice}</p>}
+        <Stack direction="row" spacing={{ xs: 1, sm: 2 }} sx={{ alignItems: 'center' }}>
+          {workspaces.length > 0 && <SelectField value={activeId ?? ''} onChange={(event) => { setActiveId(event.target.value); saveActiveWorkspaceId(user.uid, event.target.value) }} fullWidth={false} slotProps={{ htmlInput: { 'aria-label': 'Active workspace' } }} sx={{ maxWidth: { xs: 145, sm: 220 }, bgcolor: 'background.paper' }}>{workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</SelectField>}
+          <Button size="small" onClick={() => void signOutUser()}>Sign out</Button>
+        </Stack>
+      </Box>
+      <Box component="main" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'min(960px, calc(100% - 64px))' }, minHeight: 'calc(100vh - 78px)', mx: 'auto', pt: { xs: 3.75, md: 6 }, pb: 3.75 }}>
+        {error && <FormMessage severity="error">{error}</FormMessage>}
+        {notice && <FormMessage severity="success">{notice}</FormMessage>}
         {!user.emailVerified && <EmailVerificationNotice user={user} />}
         {activeWorkspace ? (
           <>
-          <section className="welcome-card">
-            <p className="section-kicker">YOUR WORKSPACE</p>
-            <h1>{activeWorkspace.name}</h1>
-            <p>Signed in as {user.email}. Your workspace is ready for the timer workflow.</p>
-            <div className="workspace-badge"><span className="status-dot" /> {activeWorkspace.role === 'owner' ? 'Workspace owner' : 'Workspace member'}</div>
-            {workspaces.length > 1 && <p className="switch-hint">Use the workspace menu above to switch between your workspaces.</p>}
-          </section>
+          <Paper component="section" variant="outlined" sx={{ maxWidth: 750, mx: 'auto', mt: { xs: 3.5, md: 11 }, p: 'clamp(28px, 6vw, 58px)', borderRadius: '22px', bgcolor: 'rgba(255,255,255,.82)', boxShadow: '0 22px 70px rgba(47, 64, 49, .06)' }}>
+            <Typography variant="overline" component="p">YOUR WORKSPACE</Typography>
+            <Typography variant="h1" sx={{ my: 1.5, overflowWrap: 'anywhere' }}>{activeWorkspace.name}</Typography>
+            <Typography color="text.secondary" sx={{ lineHeight: 1.6 }}>Signed in as {user.email}. Your workspace is ready for the timer workflow.</Typography>
+            <Chip variant="outlined" color="success" icon={<Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#7fae72', boxShadow: '0 0 0 3px rgba(127,174,114,.13)' }} />} label={activeWorkspace.role === 'owner' ? 'Workspace owner' : 'Workspace member'} sx={{ mt: 2.25, pl: 0.75 }} />
+            {workspaces.length > 1 && <Typography variant="body2" color="text.secondary" sx={{ mt: 3.5 }}>Use the workspace menu above to switch between your workspaces.</Typography>}
+          </Paper>
           <TimerPanel user={user} workspaceId={activeWorkspace.id} catalog={catalog} />
           {activeWorkspace.role === 'owner' && <CatalogPanel workspaceId={activeWorkspace.id} />}
           {activeWorkspace.role === 'owner' && <MemberManagementPanel workspaceId={activeWorkspace.id} currentUserId={user.uid} />}
           <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />
           <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} catalog={catalog} />
-          <form className="join-another-card" onSubmit={handleAcceptInvite}>
-            <div><h2>Join another workspace</h2><p>Paste an invitation link sent to your email.</p></div>
-                <label><span className="visually-hidden">Invitation link</span><input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
-            <button className="secondary-button" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</button>
-          </form>
+          <Paper component="form" variant="outlined" onSubmit={handleAcceptInvite} sx={{ display: 'grid', gap: 1.5, maxWidth: 750, mx: 'auto', mt: 2.25, p: { xs: 2.25, sm: 4 }, borderRadius: '18px' }}>
+            <div><Typography variant="h2" sx={{ fontSize: 22 }}>Join another workspace</Typography><Typography variant="body2" color="text.secondary">Paste an invitation link sent to your email.</Typography></div>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+              <TextField type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" slotProps={{ htmlInput: { 'aria-label': 'Invitation link' } }} />
+              <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified} sx={{ flex: '0 0 auto' }}>Accept invitation</Button>
+            </Stack>
+          </Paper>
           </>
         ) : (
-          <section className="onboarding-wrap">
-            <div className="onboarding-heading"><p className="section-kicker">ONE LAST STEP</p><h1>Set up your workspace</h1><p>Hi {user.displayName?.split(' ')[0] ?? 'there'} — create a new workspace or join one you’ve been invited to.</p></div>
-            <div className="onboarding-grid">
-              <form className="onboarding-card" onSubmit={handleCreate} aria-busy={pending}>
-                <span className="card-icon">✳</span><h2>Create a workspace</h2><p>You’ll be the owner and can invite people later.</p>
-                <label>Workspace name<input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} required maxLength={80} placeholder="e.g. Acme Studio" /></label>
-                <button className="primary-button" type="submit" disabled={pending}>Create workspace</button>
-              </form>
-              <form className="onboarding-card" onSubmit={handleAcceptInvite} aria-busy={pending}>
-                <span className="card-icon invite-icon">↗</span><h2>Join a workspace</h2><p>Paste the invitation link sent to your email.</p>
-                <label>Invitation link<input type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" /></label>
-                <button className="secondary-button" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</button>
-                {!user.emailVerified && <small className="field-help">Verify your email before accepting an invitation.</small>}
-              </form>
-            </div>
-          </section>
+          <Box component="section" sx={{ maxWidth: 860, mx: 'auto', mt: 3 }}>
+            <Box sx={{ mb: 3.75 }}><Typography variant="overline" component="p">ONE LAST STEP</Typography><Typography variant="h1" sx={{ my: 1.5 }}>Set up your workspace</Typography><Typography color="text.secondary" sx={{ maxWidth: 530, lineHeight: 1.6 }}>Hi {user.displayName?.split(' ')[0] ?? 'there'} — create a new workspace or join one you’ve been invited to.</Typography></Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <Paper component="form" variant="outlined" onSubmit={handleCreate} aria-busy={pending} sx={onboardingCardSx}>
+                <Box component="span" aria-hidden="true" sx={{ ...cardIconSx, bgcolor: '#eaf1e7', color: '#47744d' }}>✳</Box><Typography variant="h2" sx={{ fontSize: 23 }}>Create a workspace</Typography><Typography variant="body2" color="text.secondary">You’ll be the owner and can invite people later.</Typography>
+                <TextField label="Workspace name" value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} required placeholder="e.g. Acme Studio" slotProps={{ htmlInput: { maxLength: 80 } }} />
+                <Button variant="contained" type="submit" disabled={pending}>Create workspace</Button>
+              </Paper>
+              <Paper component="form" variant="outlined" onSubmit={handleAcceptInvite} aria-busy={pending} sx={onboardingCardSx}>
+                <Box component="span" aria-hidden="true" sx={{ ...cardIconSx, bgcolor: '#f1f0e7', color: '#8b7850' }}>↗</Box><Typography variant="h2" sx={{ fontSize: 23 }}>Join a workspace</Typography><Typography variant="body2" color="text.secondary">Paste the invitation link sent to your email.</Typography>
+                <TextField label="Invitation link" type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" helperText={user.emailVerified ? undefined : 'Verify your email before accepting an invitation.'} />
+                <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</Button>
+              </Paper>
+            </Box>
+          </Box>
         )}
-        <div className="account-actions"><button className="text-button danger-link" onClick={() => void handleDeleteAccount()} disabled={pending}>Delete account</button><span>Workspace data stays in the Firebase project selected by its owner.</span></div>
-      </main>
-    </div>
+        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 2 }, mt: 6, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button size="small" color="error" onClick={() => void handleDeleteAccount()} disabled={pending}>Delete account</Button>
+          <Typography variant="caption" color="text.secondary">Workspace data stays in the Firebase project selected by its owner.</Typography>
+        </Stack>
+      </Box>
+    </Box>
   )
 }
+
+const onboardingCardSx = { display: 'grid', alignContent: 'start', gap: 2, p: 3, borderRadius: '16px', bgcolor: 'rgba(255,255,255,.8)' }
+const cardIconSx = { display: 'grid', width: 34, height: 34, placeItems: 'center', borderRadius: '11px', fontSize: 17 }
 
 function formatElapsed(seconds: number): string {
   const hours = Math.floor(seconds / 3600).toString().padStart(2, '0')
@@ -413,34 +432,41 @@ function TimerPanel({ user, workspaceId, catalog }: { user: User; workspaceId: s
   const elapsed = runningEntry?.startAt ? Math.max(0, Math.floor(now / 1000 - runningEntry.startAt.toMillis() / 1000)) : 0
 
   return (
-    <section className="timer-card" aria-labelledby="timer-heading">
-      <div className="timer-heading"><div><p className="section-kicker">TIME TRACKING</p><h2 id="timer-heading">Timer</h2></div>
-        {runningEntry && <span className="timer-clock" aria-label={`Elapsed time ${formatElapsed(elapsed)}`}>{formatElapsed(elapsed)}</span>}
-      </div>
-      {error && <p className="form-message is-error" role="alert">{error}</p>}
+    <SectionCard labelledBy="timer-heading">
+      <SectionHeading id="timer-heading" kicker="TIME TRACKING" title="Timer" action={runningEntry && <Typography component="span" aria-label={`Elapsed time ${formatElapsed(elapsed)}`} sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: 'clamp(27px, 5vw, 38px)', fontWeight: 600, letterSpacing: 1 }}>{formatElapsed(elapsed)}</Typography>} />
+      {error && <FormMessage severity="error">{error}</FormMessage>}
       {runningEntry ? (
-        <div className="running-timer">
-          <div><strong>{runningEntry.description || 'Untitled entry'}</strong><p>{[runningEntry.clientName, runningEntry.projectName, runningEntry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}</p>{runningEntry.billable && <span className="billable-tag">Billable</span>}</div>
-          <button className="stop-button" type="button" onClick={() => void handleStop(runningEntry.id)} disabled={pending}>{pending ? 'Saving…' : 'Stop timer'}</button>
-        </div>
+        <Paper variant="outlined" sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 2, mt: 2.75, p: 2, borderRadius: '12px', borderColor: '#dce9d8', bgcolor: '#f7faf4' }}>
+          <Box sx={{ display: 'grid', gap: 0.75, justifyItems: 'start' }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{runningEntry.description || 'Untitled entry'}</Typography>
+            <Typography variant="caption" color="text.secondary">{[runningEntry.clientName, runningEntry.projectName, runningEntry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}</Typography>
+            {runningEntry.billable && <BillableChip />}
+          </Box>
+          <Button variant="contained" color="error" onClick={() => void handleStop(runningEntry.id)} disabled={pending}>{pending ? 'Saving…' : 'Stop timer'}</Button>
+        </Paper>
       ) : (
-        <form className="timer-form" onSubmit={handleStart} aria-busy={pending}>
-          <label className="timer-description">What are you working on?<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} placeholder="e.g. Prepare project proposal" required /></label>
-          <div className="timer-associations">
-            <label>Client<select value={clientName} onChange={(event) => { setClientName(event.target.value); setProjectName(''); setTaskName('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
-            <label>Project<select value={projectName} onChange={(event) => { setProjectName(event.target.value); setTaskName('') }}><option value="">No project</option>{catalog.projects.filter((item) => !item.archived && (!clientName || item.clientId === clientName) && (!item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
-            <label>Task<select value={taskName} onChange={(event) => setTaskName(event.target.value)}><option value="">No task</option>{catalog.tasks.filter((item) => !item.archived && (!projectName || item.projectId === projectName) && catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived)))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
-          </div>
-          <div className="timer-actions"><label className="billable-control"><input type="checkbox" checked={billable} onChange={(event) => setBillable(event.target.checked)} /> Billable</label><button className="primary-button" type="submit" disabled={pending}>{pending ? 'Starting…' : 'Start timer'}</button></div>
-        </form>
+        <Stack component="form" spacing={2} onSubmit={handleStart} aria-busy={pending} sx={{ mt: 2.75 }}>
+          <TextField label="What are you working on?" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="e.g. Prepare project proposal" required slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <Box sx={associationsSx}>
+            <SelectField label="Client" value={clientName} onChange={(event) => { setClientName(event.target.value); setProjectName(''); setTaskName('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
+            <SelectField label="Project" value={projectName} onChange={(event) => { setProjectName(event.target.value); setTaskName('') }}><option value="">No project</option>{catalog.projects.filter((item) => !item.archived && (!clientName || item.clientId === clientName) && (!item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
+            <SelectField label="Task" value={taskName} onChange={(event) => setTaskName(event.target.value)}><option value="">No task</option>{catalog.tasks.filter((item) => !item.archived && (!projectName || item.projectId === projectName) && catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived)))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
+          </Box>
+          <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <FormControlLabel control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />} label="Billable" sx={{ mr: 'auto' }} />
+            <Button variant="contained" type="submit" disabled={pending}>{pending ? 'Starting…' : 'Start timer'}</Button>
+          </Stack>
+        </Stack>
       )}
-      {recentEntries.length > 0 && <div className="recent-entries"><h3>Recent entries</h3>{recentEntries.map((entry) => {
+      {recentEntries.length > 0 && <Box sx={{ mt: 3, pt: 2.25, borderTop: 1, borderColor: 'divider' }}><Typography variant="h3" sx={{ mb: 1 }}>Recent entries</Typography>{recentEntries.map((entry) => {
         const duration = entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : 0
-        return <article className="recent-entry" key={entry.id}><div><strong>{entry.description || 'Untitled entry'}</strong><span>{entry.startAt.toDate().toLocaleString()} · {formatElapsed(duration)}</span></div><button className="text-button" type="button" onClick={() => void handleContinue(entry)} disabled={pending}>Continue</button></article>
-      })}</div>}
-    </section>
+        return <ListRow key={entry.id}><Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{entry.description || 'Untitled entry'}</Typography><Typography variant="caption" color="text.secondary">{entry.startAt.toDate().toLocaleString()} · {formatElapsed(duration)}</Typography></Box><Button size="small" onClick={() => void handleContinue(entry)} disabled={pending}>Continue</Button></ListRow>
+      })}</Box>}
+    </SectionCard>
   )
 }
+
+const associationsSx = { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }
 
 function localDayString(date: Date): string {
   const year = date.getFullYear()
@@ -604,62 +630,72 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
   const weekTotal = entries.reduce((total, entry) => total + secondsFor(entry), 0)
 
   return (
-    <section className="entries-card" aria-labelledby="entries-heading">
-      <div className="entries-heading"><div><p className="section-kicker">YOUR TIME</p><h2 id="entries-heading">Timesheet</h2></div>
-        <div className="week-navigation" aria-label="Timesheet week navigation">
-          <button className="secondary-button" type="button" aria-label="Previous week" onClick={() => changeWeek(shiftDayString(weekStart, -7))}>←</button>
-          <label className="week-picker"><span>{formatWeekLabel(weekStart)}</span><input aria-label="Choose a week" type="date" value={weekStart} onChange={(event) => changeWeek(event.target.value)} /></label>
-          <button className="secondary-button" type="button" aria-label="Next week" onClick={() => changeWeek(shiftDayString(weekStart, 7))}>→</button>
-          <button className="text-button" type="button" onClick={() => changeWeek(today)}>Today</button>
-        </div>
-      </div>
-      {error && <p className="form-message is-error" role="alert">{error}</p>}
-      {notice && <p className="form-message is-success" role="status">{notice}</p>}
-      <form className="entry-editor" onSubmit={handleSave} aria-busy={pending}>
-        <h3>{editId ? 'Edit entry' : `Add time · ${new Date(`${editorDay}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}</h3>
-        <label>Description<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} required /></label>
-        <div className="entry-editor-times">
-          <label>Start<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} required /></label>
-          <label>End<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required /></label>
-        </div>
-        <div className="timer-associations">
-          <label>Client<select value={clientId} onChange={(event) => { setClientId(event.target.value); setClientName(''); setProjectName(''); setTaskName(''); setProjectId(''); setTaskId('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived || item.id === clientId).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</select></label>
-          <label>Project<select value={projectId} onChange={(event) => { setProjectId(event.target.value); setProjectName(''); setTaskName(''); setTaskId('') }}><option value="">No project</option>{catalog.projects.filter((item) => (!item.archived || item.id === projectId) && (!clientId || item.clientId === clientId) && (item.id === projectId || !item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</select></label>
-          <label>Task<select value={taskId} onChange={(event) => { setTaskId(event.target.value); setTaskName('') }}><option value="">No task</option>{catalog.tasks.filter((item) => (!item.archived || item.id === taskId) && (!projectId || item.projectId === projectId) && (item.id === taskId || catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived))))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</select></label>
-        </div>
-        <div className="timer-actions"><label className="billable-control"><input type="checkbox" checked={billable} onChange={(event) => setBillable(event.target.checked)} /> Billable</label>
-          {editId && <button className="secondary-button" type="button" onClick={() => clearForm()} disabled={pending}>Cancel</button>}
-          <button className="primary-button" type="submit" disabled={pending}>{pending ? 'Saving…' : editId ? 'Save changes' : 'Add entry'}</button>
-        </div>
-      </form>
-      <div className="timesheet-summary" aria-live="polite"><div><span>Week total</span><strong>{formatElapsed(weekTotal)}</strong></div><span>{entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week</span></div>
-      <div className="timesheet-days" aria-live="polite">
+    <SectionCard labelledBy="entries-heading">
+      <SectionHeading id="entries-heading" kicker="YOUR TIME" title="Timesheet" action={
+        <Stack direction="row" aria-label="Timesheet week navigation" spacing={1} sx={{ alignItems: 'center', width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}>
+          <Button variant="outlined" aria-label="Previous week" onClick={() => changeWeek(shiftDayString(weekStart, -7))} sx={{ minWidth: 44, px: 1 }}>←</Button>
+          <Stack sx={{ alignItems: 'center', flex: { xs: 1, sm: 'none' } }}>
+            <Typography variant="body2" sx={{ fontWeight: 650 }}>{formatWeekLabel(weekStart)}</Typography>
+            <TextField variant="standard" type="date" value={weekStart} onChange={(event) => changeWeek(event.target.value)} fullWidth={false} slotProps={{ htmlInput: { 'aria-label': 'Choose a week', style: { fontSize: 12, padding: 0 } }, input: { disableUnderline: true } }} sx={{ width: 130 }} />
+          </Stack>
+          <Button variant="outlined" aria-label="Next week" onClick={() => changeWeek(shiftDayString(weekStart, 7))} sx={{ minWidth: 44, px: 1 }}>→</Button>
+          <Button size="small" onClick={() => changeWeek(today)}>Today</Button>
+        </Stack>
+      } />
+      {error && <FormMessage severity="error">{error}</FormMessage>}
+      {notice && <FormMessage severity="success">{notice}</FormMessage>}
+      <Paper component="form" variant="outlined" onSubmit={handleSave} aria-busy={pending} sx={{ display: 'grid', gap: 2, mt: 3, p: 2.25, borderRadius: '12px', bgcolor: '#fbfcfa' }}>
+        <Typography variant="h3">{editId ? 'Edit entry' : `Add time · ${new Date(`${editorDay}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}</Typography>
+        <TextField label="Description" value={description} onChange={(event) => setDescription(event.target.value)} required slotProps={{ htmlInput: { maxLength: 500 } }} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="Start" type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField label="End" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+        </Box>
+        <Box sx={associationsSx}>
+          <SelectField label="Client" value={clientId} onChange={(event) => { setClientId(event.target.value); setClientName(''); setProjectName(''); setTaskName(''); setProjectId(''); setTaskId('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived || item.id === clientId).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
+          <SelectField label="Project" value={projectId} onChange={(event) => { setProjectId(event.target.value); setProjectName(''); setTaskName(''); setTaskId('') }}><option value="">No project</option>{catalog.projects.filter((item) => (!item.archived || item.id === projectId) && (!clientId || item.clientId === clientId) && (item.id === projectId || !item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
+          <SelectField label="Task" value={taskId} onChange={(event) => { setTaskId(event.target.value); setTaskName('') }}><option value="">No task</option>{catalog.tasks.filter((item) => (!item.archived || item.id === taskId) && (!projectId || item.projectId === projectId) && (item.id === taskId || catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived))))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
+        </Box>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+          <FormControlLabel control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />} label="Billable" sx={{ mr: 'auto' }} />
+          {editId && <Button variant="outlined" onClick={() => clearForm()} disabled={pending}>Cancel</Button>}
+          <Button variant="contained" type="submit" disabled={pending}>{pending ? 'Saving…' : editId ? 'Save changes' : 'Add entry'}</Button>
+        </Stack>
+      </Paper>
+      <Paper variant="outlined" aria-live="polite" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mt: 3, px: 2, py: 1.75, borderRadius: '11px', borderColor: '#dce9d8', bgcolor: '#f7faf4' }}>
+        <Box sx={{ display: 'grid', gap: 0.5 }}><Typography variant="caption" color="text.secondary">Week total</Typography><Typography sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 700 }}>{formatElapsed(weekTotal)}</Typography></Box>
+        <Typography variant="caption" color="text.secondary">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week</Typography>
+      </Paper>
+      <Box aria-live="polite" sx={{ mt: 2.25 }}>
         {weekDays.map((weekDay) => {
           const dayEntries = entries.filter((entry) => localDayString(entry.startAt.toDate()) === weekDay).sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis())
           const dayTotal = dayEntries.reduce((total, entry) => total + secondsFor(entry), 0)
           const date = new Date(`${weekDay}T12:00:00`)
-          return <section className="timesheet-day" key={weekDay} aria-labelledby={`timesheet-${weekDay}`}>
-            <div className="timesheet-day-heading"><h3 id={`timesheet-${weekDay}`}><span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span><time dateTime={weekDay}>{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time></h3><div><strong>{formatElapsed(dayTotal)}</strong><button className="text-button" type="button" onClick={() => { clearForm(weekDay); setError(''); setNotice('') }}>Add entry</button></div></div>
-            {dayEntries.length === 0 ? <p className="empty-entries">No entries</p> : dayEntries.map((entry) => <article className="day-entry" key={entry.id}>
-              <div className="entry-time"><strong>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong><span>{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</span></div>
-              <div className="entry-summary"><strong>{entry.description || 'Untitled entry'}</strong><span>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</span></div>
-              <span className="entry-duration">{formatElapsed(secondsFor(entry))}</span>
-              <div className="entry-actions">{entry.endAt === null && <span className="running-entry-tag">Running</span>}{entry.billable && <span className="billable-tag">Billable</span>}<button className="text-button" type="button" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</button><button className="text-button danger-link" type="button" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</button></div>
-            </article>)}
-          </section>
+          return <Box component="section" key={weekDay} aria-labelledby={`timesheet-${weekDay}`} sx={{ pt: 2, pb: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.75 }}>
+              <Typography variant="h3" id={`timesheet-${weekDay}`} sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}><span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span><Typography component="time" variant="caption" color="text.secondary" dateTime={weekDay}>{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Typography></Typography>
+              <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}><Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatElapsed(dayTotal)}</Typography><Button size="small" onClick={() => { clearForm(weekDay); setError(''); setNotice('') }}>Add entry</Button></Stack>
+            </Stack>
+            {dayEntries.length === 0 ? <EmptyText>No entries</EmptyText> : dayEntries.map((entry) => <Box component="article" key={entry.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '54px minmax(0, 1fr) auto', sm: '78px minmax(0, 1fr) auto auto' }, alignItems: 'center', gap: { xs: 1, sm: 1.75 }, py: 1.5, borderTop: 1, borderColor: '#eef0eb', minWidth: 0 }}>
+              <Box sx={{ display: 'grid', gap: 0.5, fontVariantNumeric: 'tabular-nums' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography><Typography variant="caption" color="text.secondary">{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</Typography></Box>
+              <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{entry.description || 'Untitled entry'}</Typography><Typography variant="caption" color="text.secondary" noWrap>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</Typography></Box>
+              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 650 }}>{formatElapsed(secondsFor(entry))}</Typography>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', sm: 'auto' } }}>{entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}{entry.billable && <BillableChip />}<Button size="small" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</Button><Button size="small" color="error" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</Button></Stack>
+            </Box>)}
+          </Box>
         })}
-      </div>
-    </section>
+      </Box>
+    </SectionCard>
   )
 }
 
 function EmailVerificationNotice({ user }: { user: User }) {
   const [message, setMessage] = useState('Check your inbox for a verification link. Verify your email before accepting an invitation.')
   const [pending, setPending] = useState(false)
-  return <div className="verification-banner" role="status"><span>{message}</span><button className="text-button" disabled={pending} onClick={() => {
+  return <Alert severity="warning" role="status" sx={{ mb: 2.5, alignItems: 'center' }} action={<Button size="small" color="inherit" disabled={pending} onClick={() => {
     setPending(true)
     void sendEmailVerification(user).then(() => setMessage('A new verification link has been sent.')).catch((error: unknown) => setMessage(readableError(error))).finally(() => setPending(false))
-  }}>Resend email</button></div>
+  }}>Resend email</Button>}>{message}</Alert>
 }
 
 function App() {
@@ -671,11 +707,11 @@ function App() {
     setAuthReady(true)
   }), [])
 
-  if (!authReady) return <main className="loading-screen" role="status">Loading your Ticknest account…</main>
+  if (!authReady) return <Stack component="main" role="status" spacing={2} sx={{ minHeight: '100vh', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}><CircularProgress size={28} /><Typography variant="body2">Loading your Ticknest account…</Typography></Stack>
   return (
     <>
       {user ? <WorkspaceScreen user={user} /> : <AuthScreen onAuthenticated={setUser} />}
-      <footer className="app-footer">Ticknest v{__APP_VERSION__}</footer>
+      <Typography component="footer" variant="caption" sx={{ display: 'block', px: 2, py: 1.75, borderTop: 1, borderColor: 'divider', bgcolor: 'background.default', color: 'text.secondary', textAlign: 'center' }}>Ticknest v{__APP_VERSION__}</Typography>
     </>
   )
 }
