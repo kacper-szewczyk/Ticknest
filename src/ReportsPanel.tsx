@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Divider from '@mui/material/Divider'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
 import type { QueryDocumentSnapshot } from 'firebase/firestore'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import type { Catalog } from './lib/catalog'
 import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportPage, loadReportSummary, streamReportCsv, type ReportFilters } from './lib/reports'
 import type { TimeEntry } from './lib/timeEntries'
+import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 
 type GroupBy = 'day' | 'user' | 'client' | 'project' | 'task'
 type CsvWritable = { write(data: string): Promise<void>; close(): Promise<void>; abort(reason?: unknown): Promise<void> }
@@ -192,24 +200,52 @@ export function ReportsPanel({ user, workspaceId, isOwner, catalog }: { user: Us
   }
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'
-  return <section className="reports-card" aria-labelledby="reports-heading">
-    <div className="catalog-heading"><div><p className="section-kicker">WORKSPACE INSIGHTS</p><h2 id="reports-heading">Reports</h2></div><span className="report-timezone">Dates in {timezone}</span></div>
-    <div className="report-filters">
-      <label>From<input type="date" value={filters.startDay} onChange={(event) => updateFilter('startDay', event.target.value)} /></label>
-      <label>Through<input type="date" value={filters.endDay} onChange={(event) => updateFilter('endDay', event.target.value)} /></label>
-      {isOwner && <label>Member<select value={filters.userId} onChange={(event) => updateFilter('userId', event.target.value)}><option value="">Everyone</option>{members.filter((member) => member.status !== 'removed').map((member) => <option key={member.uid} value={member.uid}>{member.displayName || member.email || member.uid}</option>)}</select></label>}
-      <label>Client<select value={filters.clientId} onChange={(event) => updateFilter('clientId', event.target.value)}><option value="">All clients</option>{catalog.clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
-      <label>Project<select value={filters.projectId} onChange={(event) => updateFilter('projectId', event.target.value)}><option value="">All projects</option>{catalog.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-      <label>Task<select value={filters.taskId} onChange={(event) => updateFilter('taskId', event.target.value)}><option value="">All tasks</option>{catalog.tasks.map((task) => <option key={task.id} value={task.id}>{task.name}</option>)}</select></label>
-      <label>Billable<select value={filters.billable} onChange={(event) => updateFilter('billable', event.target.value as ReportFilters['billable'])}><option value="">All entries</option><option value="yes">Billable</option><option value="no">Non-billable</option></select></label>
-    </div>
-    {error && <p className="form-message is-error" role="alert">{error}</p>}
-    <div className="report-totals" aria-live="polite"><div><span>Total tracked</span><strong>{formatDuration(totalSeconds)}</strong></div><div><span>Billable</span><strong>{formatDuration(billableSeconds)}</strong></div><div><span>Entries</span><strong>{summaryEntries.length}{summaryLoading ? '…' : ''}</strong></div></div>
-    <div className="report-summary-heading"><h3>Summary</h3><label>Group by<select value={groupBy} onChange={(event) => setGroupBy(event.target.value as GroupBy)}><option value="day">Day</option><option value="user">User</option><option value="client">Client</option><option value="project">Project</option><option value="task">Task</option></select></label></div>
-    <div className="report-groups" aria-live="polite">{groups.length === 0 && !summaryLoading ? <p className="empty-entries">No completed entries match these filters.</p> : groups.map(([label, total]) => <div className="report-group" key={label}><strong>{label}</strong><span>{total.count} {total.count === 1 ? 'entry' : 'entries'}</span><b>{formatDuration(total.seconds)}</b></div>)}{summaryLoading && <p className="empty-entries">Updating summary…</p>}</div>
-    <div className="report-summary-heading report-detail-heading"><h3>Detailed entries</h3><div className="report-detail-actions"><span>Newest first</span><button className="secondary-button" type="button" onClick={() => void exportCsv()} disabled={invalidRange || exporting}>{exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}</button></div></div>
-    {exportNotice && <p className="form-message is-success" role="status">{exportNotice}</p>}
-    <div className="report-details">{entries.map((entry) => <article className="report-entry" key={entry.id}><div><strong>{entry.description || 'Untitled entry'}</strong><span>{entry.startAt.toDate().toLocaleString()} · {groupValue(entry, 'user', members)} · {[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}</span></div><div className="report-entry-total"><b>{formatDuration(duration(entry))}</b>{entry.billable && <span className="billable-tag">Billable</span>}</div></article>)}{entries.length === 0 && !pageLoading && <p className="empty-entries">No completed entries match these filters.</p>}</div>
-    {hasMore && <button className="secondary-button report-load-more" type="button" onClick={() => void loadMore()} disabled={pageLoading} aria-live="polite">{pageLoading ? 'Loading…' : 'Load more entries'}</button>}
-  </section>
+  return <SectionCard labelledBy="reports-heading">
+    <SectionHeading id="reports-heading" kicker="WORKSPACE INSIGHTS" title="Reports" action={<Typography variant="caption" color="text.secondary">Dates in {timezone}</Typography>} />
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1.5, mt: 2.75 }}>
+      <TextField label="From" type="date" value={filters.startDay} onChange={(event) => updateFilter('startDay', event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+      <TextField label="Through" type="date" value={filters.endDay} onChange={(event) => updateFilter('endDay', event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+      {isOwner && <SelectField label="Member" value={filters.userId} onChange={(event) => updateFilter('userId', event.target.value)}><option value="">Everyone</option>{members.filter((member) => member.status !== 'removed').map((member) => <option key={member.uid} value={member.uid}>{member.displayName || member.email || member.uid}</option>)}</SelectField>}
+      <SelectField label="Client" value={filters.clientId} onChange={(event) => updateFilter('clientId', event.target.value)}><option value="">All clients</option>{catalog.clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</SelectField>
+      <SelectField label="Project" value={filters.projectId} onChange={(event) => updateFilter('projectId', event.target.value)}><option value="">All projects</option>{catalog.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</SelectField>
+      <SelectField label="Task" value={filters.taskId} onChange={(event) => updateFilter('taskId', event.target.value)}><option value="">All tasks</option>{catalog.tasks.map((task) => <option key={task.id} value={task.id}>{task.name}</option>)}</SelectField>
+      <SelectField label="Billable" value={filters.billable} onChange={(event) => updateFilter('billable', event.target.value as ReportFilters['billable'])}><option value="">All entries</option><option value="yes">Billable</option><option value="no">Non-billable</option></SelectField>
+    </Box>
+    {error && <FormMessage severity="error">{error}</FormMessage>}
+    <Box aria-live="polite" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 0.75, sm: 1.25 }, mt: 2.5 }}>
+      {[['Total tracked', formatDuration(totalSeconds)], ['Billable', formatDuration(billableSeconds)], ['Entries', `${summaryEntries.length}${summaryLoading ? '…' : ''}`]].map(([label, value]) => <Paper key={label} variant="outlined" sx={{ display: 'grid', gap: 0.75, p: { xs: 1.25, sm: 1.75 }, minWidth: 0, bgcolor: '#fbfcfa' }}>
+        <Typography variant="caption" color="text.secondary">{label}</Typography>
+        <Typography sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: { xs: 15, sm: 18 }, fontWeight: 700 }}>{value}</Typography>
+      </Paper>)}
+    </Box>
+    <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 3 }}>
+      <Typography variant="h3">Summary</Typography>
+      <SelectField label="Group by" value={groupBy} onChange={(event) => setGroupBy(event.target.value as GroupBy)} sx={{ width: { sm: 160 } }}><option value="day">Day</option><option value="user">User</option><option value="client">Client</option><option value="project">Project</option><option value="task">Task</option></SelectField>
+    </Stack>
+    <Box aria-live="polite" sx={{ mt: 1.25 }}>{groups.length === 0 && !summaryLoading ? <EmptyText>No completed entries match these filters.</EmptyText> : groups.map(([label, total]) => <Box key={label} sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', sm: 'minmax(0, 1fr) auto auto' }, alignItems: 'center', columnGap: { xs: 1, sm: 2.25 }, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+      <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{label}</Typography>
+      <Typography variant="caption" color="text.secondary">{total.count} {total.count === 1 ? 'entry' : 'entries'}</Typography>
+      <Typography variant="body2" sx={{ gridColumn: { xs: 2, sm: 'auto' }, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatDuration(total.seconds)}</Typography>
+    </Box>)}{summaryLoading && <EmptyText>Updating summary…</EmptyText>}</Box>
+    <Divider sx={{ mt: 2 }} />
+    <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 2 }}>
+      <Typography variant="h3">Detailed entries</Typography>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+        <Typography variant="caption" color="text.secondary">Newest first</Typography>
+        <Button variant="outlined" onClick={() => void exportCsv()} disabled={invalidRange || exporting}>{exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}</Button>
+      </Stack>
+    </Stack>
+    {exportNotice && <FormMessage severity="success">{exportNotice}</FormMessage>}
+    <Box sx={{ mt: 1 }}>{entries.map((entry) => <ListRow key={entry.id} sx={{ alignItems: { xs: 'flex-start', sm: 'center' } }}>
+      <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
+        <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{entry.description || 'Untitled entry'}</Typography>
+        <Typography variant="caption" color="text.secondary" noWrap>{entry.startAt.toDate().toLocaleString()} · {groupValue(entry, 'user', members)} · {[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}</Typography>
+      </Box>
+      <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flex: '0 0 auto' }}>
+        <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatDuration(duration(entry))}</Typography>
+        {entry.billable && <BillableChip />}
+      </Stack>
+    </ListRow>)}{entries.length === 0 && !pageLoading && <EmptyText>No completed entries match these filters.</EmptyText>}</Box>
+    {hasMore && <Button variant="outlined" onClick={() => void loadMore()} disabled={pageLoading} aria-live="polite" sx={{ display: 'flex', mx: 'auto', mt: 2 }}>{pageLoading ? 'Loading…' : 'Load more entries'}</Button>}
+  </SectionCard>
 }

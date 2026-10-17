@@ -1,5 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import Typography from '@mui/material/Typography'
 import { saveCatalogRecord, setCatalogArchived, subscribeToCatalog, type Catalog, type CatalogInput } from './lib/catalog'
+import { EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 
 const empty: Catalog = { clients: [], projects: [], tasks: [] }
 
@@ -46,21 +57,41 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     finally { setPending(false) }
   }
 
-  return <section className="catalog-card" aria-labelledby="catalog-heading">
-    <div className="catalog-heading"><div><p className="section-kicker">WORK ORGANIZATION</p><h2 id="catalog-heading">Clients, projects &amp; tasks</h2></div><label className="archived-toggle"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} /> Show archived</label></div>
-    <div className="catalog-tabs" aria-label="Catalog type">{(['clients', 'projects', 'tasks'] as const).map((item) => <button type="button" aria-pressed={kind === item} className={kind === item ? 'catalog-tab is-active' : 'catalog-tab'} key={item} onClick={() => { setKind(item); reset() }}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
-    {error && <p className="form-message is-error" role="alert">{error}</p>}
-    <form className="catalog-form" onSubmit={(event) => void submit(event)} aria-busy={pending}><h3>{editing ? `Edit ${kind.slice(0, -1)}` : `Add ${kind.slice(0, -1)}`}</h3>
-      <label>Name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required /></label>
-      {kind === 'projects' && <><label>Client<select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Description<input value={description} onChange={(event) => setDescription(event.target.value)} maxLength={1000} /></label><label>Color<input type="color" value={color} onChange={(event) => setColor(event.target.value)} /></label></>}
-      {kind === 'tasks' && <label>Project<select value={projectId} onChange={(event) => setProjectId(event.target.value)} required><option value="">Select a project</option>{catalog.projects.filter((item) => !item.archived).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
-      {kind !== 'clients' && <label>Estimate (minutes)<input type="number" min="0" step="1" value={estimate} onChange={(event) => setEstimate(event.target.value)} placeholder="Optional" /></label>}
-      <div className="catalog-form-actions">{editing && <button className="secondary-button" type="button" onClick={reset}>Cancel</button>}<button className="primary-button" disabled={pending}>{pending ? 'Saving…' : editing ? 'Save changes' : 'Add'}</button></div>
-    </form>
-    <div className="catalog-list">{visible.map((record) => {
+  return <SectionCard labelledBy="catalog-heading">
+    <SectionHeading id="catalog-heading" kicker="WORK ORGANIZATION" title="Clients, projects & tasks" action={<FormControlLabel control={<Checkbox size="small" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />} label="Show archived" />} />
+    <ToggleButtonGroup aria-label="Catalog type" exclusive size="small" color="primary" value={kind} onChange={(_, value: typeof kind | null) => { if (value) { setKind(value); reset() } }} sx={{ my: 2.5 }}>
+      {(['clients', 'projects', 'tasks'] as const).map((item) => <ToggleButton key={item} value={item} sx={{ px: 2 }}>{item[0].toUpperCase() + item.slice(1)}</ToggleButton>)}
+    </ToggleButtonGroup>
+    {error && <FormMessage severity="error">{error}</FormMessage>}
+    <Paper component="form" variant="outlined" onSubmit={(event) => void submit(event)} aria-busy={pending} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, alignItems: 'end', gap: 2, p: 2, bgcolor: '#fbfcfa' }}>
+      <Typography variant="h3" sx={{ gridColumn: '1 / -1' }}>{editing ? `Edit ${kind.slice(0, -1)}` : `Add ${kind.slice(0, -1)}`}</Typography>
+      <TextField label="Name" value={name} onChange={(event) => setName(event.target.value)} required slotProps={{ htmlInput: { maxLength: 120 } }} />
+      {kind === 'projects' && <>
+        <SelectField label="Client" value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField>
+        <TextField label="Description" value={description} onChange={(event) => setDescription(event.target.value)} slotProps={{ htmlInput: { maxLength: 1000 } }} />
+        <TextField label="Color" type="color" value={color} onChange={(event) => setColor(event.target.value)} sx={{ width: 96 }} />
+      </>}
+      {kind === 'tasks' && <SelectField label="Project" value={projectId} onChange={(event) => setProjectId(event.target.value)} required><option value="">Select a project</option>{catalog.projects.filter((item) => !item.archived).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField>}
+      {kind !== 'clients' && <TextField label="Estimate (minutes)" type="number" value={estimate} onChange={(event) => setEstimate(event.target.value)} placeholder="Optional" slotProps={{ htmlInput: { min: 0, step: 1 }, inputLabel: { shrink: true } }} />}
+      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', gridColumn: { sm: '2' } }}>
+        {editing && <Button variant="outlined" onClick={reset}>Cancel</Button>}
+        <Button variant="contained" type="submit" disabled={pending}>{pending ? 'Saving…' : editing ? 'Save changes' : 'Add'}</Button>
+      </Stack>
+    </Paper>
+    <Box sx={{ mt: 1.75 }}>{visible.map((record) => {
       const archived = record.archived
       const detail = kind === 'projects' ? (record as Catalog['projects'][number]).description : kind === 'tasks' ? catalog.projects.find((project) => project.id === (record as Catalog['tasks'][number]).projectId)?.name : ''
-      return <article className={`catalog-record${archived ? ' is-archived' : ''}`} key={record.id}><div><strong>{record.name}</strong>{detail && <span>{detail}</span>}{archived && <small>Archived</small>}</div><div className="catalog-record-actions"><button type="button" className="text-button" onClick={() => beginEdit(record)} disabled={pending}>Edit</button><button type="button" className="text-button" onClick={() => void archive(record.id, !archived)} disabled={pending}>{archived ? 'Restore' : 'Archive'}</button></div></article>
-    })}{visible.length === 0 && <p className="empty-entries">No {kind} yet.</p>}</div>
-  </section>
+      return <ListRow key={record.id} sx={archived ? { opacity: 0.65 } : undefined}>
+        <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0, overflowWrap: 'anywhere' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>{record.name}</Typography>
+          {detail && <Typography variant="caption" color="text.secondary">{detail}</Typography>}
+          {archived && <Typography variant="caption" color="text.secondary">Archived</Typography>}
+        </Box>
+        <Stack direction="row" spacing={1} sx={{ flex: '0 0 auto' }}>
+          <Button size="small" onClick={() => beginEdit(record)} disabled={pending}>Edit</Button>
+          <Button size="small" onClick={() => void archive(record.id, !archived)} disabled={pending}>{archived ? 'Restore' : 'Archive'}</Button>
+        </Stack>
+      </ListRow>
+    })}{visible.length === 0 && <EmptyText>No {kind} yet.</EmptyText>}</Box>
+  </SectionCard>
 }
