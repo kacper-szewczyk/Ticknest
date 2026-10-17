@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.0.0...ticknest-v1.1.0) (2026-10-17)
+
+
+### Features
+
+* add timesheet dashboard for managing entries ([#55](https://github.com/kacper-szewczyk/Ticknest/issues/55)) ([7332c8f](https://github.com/kacper-szewczyk/Ticknest/commit/7332c8f2cb63c904071a12d43ebb6485c2c17129))
+
 ## 1.0.0 (2026-10-17)
 
 
