@@ -53,6 +53,9 @@ function readableError(error: unknown): string {
     'auth/popup-blocked': 'Allow pop-ups for this site, then try Google sign-in again.',
     'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Authentication.',
     'auth/account-exists-with-different-credential': 'An account already exists with this email. Sign in with your original method, then link Google in account settings.',
+    'functions/internal': 'The workspace service is not available in this Firebase project yet. Deploy the Firebase Functions, then try again.',
+    'functions/not-found': 'The workspace service is not deployed in this Firebase project. Deploy the Firebase Functions, then try again.',
+    'functions/unavailable': 'The workspace service is temporarily unavailable. Try again in a moment.',
     'permission-denied': 'You do not have access to this workspace.',
   }
   if (messages[code]) return messages[code]
