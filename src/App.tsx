@@ -1,5 +1,5 @@
 import { onAuthStateChanged, sendEmailVerification, type User } from 'firebase/auth'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -11,8 +11,6 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
-import Tab from '@mui/material/Tab'
-import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import {
@@ -48,10 +46,20 @@ import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
 import { TimesheetDashboard } from './TimesheetDashboard'
+import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
-type WorkspaceView = 'workspace' | 'dashboard'
+type WorkspaceView = 'timer' | 'timesheet' | 'dashboard' | 'reports' | 'catalog' | 'members' | 'settings'
+
+const WORKSPACE_VIEWS: WorkspaceView[] = ['timer', 'timesheet', 'dashboard', 'reports', 'catalog', 'members', 'settings']
+const OWNER_VIEWS: WorkspaceView[] = ['catalog', 'members']
+
+// The current page lives in the URL hash so refreshes and the back button keep it.
+function viewFromHash(): WorkspaceView | null {
+  const hash = window.location.hash.slice(1)
+  return (WORKSPACE_VIEWS as string[]).includes(hash) ? hash as WorkspaceView : null
+}
 
 function readableError(error: unknown): string {
   if (!(error instanceof Error)) return 'Something went wrong. Please try again.'
@@ -80,11 +88,11 @@ function readableError(error: unknown): string {
   return error.message
 }
 
-function Brand() {
+function Brand({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
   return (
-    <Link href="/" aria-label="Ticknest home" underline="none" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.25, color: '#17271f', fontSize: 20, fontWeight: 700, letterSpacing: '-0.8px' }}>
-      <Box component="span" aria-hidden="true" sx={{ display: 'grid', width: 30, height: 30, placeItems: 'center', borderRadius: '10px', bgcolor: '#213b2c' }}>
-        <Box component="svg" viewBox="0 0 24 24" fill="none" sx={{ width: 19, stroke: '#e9f2df', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2.5 }}><path d="M5 13.5 9.2 18 19 6" /></Box>
+    <Link href="/" aria-label="Ticknest home" underline="none" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.25, color: tone === 'light' ? '#f3f7ef' : '#17271f', fontSize: 20, fontWeight: 700, letterSpacing: '-0.8px' }}>
+      <Box component="span" aria-hidden="true" sx={{ display: 'grid', width: 30, height: 30, placeItems: 'center', borderRadius: '10px', bgcolor: tone === 'light' ? '#e9f2df' : '#213b2c' }}>
+        <Box component="svg" viewBox="0 0 24 24" fill="none" sx={{ width: 19, stroke: tone === 'light' ? '#213b2c' : '#e9f2df', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2.5 }}><path d="M5 13.5 9.2 18 19 6" /></Box>
       </Box>
       <span>ticknest</span>
     </Link>
@@ -203,7 +211,13 @@ function WorkspaceScreen({ user }: { user: User }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [catalog, setCatalog] = useState<Catalog>({ clients: [], projects: [], tasks: [] })
-  const [view, setView] = useState<WorkspaceView>('workspace')
+  const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : 'timer'))
+
+  useEffect(() => {
+    const syncView = () => setView(viewFromHash() ?? 'timer')
+    window.addEventListener('hashchange', syncView)
+    return () => window.removeEventListener('hashchange', syncView)
+  }, [])
 
   useEffect(() => {
     if (!activeId) return
@@ -291,51 +305,87 @@ function WorkspaceScreen({ user }: { user: User }) {
   }
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId)
+  const isOwner = activeWorkspace?.role === 'owner'
+  const currentView: WorkspaceView = !isOwner && OWNER_VIEWS.includes(view) ? 'timer' : view
+  const navItems: NavItem<WorkspaceView>[] = activeWorkspace ? [
+    { value: 'timer', label: 'Timer', icon: navIcons.timer, section: 'Track' },
+    { value: 'timesheet', label: 'Timesheet', icon: navIcons.timesheet, section: 'Track' },
+    { value: 'dashboard', label: isOwner ? 'Team dashboard' : 'Dashboard', icon: navIcons.dashboard, section: 'Analyze' },
+    { value: 'reports', label: 'Reports', icon: navIcons.reports, section: 'Analyze' },
+    ...(isOwner ? [
+      { value: 'catalog', label: 'Clients & projects', icon: navIcons.catalog, section: 'Manage' },
+      { value: 'members', label: 'Members', icon: navIcons.members, section: 'Manage' },
+    ] satisfies NavItem<WorkspaceView>[] : []),
+    { value: 'settings', label: 'Settings', icon: navIcons.settings, section: 'Account' },
+  ] : []
+
+  function navigate(next: WorkspaceView) {
+    setError('')
+    setNotice('')
+    window.location.hash = next
+    setView(next)
+  }
+
+  const joinWorkspaceForm = (
+    <Paper component="form" variant="outlined" onSubmit={handleAcceptInvite} sx={{ display: 'grid', gap: 1.5, maxWidth: 750, mx: 'auto', mt: 2.25, p: { xs: 2.25, sm: 4 }, borderRadius: '18px' }}>
+      <div><Typography variant="h2" sx={{ fontSize: 22 }}>Join another workspace</Typography><Typography variant="body2" color="text.secondary">Paste an invitation link sent to your email.</Typography></div>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+        <TextField type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" slotProps={{ htmlInput: { 'aria-label': 'Invitation link' } }} />
+        <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified} sx={{ flex: '0 0 auto' }}>Accept invitation</Button>
+      </Stack>
+    </Paper>
+  )
+
+  const workspaceSwitcher = workspaces.length > 0 ? (
+    <Box component="label" sx={{ display: 'grid', gap: 0.5, px: 1 }}>
+      <Typography component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#7f9383' }}>WORKSPACE</Typography>
+      <Box component="select" value={activeId ?? ''} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setActiveId(event.target.value); saveActiveWorkspaceId(user.uid, event.target.value) }} sx={{ width: '100%', minHeight: 40, px: 1.25, borderRadius: '9px', border: '1px solid rgba(233, 242, 223, .16)', bgcolor: 'rgba(233, 242, 223, .06)', color: '#f3f7ef', font: 'inherit', fontSize: 14, fontWeight: 600, '&:focus-visible': { outline: '3px solid #a8d29a', outlineOffset: 1 }, '& option': { color: '#24342a' } }}>
+        {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
+      </Box>
+    </Box>
+  ) : null
+
+  const sidebarFooter = (
+    <Stack spacing={1.25}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', px: 1, py: 0.5, minWidth: 0 }}>
+        <Box aria-hidden="true" sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, flexShrink: 0, borderRadius: '50%', bgcolor: '#dbe8d7', color: '#213b2c', fontSize: 13, fontWeight: 700 }}>{(user.displayName || user.email || '?').trim().charAt(0).toUpperCase()}</Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="body2" noWrap sx={{ color: '#f3f7ef', fontWeight: 600 }}>{user.displayName || 'Your account'}</Typography>
+          <Typography variant="caption" noWrap sx={{ display: 'block', color: '#7f9383' }}>{user.email}</Typography>
+        </Box>
+      </Stack>
+      <Button size="small" onClick={() => void signOutUser()} sx={{ minHeight: 36, color: '#c3d0c6', justifyContent: 'flex-start', px: 1, '&:hover': { bgcolor: 'rgba(233, 242, 223, .09)' } }}>Sign out</Button>
+      <Typography variant="caption" sx={{ px: 1, color: '#5f7363' }}>Ticknest v{__APP_VERSION__}</Typography>
+    </Stack>
+  )
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 12% 0%, rgba(217, 231, 221, .48), transparent 32rem), #f8f8f5' }}>
-      <Box component="header" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'min(1120px, calc(100% - 64px))' }, height: { xs: 68, sm: 78 }, mx: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider' }}>
-        <Brand />
-        <Stack direction="row" spacing={{ xs: 1, sm: 2 }} sx={{ alignItems: 'center' }}>
-          {workspaces.length > 0 && <SelectField value={activeId ?? ''} onChange={(event) => { setActiveId(event.target.value); saveActiveWorkspaceId(user.uid, event.target.value) }} fullWidth={false} slotProps={{ htmlInput: { 'aria-label': 'Active workspace' } }} sx={{ maxWidth: { xs: 145, sm: 220 }, bgcolor: 'background.paper' }}>{workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</SelectField>}
-          <Button size="small" onClick={() => void signOutUser()}>Sign out</Button>
-        </Stack>
-      </Box>
-      {activeWorkspace && (
-        <Box component="nav" aria-label="Workspace views" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'min(1120px, calc(100% - 64px))' }, mx: 'auto', borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={view} onChange={(_, value: WorkspaceView) => setView(value)} sx={{ minHeight: 44, '& .MuiTab-root': { minHeight: 44, px: 0, mr: 3, minWidth: 0 } }}>
-            <Tab value="workspace" label="Workspace" />
-            <Tab value="dashboard" label="Timesheet dashboard" />
-          </Tabs>
-        </Box>
-      )}
-      <Box component="main" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: activeWorkspace && view === 'dashboard' ? 'min(1120px, calc(100% - 64px))' : 'min(960px, calc(100% - 64px))' }, minHeight: 'calc(100vh - 78px)', mx: 'auto', pt: { xs: 3.75, md: 6 }, pb: 3.75 }}>
+    <AppShell brand={<Brand tone="light" />} header={workspaceSwitcher} items={navItems} active={activeWorkspace ? currentView : null} onNavigate={navigate} footer={sidebarFooter}>
+      <Box component="main" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'calc(100% - 64px)' }, maxWidth: activeWorkspace && currentView === 'dashboard' ? 1120 : 960, mx: 'auto', pt: { xs: 3, md: 5 }, pb: 5 }}>
         {error && <FormMessage severity="error">{error}</FormMessage>}
         {notice && <FormMessage severity="success">{notice}</FormMessage>}
         {!user.emailVerified && <EmailVerificationNotice user={user} />}
-        {activeWorkspace && view === 'dashboard' ? (
-          <TimesheetDashboard key={activeWorkspace.id} user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />
-        ) : activeWorkspace ? (
+        {activeWorkspace ? (
           <>
-          <Paper component="section" variant="outlined" sx={{ maxWidth: 750, mx: 'auto', mt: { xs: 3.5, md: 11 }, p: 'clamp(28px, 6vw, 58px)', borderRadius: '22px', bgcolor: 'rgba(255,255,255,.82)', boxShadow: '0 22px 70px rgba(47, 64, 49, .06)' }}>
-            <Typography variant="overline" component="p">YOUR WORKSPACE</Typography>
-            <Typography variant="h1" sx={{ my: 1.5, overflowWrap: 'anywhere' }}>{activeWorkspace.name}</Typography>
-            <Typography color="text.secondary" sx={{ lineHeight: 1.6 }}>Signed in as {user.email}. Your workspace is ready for the timer workflow.</Typography>
-            <Chip variant="outlined" color="success" icon={<Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#7fae72', boxShadow: '0 0 0 3px rgba(127,174,114,.13)' }} />} label={activeWorkspace.role === 'owner' ? 'Workspace owner' : 'Workspace member'} sx={{ mt: 2.25, pl: 0.75 }} />
-            {workspaces.length > 1 && <Typography variant="body2" color="text.secondary" sx={{ mt: 3.5 }}>Use the workspace menu above to switch between your workspaces.</Typography>}
-          </Paper>
-          <TimerPanel user={user} workspaceId={activeWorkspace.id} catalog={catalog} />
-          {activeWorkspace.role === 'owner' && <CatalogPanel workspaceId={activeWorkspace.id} />}
-          {activeWorkspace.role === 'owner' && <MemberManagementPanel workspaceId={activeWorkspace.id} currentUserId={user.uid} />}
-          <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />
-          <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={activeWorkspace.role === 'owner'} catalog={catalog} />
-          <Paper component="form" variant="outlined" onSubmit={handleAcceptInvite} sx={{ display: 'grid', gap: 1.5, maxWidth: 750, mx: 'auto', mt: 2.25, p: { xs: 2.25, sm: 4 }, borderRadius: '18px' }}>
-            <div><Typography variant="h2" sx={{ fontSize: 22 }}>Join another workspace</Typography><Typography variant="body2" color="text.secondary">Paste an invitation link sent to your email.</Typography></div>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-              <TextField type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" slotProps={{ htmlInput: { 'aria-label': 'Invitation link' } }} />
-              <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified} sx={{ flex: '0 0 auto' }}>Accept invitation</Button>
-            </Stack>
-          </Paper>
+            {currentView === 'timer' && <TimerPanel user={user} workspaceId={activeWorkspace.id} catalog={catalog} />}
+            {currentView === 'timesheet' && <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />}
+            {currentView === 'dashboard' && <TimesheetDashboard key={activeWorkspace.id} user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />}
+            {currentView === 'reports' && <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} catalog={catalog} />}
+            {currentView === 'catalog' && <CatalogPanel workspaceId={activeWorkspace.id} />}
+            {currentView === 'members' && <MemberManagementPanel workspaceId={activeWorkspace.id} currentUserId={user.uid} />}
+            {currentView === 'settings' && <>
+              <Paper component="section" variant="outlined" sx={{ maxWidth: 750, mx: 'auto', mt: 2.25, p: { xs: 2.25, sm: 4 }, borderRadius: '18px' }}>
+                <Typography variant="overline" component="p">YOUR WORKSPACE</Typography>
+                <Typography variant="h2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{activeWorkspace.name}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>Signed in as {user.email}.{workspaces.length > 1 && ' Switch workspaces from the menu at the top of the sidebar.'}</Typography>
+                <Chip variant="outlined" color="success" icon={<Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#7fae72', boxShadow: '0 0 0 3px rgba(127,174,114,.13)' }} />} label={isOwner ? 'Workspace owner' : 'Workspace member'} sx={{ mt: 2, pl: 0.75 }} />
+              </Paper>
+              {joinWorkspaceForm}
+              <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ maxWidth: 750, mx: 'auto', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 2 }, mt: 4, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Button size="small" color="error" onClick={() => void handleDeleteAccount()} disabled={pending}>Delete account</Button>
+                <Typography variant="caption" color="text.secondary">Workspace data stays in the Firebase project selected by its owner.</Typography>
+              </Stack>
+            </>}
           </>
         ) : (
           <Box component="section" sx={{ maxWidth: 860, mx: 'auto', mt: 3 }}>
@@ -352,15 +402,25 @@ function WorkspaceScreen({ user }: { user: User }) {
                 <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</Button>
               </Paper>
             </Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 2 }, mt: 6, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+              <Button size="small" color="error" onClick={() => void handleDeleteAccount()} disabled={pending}>Delete account</Button>
+              <Typography variant="caption" color="text.secondary">Workspace data stays in the Firebase project selected by its owner.</Typography>
+            </Stack>
           </Box>
         )}
-        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 2 }, mt: 6, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Button size="small" color="error" onClick={() => void handleDeleteAccount()} disabled={pending}>Delete account</Button>
-          <Typography variant="caption" color="text.secondary">Workspace data stays in the Firebase project selected by its owner.</Typography>
-        </Stack>
       </Box>
-    </Box>
+    </AppShell>
   )
+}
+
+const navIcons = {
+  timer: <NavIcon><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9.5 2.5h5" /></NavIcon>,
+  timesheet: <NavIcon><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></NavIcon>,
+  dashboard: <NavIcon><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></NavIcon>,
+  reports: <NavIcon><path d="M5 20V11M12 20V5M19 20v-6M3 20h18" /></NavIcon>,
+  catalog: <NavIcon><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" /></NavIcon>,
+  members: <NavIcon><circle cx="9" cy="8.5" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5.2a3.5 3.5 0 0 1 0 6.6M18 14.2a6.5 6.5 0 0 1 3.5 5.8" /></NavIcon>,
+  settings: <NavIcon><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></NavIcon>,
 }
 
 const onboardingCardSx = { display: 'grid', alignContent: 'start', gap: 2, p: 3, borderRadius: '16px', bgcolor: 'rgba(255,255,255,.8)' }
@@ -726,7 +786,7 @@ function App() {
   return (
     <>
       {user ? <WorkspaceScreen user={user} /> : <AuthScreen onAuthenticated={setUser} />}
-      <Typography component="footer" variant="caption" sx={{ display: 'block', px: 2, py: 1.75, borderTop: 1, borderColor: 'divider', bgcolor: 'background.default', color: 'text.secondary', textAlign: 'center' }}>Ticknest v{__APP_VERSION__}</Typography>
+      {!user && <Typography component="footer" variant="caption" sx={{ display: 'block', px: 2, py: 1.75, borderTop: 1, borderColor: 'divider', bgcolor: 'background.default', color: 'text.secondary', textAlign: 'center' }}>Ticknest v{__APP_VERSION__}</Typography>}
     </>
   )
 }
