@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.4.1...ticknest-v1.5.0) (2026-10-18)
+
+
+### Features
+
+* support account deletion for Google-authenticated users ([#68](https://github.com/kacper-szewczyk/Ticknest/issues/68)) ([65ec2f4](https://github.com/kacper-szewczyk/Ticknest/commit/65ec2f42d74ee5c4b345bfd67a540078905443f5)), closes [#31](https://github.com/kacper-szewczyk/Ticknest/issues/31)
+
 ## [1.4.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.4.0...ticknest-v1.4.1) (2026-10-18)
 
 
