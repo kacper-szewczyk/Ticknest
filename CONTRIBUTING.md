@@ -15,14 +15,15 @@ npm test
 npm run test:emulators
 ```
 
-`npm test` needs no emulators. `npm run test:emulators` builds the Functions, starts the Auth, Firestore, and Functions emulators, runs the emulator tests, and stops the emulators; it needs Java and the ports in `firebase.json` to be free, so stop `npm run emulators` first. Both run on every pull request. When you change `firestore.rules` or a callable, add or update a test, and keep [the rules test matrix](docs/firestore-rules-test-matrix.md) in step.
+`npm test` needs no emulators. `npm run test:emulators` builds the Functions, starts the Auth, Firestore, and Functions emulators, runs the emulator tests (including `functions/test`), and stops the emulators. It needs Java and free ports from `firebase.json`, so stop `npm run emulators` first. Both run on every pull request. When you change `firestore.rules` or a callable, add or update a test and keep [the rules test matrix](docs/firestore-rules-test-matrix.md) in step.
 
 ## Propose a change
 
 1. Check existing issues and pull requests, then open an issue for a substantial feature or bug that has not been discussed.
 2. Create a focused branch from `main` and make the smallest coherent change.
 3. Update documentation when behavior, configuration, or data handling changes.
-4. Run the tests, then open a pull request describing the problem, the change, any security or data implications, and the checks you ran. Include screenshots for meaningful UI changes.
+4. Run `npm run format`, then `npm run lint`, `npm run typecheck`, `npm run lint:functions`, `npm run typecheck:functions`, `npm test`, and `npm run test:emulators`. CI fails if `npm run format:check` finds unformatted files.
+5. Open a pull request describing the problem, the change, any security or data implications, and the checks you ran. Include screenshots for meaningful UI changes.
 
 For bug reports, include clear reproduction steps, expected and actual behavior, browser and Node.js versions where relevant, and sanitized error output. Remove names, email addresses, workspace data, invite links, tokens, and credentials from screenshots, logs, and example data.
 

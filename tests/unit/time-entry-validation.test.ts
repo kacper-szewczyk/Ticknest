@@ -1,58 +1,68 @@
 import { describe, expect, it } from 'vitest'
-import { validateManualEntry } from '../../src/lib/timeEntryValidation'
-import type { ManualEntryInput } from '../../src/lib/timeEntries'
+import { ManualEntryFieldError, validateManualEntryFields } from '../../src/lib/timeEntryValidation'
 
-function input(overrides: Partial<ManualEntryInput> = {}): ManualEntryInput {
-  return {
-    description: 'Design review',
-    clientName: 'Acme',
-    projectName: 'Website',
-    taskName: 'Review',
-    clientId: 'client-1',
-    projectId: 'project-1',
-    taskId: 'task-1',
-    billable: true,
-    startAt: new Date('2026-10-14T08:00:00Z'),
-    endAt: new Date('2026-10-14T09:00:00Z'),
-    ...overrides,
+const START = new Date('2026-10-14T08:00:00Z')
+const END = new Date('2026-10-14T09:00:00Z')
+
+function fieldError(run: () => void): ManualEntryFieldError {
+  try {
+    run()
+  } catch (error) {
+    if (error instanceof ManualEntryFieldError) return error
+    throw error
   }
+  throw new Error('Expected a ManualEntryFieldError.')
 }
 
-describe('validateManualEntry', () => {
-  it('returns the trimmed description of a valid entry', () => {
-    expect(validateManualEntry(input({ description: '  Design review  ' }))).toBe('Design review')
-  })
-
-  it('accepts entries without a client, project, or task', () => {
-    expect(validateManualEntry(input({ clientName: null, projectName: null, taskName: null }))).toBe('Design review')
+describe('validateManualEntryFields', () => {
+  it('accepts a valid entry', () => {
+    expect(() =>
+      validateManualEntryFields({ description: ' Design review ', startAt: START, endAt: END }),
+    ).not.toThrow()
   })
 
   it('requires a description', () => {
-    expect(() => validateManualEntry(input({ description: '   ' }))).toThrow('Add a description for this entry.')
+    const error = fieldError(() => validateManualEntryFields({ description: '   ', startAt: START, endAt: END }))
+    expect(error.field).toBe('description')
+    expect(error.message).toBe('Add a description for this entry.')
   })
 
-  it('limits descriptions to 500 characters', () => {
-    expect(validateManualEntry(input({ description: 'a'.repeat(500) }))).toHaveLength(500)
-    expect(() => validateManualEntry(input({ description: 'a'.repeat(501) }))).toThrow('Descriptions must be 500 characters or fewer.')
+  it('limits trimmed descriptions to 500 characters', () => {
+    expect(() =>
+      validateManualEntryFields({ description: ` ${'a'.repeat(500)} `, startAt: START, endAt: END }),
+    ).not.toThrow()
+    const error = fieldError(() =>
+      validateManualEntryFields({ description: 'a'.repeat(501), startAt: START, endAt: END }),
+    )
+    expect(error.field).toBe('description')
+    expect(error.message).toBe('Descriptions must be 500 characters or fewer.')
   })
 
-  it.each([
-    ['clientName', 'Client'],
-    ['projectName', 'Project'],
-    ['taskName', 'Task'],
-  ] as const)('limits %s to 100 characters', (field, label) => {
-    expect(() => validateManualEntry(input({ [field]: ` ${'a'.repeat(100)} ` }))).not.toThrow()
-    expect(() => validateManualEntry(input({ [field]: 'a'.repeat(101) }))).toThrow(`${label} names must be 100 characters or fewer.`)
+  it('points an invalid start at the start field', () => {
+    const error = fieldError(() =>
+      validateManualEntryFields({ description: 'Work', startAt: new Date('invalid'), endAt: END }),
+    )
+    expect(error.field).toBe('startAt')
+  })
+
+  it('points an invalid end at the end field', () => {
+    const error = fieldError(() =>
+      validateManualEntryFields({ description: 'Work', startAt: START, endAt: new Date('invalid') }),
+    )
+    expect(error.field).toBe('endAt')
   })
 
   it('requires the end to be after the start', () => {
-    const startAt = new Date('2026-10-14T08:00:00Z')
-    expect(() => validateManualEntry(input({ startAt, endAt: new Date(startAt) }))).toThrow('The end time must be later than the start time.')
-    expect(() => validateManualEntry(input({ startAt, endAt: new Date('2026-10-14T07:59:59Z') }))).toThrow('The end time must be later than the start time.')
+    for (const endAt of [new Date(START), new Date('2026-10-14T07:59:59Z')]) {
+      const error = fieldError(() => validateManualEntryFields({ description: 'Work', startAt: START, endAt }))
+      expect(error.field).toBe('endAt')
+      expect(error.message).toBe('The end time must be later than the start time.')
+    }
   })
 
-  it('rejects invalid dates', () => {
-    expect(() => validateManualEntry(input({ startAt: new Date('invalid') }))).toThrow('The end time must be later than the start time.')
-    expect(() => validateManualEntry(input({ endAt: new Date('invalid') }))).toThrow('The end time must be later than the start time.')
+  it('is an Error with its own name', () => {
+    const error = new ManualEntryFieldError('description', 'Message')
+    expect(error).toBeInstanceOf(Error)
+    expect(error.name).toBe('ManualEntryFieldError')
   })
 })

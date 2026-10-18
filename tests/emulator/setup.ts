@@ -11,7 +11,7 @@ type EmulatorInfo = { host: string; port: number }
 export async function emulatorOrigin(name: 'auth' | 'functions'): Promise<EmulatorInfo> {
   const hub = process.env.FIREBASE_EMULATOR_HUB
   if (!hub) throw new Error('Run the emulator tests with `npm run test:emulators`.')
-  const emulators = await (await fetch(`http://${hub}/emulators`)).json() as Record<string, EmulatorInfo>
+  const emulators = (await (await fetch(`http://${hub}/emulators`)).json()) as Record<string, EmulatorInfo>
   const info = emulators[name]
   if (!info) throw new Error(`The ${name} emulator is not running.`)
   return info
@@ -63,12 +63,23 @@ export function completedEntry(userId: string, displayName: string, hour: number
   }
 }
 
-function membership(user: { uid: string; email: string }, role: 'owner' | 'member', status: 'active' | 'removed' = 'active') {
+function membership(
+  user: { uid: string; email: string },
+  role: 'owner' | 'member',
+  status: 'active' | 'removed' = 'active',
+) {
   return { uid: user.uid, email: user.email, displayName: user.uid, role, status, joinedAt: PAST }
 }
 
 function profile(user: { uid: string; email: string }) {
-  return { displayName: user.uid, email: user.email, timezone: 'Europe/Warsaw', palette: 'system', createdAt: PAST, updatedAt: PAST }
+  return {
+    displayName: user.uid,
+    email: user.email,
+    timezone: 'Europe/Warsaw',
+    palette: 'system',
+    createdAt: PAST,
+    updatedAt: PAST,
+  }
 }
 
 /** Writes the shared fixture with rules disabled, the way trusted Admin code would. */
@@ -86,19 +97,54 @@ export async function seedWorkspace(env: RulesTestEnvironment): Promise<void> {
       [`${ws}/members/${OTHER_MEMBER.uid}`, membership(OTHER_MEMBER, 'member')],
       [`${ws}/members/${REMOVED_MEMBER.uid}`, membership(REMOVED_MEMBER, 'member', 'removed')],
       [`${ws}/clients/${CLIENT_ID}`, { name: 'Acme', archived: false, createdAt: PAST, updatedAt: PAST }],
-      [`${ws}/projects/${PROJECT_ID_IN_WORKSPACE}`, {
-        name: 'Website', clientId: CLIENT_ID, description: '', color: '#2e7d32', estimateMinutes: 600, archived: false, createdAt: PAST, updatedAt: PAST,
-      }],
-      [`${ws}/tasks/${TASK_ID}`, { name: 'Build', projectId: PROJECT_ID_IN_WORKSPACE, estimateMinutes: null, archived: false, createdAt: PAST, updatedAt: PAST }],
+      [
+        `${ws}/projects/${PROJECT_ID_IN_WORKSPACE}`,
+        {
+          name: 'Website',
+          clientId: CLIENT_ID,
+          description: '',
+          color: '#2e7d32',
+          estimateMinutes: 600,
+          archived: false,
+          createdAt: PAST,
+          updatedAt: PAST,
+        },
+      ],
+      [
+        `${ws}/tasks/${TASK_ID}`,
+        {
+          name: 'Build',
+          projectId: PROJECT_ID_IN_WORKSPACE,
+          estimateMinutes: null,
+          archived: false,
+          createdAt: PAST,
+          updatedAt: PAST,
+        },
+      ],
       [`${ws}/timeEntries/${MEMBER_ENTRY_ID}`, completedEntry(MEMBER.uid, 'alice', 8)],
       [`${ws}/timeEntries/${OTHER_MEMBER_ENTRY_ID}`, completedEntry(OTHER_MEMBER.uid, 'dave', 10)],
       [`${ws}/timeEntries/${OWNER_ENTRY_ID}`, completedEntry(OWNER.uid, 'owner', 12)],
-      [`${ws}/invitations/${INVITATION_ID}`, {
-        email: INVITEE.email, role: 'member', tokenHash: '0'.repeat(64), expiresAt: Timestamp.fromDate(new Date('2099-01-01T00:00:00Z')), status: 'pending', createdBy: OWNER.uid, createdAt: PAST,
-      }],
-      [`workspaces/${OTHER_WORKSPACE_ID}`, { name: 'Other', ownerUid: NON_MEMBER.uid, weekStartsOn: 1, createdAt: PAST, updatedAt: PAST }],
+      [
+        `${ws}/invitations/${INVITATION_ID}`,
+        {
+          email: INVITEE.email,
+          role: 'member',
+          tokenHash: '0'.repeat(64),
+          expiresAt: Timestamp.fromDate(new Date('2099-01-01T00:00:00Z')),
+          status: 'pending',
+          createdBy: OWNER.uid,
+          createdAt: PAST,
+        },
+      ],
+      [
+        `workspaces/${OTHER_WORKSPACE_ID}`,
+        { name: 'Other', ownerUid: NON_MEMBER.uid, weekStartsOn: 1, createdAt: PAST, updatedAt: PAST },
+      ],
       [`workspaces/${OTHER_WORKSPACE_ID}/members/${NON_MEMBER.uid}`, membership(NON_MEMBER, 'owner')],
-      [`workspaces/${OTHER_WORKSPACE_ID}/clients/client-other`, { name: 'Other client', archived: false, createdAt: PAST, updatedAt: PAST }],
+      [
+        `workspaces/${OTHER_WORKSPACE_ID}/clients/client-other`,
+        { name: 'Other client', archived: false, createdAt: PAST, updatedAt: PAST },
+      ],
       [`workspaces/${OTHER_WORKSPACE_ID}/timeEntries/entry-bob`, completedEntry(NON_MEMBER.uid, 'bob', 8)],
     ]
     for (const [path, data] of writes) await setDoc(doc(db, path), data)

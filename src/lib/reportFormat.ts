@@ -20,10 +20,12 @@ export function reportRange(filters: Pick<ReportFilters, 'startDay' | 'endDay'>)
 
 // Firestore filters by date and user; these filters are applied after the read.
 export function matchesFilters(entry: TimeEntry, filters: ReportFilters): boolean {
-  return (!filters.clientId || entry.clientId === filters.clientId)
-    && (!filters.projectId || entry.projectId === filters.projectId)
-    && (!filters.taskId || entry.taskId === filters.taskId)
-    && (!filters.billable || entry.billable === (filters.billable === 'yes'))
+  return (
+    (!filters.clientId || entry.clientId === filters.clientId) &&
+    (!filters.projectId || entry.projectId === filters.projectId) &&
+    (!filters.taskId || entry.taskId === filters.taskId) &&
+    (!filters.billable || entry.billable === (filters.billable === 'yes'))
+  )
 }
 
 export function csvField(value: string | number | boolean | null | undefined): string {
@@ -57,7 +59,18 @@ export function localDateTime(date: Date, timeZone: string): string {
 }
 
 export function csvHeader(timeZone: string): string {
-  const headers = ['Date', 'User', 'Description', 'Client', 'Project', 'Task', `Start (${timeZone})`, `End (${timeZone})`, 'Duration', 'Billable']
+  const headers = [
+    'Date',
+    'User',
+    'Description',
+    'Client',
+    'Project',
+    'Task',
+    `Start (${timeZone})`,
+    `End (${timeZone})`,
+    'Duration',
+    'Billable',
+  ]
   return headers.map(csvField).join(',')
 }
 
@@ -77,5 +90,7 @@ export function csvRow(entry: TimeEntry & { endAt: NonNullable<TimeEntry['endAt'
     localDateTime(end, timeZone),
     formatDuration(seconds),
     entry.billable ? 'Yes' : 'No',
-  ].map(csvField).join(',')
+  ]
+    .map(csvField)
+    .join(',')
 }

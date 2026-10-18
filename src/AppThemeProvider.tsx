@@ -3,7 +3,13 @@ import CssBaseline from '@mui/material/CssBaseline'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { ThemeProvider } from '@mui/material/styles'
 import { PaletteContext } from './paletteContext'
-import { cachePaletteChoice, DEFAULT_PALETTE_CHOICE, getCachedPaletteChoice, resolvePalette, type PaletteChoice } from './palettes'
+import {
+  cachePaletteChoice,
+  DEFAULT_PALETTE_CHOICE,
+  getCachedPaletteChoice,
+  resolvePalette,
+  type PaletteChoice,
+} from './palettes'
 import { createAppTheme } from './theme'
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {

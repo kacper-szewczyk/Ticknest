@@ -1,9 +1,26 @@
 import { Timestamp } from 'firebase/firestore'
 import { describe, expect, it } from 'vitest'
-import { csvField, csvHeader, csvRow, localDate, localDateTime, matchesFilters, reportRange, type ReportFilters } from '../../src/lib/reportFormat'
+import {
+  csvField,
+  csvHeader,
+  csvRow,
+  localDate,
+  localDateTime,
+  matchesFilters,
+  reportRange,
+  type ReportFilters,
+} from '../../src/lib/reportFormat'
 import type { TimeEntry } from '../../src/lib/timeEntries'
 
-const NO_FILTERS: ReportFilters = { startDay: '2026-10-01', endDay: '2026-10-31', userId: '', clientId: '', projectId: '', taskId: '', billable: '' }
+const NO_FILTERS: ReportFilters = {
+  startDay: '2026-10-01',
+  endDay: '2026-10-31',
+  userId: '',
+  clientId: '',
+  projectId: '',
+  taskId: '',
+  billable: '',
+}
 
 function entry(overrides: Partial<TimeEntry> = {}): TimeEntry {
   return {
@@ -102,21 +119,32 @@ describe('localDate and localDateTime', () => {
 
 describe('csvHeader', () => {
   it('names the time zone in the start and end columns', () => {
-    expect(csvHeader('Europe/Warsaw')).toBe('Date,User,Description,Client,Project,Task,Start (Europe/Warsaw),End (Europe/Warsaw),Duration,Billable')
+    expect(csvHeader('Europe/Warsaw')).toBe(
+      'Date,User,Description,Client,Project,Task,Start (Europe/Warsaw),End (Europe/Warsaw),Duration,Billable',
+    )
   })
 })
 
 describe('csvRow', () => {
   it('formats a completed entry', () => {
     const completed = entry()
-    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC'))
-      .toBe('2026-10-14,Alice,Design review,Acme,Website,Review,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,Yes')
+    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC')).toBe(
+      '2026-10-14,Alice,Design review,Acme,Website,Review,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,Yes',
+    )
   })
 
   it('falls back to the user ID, leaves missing names empty, and escapes text', () => {
-    const completed = entry({ userDisplayName: undefined, description: 'Fix "login", again', clientName: null, projectName: null, taskName: null, billable: false })
-    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC'))
-      .toBe('2026-10-14,alice,"Fix ""login"", again",,,,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,No')
+    const completed = entry({
+      userDisplayName: undefined,
+      description: 'Fix "login", again',
+      clientName: null,
+      projectName: null,
+      taskName: null,
+      billable: false,
+    })
+    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC')).toBe(
+      '2026-10-14,alice,"Fix ""login"", again",,,,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,No',
+    )
   })
 
   it('never reports a negative duration', () => {

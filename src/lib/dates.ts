@@ -35,7 +35,8 @@ export function formatWeekLabel(startDay: string): string {
   const end = new Date(start)
   end.setDate(end.getDate() + 6)
   const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()
-  if (sameMonth) return `${start.toLocaleDateString(undefined, { month: 'long' })} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`
+  if (sameMonth)
+    return `${start.toLocaleDateString(undefined, { month: 'long' })} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`
   const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
   const endLabel = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
   return `${startLabel} – ${endLabel}`
@@ -53,8 +54,12 @@ export function dateTimeForDay(day: string, hour: number): string {
 
 /** Formats seconds as `HH:MM:SS`; hours keep growing past 24. */
 export function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600).toString().padStart(2, '0')
-  const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+  const hours = Math.floor(seconds / 3600)
+    .toString()
+    .padStart(2, '0')
+  const minutes = Math.floor((seconds % 3600) / 60)
+    .toString()
+    .padStart(2, '0')
   const remainder = (seconds % 60).toString().padStart(2, '0')
   return `${hours}:${minutes}:${remainder}`
 }

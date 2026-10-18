@@ -32,6 +32,8 @@ npm run emulators
 
 In a second terminal run `npm run dev`. The app is at <http://127.0.0.1:5173>, Emulator Suite UI at <http://127.0.0.1:4000>, and Hosting emulator at <http://127.0.0.1:5000>.
 
+Run `npm run test:emulators` to build the functions, start the Auth, Firestore, and Functions emulators, and run the emulator tests in `functions/test`. Stop `npm run emulators` first, since both use the same ports.
+
 ## Data and privacy
 
 The Firebase project operator is responsible for the data stored in that project, end-user notices, access, retention, and applicable legal obligations. Firebase and Google Cloud process data under the operator's project and their own service terms.
@@ -50,7 +52,7 @@ Firestore rules deny access by default and scope workspace data to active member
 
 ## Account and workspace deletion
 
-The in-app account deletion flow reauthenticates with an email and password, then deletes the signed-in Firebase Authentication identity and its `/users/{uid}` profile document. This flow currently supports email/password reauthentication; Google-only accounts may not be able to complete it. Deleting that identity does not delete workspace documents, memberships, time entries, invitations, or other shared data. Removing a member in the app does not erase their historical time entries.
+The in-app account deletion flow first reauthenticates the user with their linked provider — a Google popup for accounts linked to Google, otherwise their email and password — and only then deletes the signed-in Firebase Authentication identity and its `/users/{uid}` profile document. If reauthentication fails or is cancelled, nothing is deleted. Deleting that identity does not delete workspace documents, memberships, time entries, invitations, or other shared data. Removing a member in the app does not erase their historical time entries.
 
 Before removing a user or workspace's data, export a backup. To remove all data in a self-hosted project, an owner can delete the Firebase/Google Cloud project from Firebase project settings. This affects every app and resource in that project, not just Ticknest. Review the project and backup first; follow the current [Firebase project deletion guidance](https://firebase.google.com/docs/projects/learn-more). A shared Cloud Billing account can serve multiple projects, so do not close it unless you intend to affect them all.
 

@@ -3,31 +3,33 @@
 Every row below, the boundary-validation cases, and the callable flows are automated. `npm run test:emulators` runs them against the Auth, Firestore, and Functions emulators:
 
 - [`tests/emulator/firestore-rules.test.ts`](../tests/emulator/firestore-rules.test.ts) has one `matrix(...)` block per row, run as an unauthenticated client, an authenticated user with no membership, a workspace member, and the workspace owner.
-- [`tests/emulator/functions.test.ts`](../tests/emulator/functions.test.ts) calls the Functions emulator with Auth emulator users.
+- [`tests/emulator/functions.test.ts`](../tests/emulator/functions.test.ts) calls the workspace, invitation, and membership callables with Auth emulator users.
+- [`functions/test/manual-time-entries.test.mjs`](../functions/test/manual-time-entries.test.mjs) covers `saveManualTimeEntry`.
 
 Fixtures are written with rules disabled, the way trusted Admin SDK code would write them. When a rule changes, update this table and its test together.
 
-| Operation | Unauthenticated | Non-member | Workspace member | Workspace owner |
-| --- | --- | --- | --- | --- |
-| Read or update own `users/{uid}` profile, including `palette` | Deny | Allow | Allow | Allow |
-| Read or update another user's profile | Deny | Deny | Deny | Deny |
-| Set `palette` to a value outside the predefined list | Deny | Deny | Deny | Deny |
-| Read workspace document | Deny | Deny | Allow | Allow |
-| Read workspace clients/projects/tasks | Deny | Deny | Allow | Allow |
-| Read own time entries (direct get and query constrained to `userId == auth.uid`) | Deny | Deny | Allow | Allow |
-| Read another member's time entry (direct get) | Deny | Deny | Deny | Allow |
-| Query another member's time entries (`userId != auth.uid`) | Deny | Deny | Deny | Allow |
-| Query own memberships (`members` group, `uid == auth.uid`) | Deny | Allow only own matching records | Allow only own matching records | Allow only own matching records |
-| Read another member's membership in a known workspace | Deny | Deny | Allow | Allow |
-| Create or change a membership or its role from a web client | Deny | Deny | Deny | Deny |
-| Create or change workspace owner identity from a web client | Deny | Deny | Deny | Deny |
-| Read an invitation not addressed to the caller | Deny | Deny | Deny | Allow |
-| Create, update, or delete an invitation from a web client | Deny | Deny | Deny | Deny |
-| Create/update/delete a client, project, or task | Deny | Deny | Deny | Allow |
-| Create a time entry attributed to the caller | Deny | Deny | Allow | Allow |
-| Create a time entry attributed to a different user | Deny | Deny | Deny | Deny |
-| Update/delete own time entry | Deny | Deny | Allow | Allow |
-| Update/delete another user's time entry | Deny | Deny | Deny | Allow |
-| Access a collection or workspace outside the caller's membership | Deny | Deny | Deny | Deny |
+| Operation                                                                        | Unauthenticated | Non-member                      | Workspace member                | Workspace owner                 |
+| -------------------------------------------------------------------------------- | --------------- | ------------------------------- | ------------------------------- | ------------------------------- |
+| Read or update own `users/{uid}` profile, including `palette`                    | Deny            | Allow                           | Allow                           | Allow                           |
+| Read or update another user's profile                                            | Deny            | Deny                            | Deny                            | Deny                            |
+| Set `palette` to a value outside the predefined list                             | Deny            | Deny                            | Deny                            | Deny                            |
+| Read workspace document                                                          | Deny            | Deny                            | Allow                           | Allow                           |
+| Read workspace clients/projects/tasks                                            | Deny            | Deny                            | Allow                           | Allow                           |
+| Read own time entries (direct get and query constrained to `userId == auth.uid`) | Deny            | Deny                            | Allow                           | Allow                           |
+| Read another member's time entry (direct get)                                    | Deny            | Deny                            | Deny                            | Allow                           |
+| Query another member's time entries (`userId != auth.uid`)                       | Deny            | Deny                            | Deny                            | Allow                           |
+| Query own memberships (`members` group, `uid == auth.uid`)                       | Deny            | Allow only own matching records | Allow only own matching records | Allow only own matching records |
+| Read another member's membership in a known workspace                            | Deny            | Deny                            | Allow                           | Allow                           |
+| Create or change a membership or its role from a web client                      | Deny            | Deny                            | Deny                            | Deny                            |
+| Create or change workspace owner identity from a web client                      | Deny            | Deny                            | Deny                            | Deny                            |
+| Read an invitation not addressed to the caller                                   | Deny            | Deny                            | Deny                            | Allow                           |
+| Create, update, or delete an invitation from a web client                        | Deny            | Deny                            | Deny                            | Deny                            |
+| Create/update/delete a client, project, or task                                  | Deny            | Deny                            | Deny                            | Allow                           |
+| Start a running timer attributed to the caller                                   | Deny            | Deny                            | Allow                           | Allow                           |
+| Start a running timer attributed to a different user                             | Deny            | Deny                            | Deny                            | Deny                            |
+| Stop own running timer or delete own completed entry                             | Deny            | Deny                            | Allow                           | Allow                           |
+| Delete another user's completed entry                                            | Deny            | Deny                            | Deny                            | Allow                           |
+| Create or edit a completed entry directly (only via `saveManualTimeEntry`)       | Deny            | Deny                            | Deny                            | Deny                            |
+| Access a collection or workspace outside the caller's membership                 | Deny            | Deny                            | Deny                            | Deny                            |
 
-For time-entry reads, verify that a member can directly get and query their own entries but cannot directly get another member's entry or run an unconstrained query over the collection. An owner can directly get and query entries for every member. Also verify boundary validation: unknown fields, oversized names/descriptions, invalid enum values, malformed timestamps, negative estimates, and completed entries with an end at or before the start must be denied. Verify the callable flows separately in the Functions emulator: only an active workspace owner can create or revoke invitations and remove members; invitation acceptance requires a matching verified email, pending status, and unexpired invitation; repeated acceptance is denied; the owner cannot remove themselves or another owner. After removal, the former member must lose workspace reads and writes, while the owner can still read the retained membership identity and historical time entries.
+For time-entry reads, verify that a member can directly get and query their own entries but cannot directly get another member's entry or run an unconstrained query over the collection. An owner can directly get and query entries for every member. Also verify boundary validation: unknown fields, oversized names/descriptions, invalid enum values, malformed timestamps, negative estimates, and completed entries with an end at or before the start must be denied. Direct client creates of completed entries and direct edits of completed entries must be denied; only starting and stopping a running timer is allowed from the browser. Verify the callable flows separately in the Functions emulator: `saveManualTimeEntry` rejects overlapping entries (including concurrent conflicting saves, of which only one may succeed) and entries that overlap a running timer, lets an edit overlap its own previous time, and lets only owners edit another member's entry (covered by `functions/test/manual-time-entries.test.mjs`); only an active workspace owner can create or revoke invitations and remove members; invitation acceptance requires a matching verified email, pending status, and unexpired invitation; repeated acceptance is denied; the owner cannot remove themselves or another owner. After removal, the former member must lose workspace reads and writes, while the owner can still read the retained membership identity and historical time entries.

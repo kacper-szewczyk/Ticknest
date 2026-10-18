@@ -23,7 +23,16 @@ export type AppColors = {
   warmSoft: string
   warmSoftText: string
   errorSoft: string
-  sidebar: { bg: string; text: string; muted: string; faint: string; strong: string; accent: string; avatarBg: string; avatarText: string }
+  sidebar: {
+    bg: string
+    text: string
+    muted: string
+    faint: string
+    strong: string
+    accent: string
+    avatarBg: string
+    avatarText: string
+  }
   segment: { billable: string; nonBillable: string; running: string; gap: string }
   avatars: string[]
   avatarText: string
@@ -82,7 +91,16 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
       warmSoft: '#f1f0e7',
       warmSoftText: '#8b7850',
       errorSoft: '#f6e3df',
-      sidebar: { bg: '#17271f', text: '#c3d0c6', muted: '#7f9383', faint: '#5f7363', strong: '#f3f7ef', accent: '#a8d29a', avatarBg: '#dbe8d7', avatarText: '#213b2c' },
+      sidebar: {
+        bg: '#17271f',
+        text: '#c3d0c6',
+        muted: '#7f9383',
+        faint: '#5f7363',
+        strong: '#f3f7ef',
+        accent: '#a8d29a',
+        avatarBg: '#dbe8d7',
+        avatarText: '#213b2c',
+      },
       segment: { billable: '#386b43', nonBillable: '#9fbfa8', running: '#c4892f', gap: '#d6e6ee' },
       avatars: ['#dbe8d7', '#efe3cf', '#dfe6ef', '#eedcd8', '#e5def0', '#d8ebe7'],
       avatarText: '#24342a',
@@ -117,7 +135,16 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
       warmSoft: '#f3efe6',
       warmSoftText: '#8a6d3b',
       errorSoft: '#f7e2e0',
-      sidebar: { bg: '#142536', text: '#c2cfdc', muted: '#7d90a4', faint: '#5c7086', strong: '#f1f6fb', accent: '#8fc1ee', avatarBg: '#d3e4f5', avatarText: '#163a5c' },
+      sidebar: {
+        bg: '#142536',
+        text: '#c2cfdc',
+        muted: '#7d90a4',
+        faint: '#5c7086',
+        strong: '#f1f6fb',
+        accent: '#8fc1ee',
+        avatarBg: '#d3e4f5',
+        avatarText: '#163a5c',
+      },
       segment: { billable: '#2f6f9e', nonBillable: '#9fbfd8', running: '#c4892f', gap: '#e8e4d8' },
       avatars: ['#d3e4f5', '#efe3cf', '#dbeee6', '#eedcd8', '#e5def0', '#d8ebe7'],
       avatarText: '#1d2b3a',
@@ -152,7 +179,16 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
       warmSoft: '#f3eee6',
       warmSoftText: '#8b7048',
       errorSoft: '#f6e1e1',
-      sidebar: { bg: '#251a2c', text: '#d2c6d8', muted: '#95849e', faint: '#6f5f78', strong: '#f7f1fa', accent: '#d2a8ec', avatarBg: '#e6d9ee', avatarText: '#462c56' },
+      sidebar: {
+        bg: '#251a2c',
+        text: '#d2c6d8',
+        muted: '#95849e',
+        faint: '#6f5f78',
+        strong: '#f7f1fa',
+        accent: '#d2a8ec',
+        avatarBg: '#e6d9ee',
+        avatarText: '#462c56',
+      },
       segment: { billable: '#6b4a84', nonBillable: '#c0abd0', running: '#c4892f', gap: '#e3e7ec' },
       avatars: ['#e6d9ee', '#efe3cf', '#dfe6ef', '#eedcd8', '#dbeee6', '#f3e3ec'],
       avatarText: '#2e2433',
@@ -187,7 +223,16 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
       warmSoft: '#eef0e4',
       warmSoftText: '#5f6e3c',
       errorSoft: '#f6e0dc',
-      sidebar: { bg: '#2b1d17', text: '#dccbc1', muted: '#a08c80', faint: '#7a675c', strong: '#fbf3ee', accent: '#f0a986', avatarBg: '#f3d9cb', avatarText: '#6e311c' },
+      sidebar: {
+        bg: '#2b1d17',
+        text: '#dccbc1',
+        muted: '#a08c80',
+        faint: '#7a675c',
+        strong: '#fbf3ee',
+        accent: '#f0a986',
+        avatarBg: '#f3d9cb',
+        avatarText: '#6e311c',
+      },
       segment: { billable: '#9a4a2c', nonBillable: '#ddb39f', running: '#4f7a8f', gap: '#e6eadc' },
       avatars: ['#f3d9cb', '#efe3cf', '#dfe6ef', '#e3ecd8', '#e5def0', '#d8ebe7'],
       avatarText: '#33261f',
@@ -222,7 +267,16 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
       warmSoft: '#34301f',
       warmSoftText: '#d9c08a',
       errorSoft: '#4a2620',
-      sidebar: { bg: '#0d1410', text: '#b9c7bc', muted: '#78897c', faint: '#5a6b5e', strong: '#f0f6ef', accent: '#a8d29a', avatarBg: '#2f4a37', avatarText: '#e3ebe4' },
+      sidebar: {
+        bg: '#0d1410',
+        text: '#b9c7bc',
+        muted: '#78897c',
+        faint: '#5a6b5e',
+        strong: '#f0f6ef',
+        accent: '#a8d29a',
+        avatarBg: '#2f4a37',
+        avatarText: '#e3ebe4',
+      },
       segment: { billable: '#6fb27c', nonBillable: '#3f6b4c', running: '#e0a548', gap: '#2d4250' },
       avatars: ['#2f4a37', '#4a3f2a', '#2e3b4d', '#4d3230', '#3d3350', '#28463f'],
       avatarText: '#e3ebe4',
@@ -257,7 +311,16 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
       warmSoft: '#3a3220',
       warmSoftText: '#e3c27d',
       errorSoft: '#4d2624',
-      sidebar: { bg: '#0a1018', text: '#b5c3d3', muted: '#7488a0', faint: '#566a80', strong: '#eef4fb', accent: '#8ab4f8', avatarBg: '#1f3550', avatarText: '#e3e9f0' },
+      sidebar: {
+        bg: '#0a1018',
+        text: '#b5c3d3',
+        muted: '#7488a0',
+        faint: '#566a80',
+        strong: '#eef4fb',
+        accent: '#8ab4f8',
+        avatarBg: '#1f3550',
+        avatarText: '#e3e9f0',
+      },
       segment: { billable: '#5c9ce6', nonBillable: '#34557a', running: '#e8a64a', gap: '#3a3a4f' },
       avatars: ['#1f3550', '#4a3f2a', '#28463f', '#4d3230', '#3d3350', '#2f4a37'],
       avatarText: '#e3e9f0',
@@ -292,7 +355,16 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
       warmSoft: '#253325',
       warmSoftText: '#a8d4a8',
       errorSoft: '#4a2622',
-      sidebar: { bg: '#0e0e0e', text: '#c4c4c4', muted: '#858585', faint: '#626262', strong: '#f5f5f5', accent: '#f2b05e', avatarBg: '#3a2f1f', avatarText: '#ececec' },
+      sidebar: {
+        bg: '#0e0e0e',
+        text: '#c4c4c4',
+        muted: '#858585',
+        faint: '#626262',
+        strong: '#f5f5f5',
+        accent: '#f2b05e',
+        avatarBg: '#3a2f1f',
+        avatarText: '#ececec',
+      },
       segment: { billable: '#e0a050', nonBillable: '#6b5a42', running: '#6fb0d8', gap: '#333a40' },
       avatars: ['#3a2f1f', '#2e3b4d', '#28463f', '#4d3230', '#3d3350', '#3a3a3a'],
       avatarText: '#ececec',
