@@ -4,6 +4,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # PR titles must be Conventional Commits (see pr-title.yml).
+    commit-message:
+      prefix: chore
+    ignore:
+      # Types must match the Node runtime in .nvmrc, so bump majors by hand.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       app-minor-and-patch:
         patterns: ['*']
@@ -12,6 +19,8 @@ updates:
     directory: /functions
     schedule:
       interval: weekly
+    commit-message:
+      prefix: chore
     groups:
       functions-minor-and-patch:
         patterns: ['*']
@@ -20,3 +29,5 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    commit-message:
+      prefix: ci
