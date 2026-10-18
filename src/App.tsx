@@ -43,6 +43,7 @@ import {
   type TimeEntry,
 } from './lib/timeEntries'
 import { subscribeToCatalog, type Catalog } from './lib/catalog'
+import { dateTimeForDay, formatDuration, formatWeekLabel, localDateTimeValue, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
 import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
@@ -428,13 +429,6 @@ const navIcons = {
 const onboardingCardSx = { display: 'grid', alignContent: 'start', gap: 2, p: 3, borderRadius: '16px', bgcolor: (theme: Theme) => alpha(theme.palette.background.paper, 0.8) }
 const cardIconSx = { display: 'grid', width: 34, height: 34, placeItems: 'center', borderRadius: '11px', fontSize: 17 }
 
-function formatElapsed(seconds: number): string {
-  const hours = Math.floor(seconds / 3600).toString().padStart(2, '0')
-  const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
-  const remainder = (seconds % 60).toString().padStart(2, '0')
-  return `${hours}:${minutes}:${remainder}`
-}
-
 // Always-visible timer at the top of every workspace page.
 function TimerBar({ user, workspaceId, catalog }: { user: User; workspaceId: string; catalog: Catalog }) {
   const [entries, setEntries] = useState<TimeEntry[]>([])
@@ -497,7 +491,7 @@ function TimerBar({ user, workspaceId, catalog }: { user: User; workspaceId: str
   }
 
   const elapsed = runningEntry?.startAt ? Math.max(0, Math.floor(now / 1000 - runningEntry.startAt.toMillis() / 1000)) : 0
-  const elapsedText = <Typography component="span" aria-label={`Elapsed time ${formatElapsed(elapsed)}`} sx={{ color: runningEntry ? 'primary.main' : 'text.secondary', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 650, letterSpacing: 0.5, flexShrink: 0 }}>{formatElapsed(elapsed)}</Typography>
+  const elapsedText = <Typography component="span" aria-label={`Elapsed time ${formatDuration(elapsed)}`} sx={{ color: runningEntry ? 'primary.main' : 'text.secondary', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 650, letterSpacing: 0.5, flexShrink: 0 }}>{formatDuration(elapsed)}</Typography>
 
   return (
     <Box component="section" aria-label="Timer" sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25 }}>
@@ -530,46 +524,6 @@ function TimerBar({ user, workspaceId, catalog }: { user: User; workspaceId: str
 }
 
 const associationsSx = { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }
-
-function localDayString(date: Date): string {
-  const year = date.getFullYear()
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const day = date.getDate().toString().padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function startOfWeekString(day: string, weekStartsOn: number): string {
-  const date = new Date(`${day}T12:00:00`)
-  const offset = (date.getDay() - weekStartsOn + 7) % 7
-  date.setDate(date.getDate() - offset)
-  return localDayString(date)
-}
-
-function shiftDayString(day: string, days: number): string {
-  const date = new Date(`${day}T12:00:00`)
-  date.setDate(date.getDate() + days)
-  return localDayString(date)
-}
-
-function formatWeekLabel(startDay: string): string {
-  const start = new Date(`${startDay}T12:00:00`)
-  const end = new Date(start)
-  end.setDate(end.getDate() + 6)
-  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()
-  if (sameMonth) return `${start.toLocaleDateString(undefined, { month: 'long' })} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`
-  const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const endLabel = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-  return `${startLabel} – ${endLabel}`
-}
-
-function localDateTimeValue(date: Date): string {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return local.toISOString().slice(0, 16)
-}
-
-function dateTimeForDay(day: string, hour: number): string {
-  return `${day}T${hour.toString().padStart(2, '0')}:00`
-}
 
 function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }: { user: User; workspaceId: string; isOwner: boolean; weekStartsOn: number; catalog: Catalog }) {
   const [today] = useState(() => localDayString(new Date()))
@@ -739,7 +693,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
         </Stack>
       </Paper>
       <Paper variant="outlined" aria-live="polite" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mt: 3, px: 2, py: 1.75, borderRadius: '11px', borderColor: 'app.tintBorder', bgcolor: 'app.tint' }}>
-        <Box sx={{ display: 'grid', gap: 0.5 }}><Typography variant="caption" color="text.secondary">Week total</Typography><Typography sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 700 }}>{formatElapsed(weekTotal)}</Typography></Box>
+        <Box sx={{ display: 'grid', gap: 0.5 }}><Typography variant="caption" color="text.secondary">Week total</Typography><Typography sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 700 }}>{formatDuration(weekTotal)}</Typography></Box>
         <Typography variant="caption" color="text.secondary">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week</Typography>
       </Paper>
       <Box aria-live="polite" sx={{ mt: 2.25 }}>
@@ -750,12 +704,12 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
           return <Box component="section" key={weekDay} aria-labelledby={`timesheet-${weekDay}`} sx={{ pt: 2, pb: 0.75, borderBottom: 1, borderColor: 'divider' }}>
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.75 }}>
               <Typography variant="h3" id={`timesheet-${weekDay}`} sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}><span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span><Typography component="time" variant="caption" color="text.secondary" dateTime={weekDay}>{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Typography></Typography>
-              <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}><Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatElapsed(dayTotal)}</Typography><Button size="small" onClick={() => { clearForm(weekDay); setError(''); setNotice('') }}>Add entry</Button></Stack>
+              <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}><Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatDuration(dayTotal)}</Typography><Button size="small" onClick={() => { clearForm(weekDay); setError(''); setNotice('') }}>Add entry</Button></Stack>
             </Stack>
             {dayEntries.length === 0 ? <EmptyText>No entries</EmptyText> : dayEntries.map((entry) => <Box component="article" key={entry.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '54px minmax(0, 1fr) auto', sm: '78px minmax(0, 1fr) auto auto' }, alignItems: 'center', gap: { xs: 1, sm: 1.75 }, py: 1.5, borderTop: 1, borderColor: 'app.track', minWidth: 0 }}>
               <Box sx={{ display: 'grid', gap: 0.5, fontVariantNumeric: 'tabular-nums' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography><Typography variant="caption" color="text.secondary">{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</Typography></Box>
               <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{entry.description || 'Untitled entry'}</Typography><Typography variant="caption" color="text.secondary" noWrap>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</Typography></Box>
-              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 650 }}>{formatElapsed(secondsFor(entry))}</Typography>
+              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 650 }}>{formatDuration(secondsFor(entry))}</Typography>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', sm: 'auto' } }}>{entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}{entry.billable && <BillableChip />}{entry.endAt !== null && entry.userId === user.uid && <Button size="small" onClick={() => void handleContinue(entry)} disabled={pending}>Continue</Button>}<Button size="small" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</Button><Button size="small" color="error" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</Button></Stack>
             </Box>)}
           </Box>

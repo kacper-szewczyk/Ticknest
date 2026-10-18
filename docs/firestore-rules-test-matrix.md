@@ -1,6 +1,11 @@
 # Firestore Rules emulator test matrix
 
-Run the Auth, Firestore, and Functions emulators with `npm run emulators`, then exercise these requests against the Firestore emulator. Use separate Auth emulator users for the owner and member, plus an authenticated user with no membership and an unauthenticated client. Seed invitation fixtures only through trusted Admin SDK setup or the Functions emulator.
+Every row below, the boundary-validation cases, and the callable flows are automated. `npm run test:emulators` runs them against the Auth, Firestore, and Functions emulators:
+
+- [`tests/emulator/firestore-rules.test.ts`](../tests/emulator/firestore-rules.test.ts) has one `matrix(...)` block per row, run as an unauthenticated client, an authenticated user with no membership, a workspace member, and the workspace owner.
+- [`tests/emulator/functions.test.ts`](../tests/emulator/functions.test.ts) calls the Functions emulator with Auth emulator users.
+
+Fixtures are written with rules disabled, the way trusted Admin SDK code would write them. When a rule changes, update this table and its test together.
 
 | Operation | Unauthenticated | Non-member | Workspace member | Workspace owner |
 | --- | --- | --- | --- | --- |

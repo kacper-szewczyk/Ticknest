@@ -18,6 +18,8 @@ import {
 } from 'firebase/firestore'
 import type { User } from 'firebase/auth'
 import { db } from './firebase'
+import { localDayBounds } from './dates'
+import { validateManualEntry } from './timeEntryValidation'
 
 export type TimeEntry = {
   id: string
@@ -58,14 +60,6 @@ export function subscribeToTimeEntries(
     const entries = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry)
     onEntries(entries)
   }, onError)
-}
-
-function localDayBounds(day: string): [Date, Date] {
-  const [year, month, date] = day.split('-').map(Number)
-  const start = new Date(year, month - 1, date)
-  const end = new Date(year, month - 1, date + 1)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new Error('Choose a valid date.')
-  return [start, end]
 }
 
 export function subscribeToEntriesForDay(
@@ -168,15 +162,7 @@ export async function saveManualTimeEntry(
   userId = user.uid,
   entryId?: string,
 ): Promise<string> {
-  const description = input.description.trim()
-  if (!description) throw new Error('Add a description for this entry.')
-  if (description.length > 500) throw new Error('Descriptions must be 500 characters or fewer.')
-  for (const [label, value] of [['Client', input.clientName], ['Project', input.projectName], ['Task', input.taskName]] as const) {
-    if ((value?.trim().length ?? 0) > 100) throw new Error(`${label} names must be 100 characters or fewer.`)
-  }
-  if (!Number.isFinite(input.startAt.getTime()) || !Number.isFinite(input.endAt.getTime()) || input.endAt <= input.startAt) {
-    throw new Error('The end time must be later than the start time.')
-  }
+  const description = validateManualEntry(input)
 
   await assertNoOverlap(workspaceId, userId, input.startAt, input.endAt, entryId)
   const entryRef = entryId ? doc(entriesPath(workspaceId), entryId) : doc(entriesPath(workspaceId))
