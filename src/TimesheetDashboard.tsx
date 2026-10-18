@@ -26,6 +26,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme, type Theme } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
 import type { Catalog } from './lib/catalog'
+import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
 import { deleteTimeEntry, saveManualTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import { BillableChip, EmptyText, FormMessage, SelectField } from './ui'
@@ -633,11 +634,13 @@ function EntryEditor({ user, workspaceId, catalog, entry, day, onClose, onSaved 
   const [endAt, setEndAt] = useState(entry?.endAt ? localDateTimeValue(entry.endAt.toDate()) : `${day}T10:00`)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const { fieldProps, showFieldError, clearFieldError, clearFieldErrors } = useManualEntryFieldErrors()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
     setError('')
+    clearFieldErrors()
     try {
       await saveManualTimeEntry(user, workspaceId, {
         description,
@@ -654,7 +657,7 @@ function EntryEditor({ user, workspaceId, catalog, entry, day, onClose, onSaved 
       }, entry?.userId, entry?.id)
       onSaved(entry ? 'Time entry updated.' : 'Time entry added.')
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not save this entry.')
+      if (!showFieldError(requestError)) setError(requestError instanceof Error ? requestError.message : 'Could not save this entry.')
       setPending(false)
     }
   }
@@ -666,10 +669,10 @@ function EntryEditor({ user, workspaceId, catalog, entry, day, onClose, onSaved 
         <DialogTitle id="entry-editor-title" sx={{ fontWeight: 650 }}>{entry ? 'Edit time entry' : 'Add time entry'}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
           {error && <FormMessage severity="error">{error}</FormMessage>}
-          <TextField label="Description" value={description} onChange={(event) => setDescription(event.target.value)} required autoFocus slotProps={{ htmlInput: { maxLength: 500 } }} />
+          <TextField label="Description" value={description} onChange={(event) => { setDescription(event.target.value); clearFieldError('description') }} required autoFocus {...fieldProps('description')} slotProps={{ htmlInput: { maxLength: 500 } }} />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-            <TextField label="Start" type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="End" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+            <TextField label="Start" type="datetime-local" value={startAt} onChange={(event) => { setStartAt(event.target.value); clearFieldError('startAt'); clearFieldError('endAt') }} required {...fieldProps('startAt')} slotProps={{ inputLabel: { shrink: true } }} />
+            <TextField label="End" type="datetime-local" value={endAt} onChange={(event) => { setEndAt(event.target.value); clearFieldError('endAt') }} required {...fieldProps('endAt')} slotProps={{ inputLabel: { shrink: true } }} />
           </Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
             <SelectField label="Client" value={clientId} onChange={(event) => { setClientId(event.target.value); setProjectId(''); setTaskId('') }}>

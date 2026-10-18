@@ -47,6 +47,7 @@ import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
 import { TimesheetDashboard } from './TimesheetDashboard'
+import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
 import { AppearancePanel } from './AppearancePanel'
 import { subscribeToPalettePreference } from './lib/userPreferences'
 import { usePalette } from './paletteContext'
@@ -592,6 +593,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [now, setNow] = useState(() => Date.now())
+  const { fieldProps, showFieldError, clearFieldError, clearFieldErrors } = useManualEntryFieldErrors()
 
   useEffect(() => {
     return subscribeToEntriesForRange(workspaceId, user.uid, isOwner, weekStart, 7, (nextEntries) => setEntryState({ workspaceId, weekStart, entries: nextEntries }), (loadError) => setError(readableError(loadError)))
@@ -630,6 +632,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
     setStartAt(localDateTimeValue(entry.startAt.toDate()))
     setEndAt(localDateTimeValue(entry.endAt.toDate()))
     setError('')
+    clearFieldErrors()
     setNotice('')
   }
 
@@ -638,6 +641,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
     setPending(true)
     setError('')
     setNotice('')
+    clearFieldErrors()
     try {
       const existing = entries.find((entry) => entry.id === editId)
       await saveManualTimeEntry(user, workspaceId, {
@@ -655,7 +659,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
       clearForm()
       setNotice(editId ? 'Time entry updated.' : 'Time entry added.')
     } catch (requestError) {
-      setError(readableError(requestError))
+      if (!showFieldError(requestError)) setError(readableError(requestError))
     } finally {
       setPending(false)
     }
@@ -722,10 +726,10 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
       {notice && <FormMessage severity="success">{notice}</FormMessage>}
       <Paper component="form" variant="outlined" onSubmit={handleSave} aria-busy={pending} sx={{ display: 'grid', gap: 2, mt: 3, p: 2.25, borderRadius: '12px', bgcolor: 'app.surface' }}>
         <Typography variant="h3">{editId ? 'Edit entry' : `Add time · ${new Date(`${editorDay}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}</Typography>
-        <TextField label="Description" value={description} onChange={(event) => setDescription(event.target.value)} required slotProps={{ htmlInput: { maxLength: 500 } }} />
+        <TextField label="Description" value={description} onChange={(event) => { setDescription(event.target.value); clearFieldError('description') }} required {...fieldProps('description')} slotProps={{ htmlInput: { maxLength: 500 } }} />
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-          <TextField label="Start" type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
-          <TextField label="End" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField label="Start" type="datetime-local" value={startAt} onChange={(event) => { setStartAt(event.target.value); clearFieldError('startAt'); clearFieldError('endAt') }} required {...fieldProps('startAt')} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField label="End" type="datetime-local" value={endAt} onChange={(event) => { setEndAt(event.target.value); clearFieldError('endAt') }} required {...fieldProps('endAt')} slotProps={{ inputLabel: { shrink: true } }} />
         </Box>
         <Box sx={associationsSx}>
           <SelectField label="Client" value={clientId} onChange={(event) => { setClientId(event.target.value); setClientName(''); setProjectName(''); setTaskName(''); setProjectId(''); setTaskId('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived || item.id === clientId).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
