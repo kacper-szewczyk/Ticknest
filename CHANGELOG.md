@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.3.0...ticknest-v1.4.0) (2026-10-18)
+
+
+### Features
+
+* add per-user color palettes with dark mode options ([#63](https://github.com/kacper-szewczyk/Ticknest/issues/63)) ([8abf63e](https://github.com/kacper-szewczyk/Ticknest/commit/8abf63ecd3b1a312fcdee73d7331ab0a8c6896e5))
+
 ## [1.3.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.2.1...ticknest-v1.3.0) (2026-10-18)
 
 
