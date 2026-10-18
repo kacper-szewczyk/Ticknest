@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.5.0...ticknest-v1.5.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* associate time-entry validation errors with their fields ([#72](https://github.com/kacper-szewczyk/Ticknest/issues/72)) ([9ef48a9](https://github.com/kacper-szewczyk/Ticknest/commit/9ef48a977e8c8eafdc4a1b3e92bf31c47d9ecb4f)), closes [#32](https://github.com/kacper-szewczyk/Ticknest/issues/32)
+
 ## [1.5.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.4.1...ticknest-v1.5.0) (2026-10-18)
 
 
