@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   dateTimeForDay,
-  formatDuration,
+  formatElapsed,
   formatWeekLabel,
   localDateTimeValue,
   localDayBounds,
@@ -108,7 +108,7 @@ describe('dateTimeForDay', () => {
   })
 })
 
-describe('formatDuration', () => {
+describe('formatElapsed', () => {
   it.each([
     [0, '00:00:00'],
     [59, '00:00:59'],
@@ -117,6 +117,6 @@ describe('formatDuration', () => {
     [36_000 + 1234, '10:20:34'],
     [100 * 3600, '100:00:00'],
   ])('formats %i seconds as %s', (seconds, expected) => {
-    expect(formatDuration(seconds)).toBe(expected)
+    expect(formatElapsed(seconds)).toBe(expected)
   })
 })

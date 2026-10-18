@@ -1,5 +1,5 @@
 import type { TimeEntry } from './timeEntries'
-import { formatDuration, localDayBounds } from './dates'
+import { formatElapsed, localDayBounds } from './dates'
 
 export type ReportFilters = {
   startDay: string
@@ -88,7 +88,7 @@ export function csvRow(entry: TimeEntry & { endAt: NonNullable<TimeEntry['endAt'
     entry.taskName,
     localDateTime(start, timeZone),
     localDateTime(end, timeZone),
-    formatDuration(seconds),
+    formatElapsed(seconds),
     entry.billable ? 'Yes' : 'No',
   ]
     .map(csvField)

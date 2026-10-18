@@ -10,6 +10,7 @@ import type { User } from 'firebase/auth'
 import type { QueryDocumentSnapshot } from 'firebase/firestore'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import type { Catalog } from './lib/catalog'
+import { formatElapsed, localDayString } from './lib/dates'
 import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportPage, loadReportSummary, streamReportCsv } from './lib/reports'
 import type { ReportFilters } from './lib/reportFormat'
 import type { TimeEntry } from './lib/timeEntries'
@@ -27,16 +28,12 @@ type SaveFilePicker = (options: {
   types: { description: string; accept: Record<string, string[]> }[]
 }) => Promise<SaveFileHandle>
 
-function localDay(date: Date) {
-  return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`
-}
-
 function initialFilters(): ReportFilters {
   const today = new Date()
   const start = new Date(today.getFullYear(), today.getMonth(), 1)
   return {
-    startDay: localDay(start),
-    endDay: localDay(today),
+    startDay: localDayString(start),
+    endDay: localDayString(today),
     userId: '',
     clientId: '',
     projectId: '',
@@ -45,23 +42,12 @@ function initialFilters(): ReportFilters {
   }
 }
 
-function formatDuration(seconds: number) {
-  const hours = Math.floor(seconds / 3600)
-    .toString()
-    .padStart(2, '0')
-  const minutes = Math.floor((seconds % 3600) / 60)
-    .toString()
-    .padStart(2, '0')
-  const remainder = (seconds % 60).toString().padStart(2, '0')
-  return `${hours}:${minutes}:${remainder}`
-}
-
 function duration(entry: TimeEntry) {
   return entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : 0
 }
 
 function groupValue(entry: TimeEntry, groupBy: GroupBy, members: WorkspaceMember[]) {
-  if (groupBy === 'day') return localDay(entry.startAt.toDate())
+  if (groupBy === 'day') return localDayString(entry.startAt.toDate())
   if (groupBy === 'user') {
     const member = members.find((item) => item.uid === entry.userId)
     return member?.displayName || member?.email || entry.userId
@@ -368,8 +354,8 @@ export function ReportsPanel({
         sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 0.75, sm: 1.25 }, mt: 2.5 }}
       >
         {[
-          ['Total tracked', formatDuration(totalSeconds)],
-          ['Billable', formatDuration(billableSeconds)],
+          ['Total tracked', formatElapsed(totalSeconds)],
+          ['Billable', formatElapsed(billableSeconds)],
           ['Entries', `${summaryEntries.length}${summaryLoading ? '…' : ''}`],
         ].map(([label, value]) => (
           <Paper
@@ -438,7 +424,7 @@ export function ReportsPanel({
                 variant="body2"
                 sx={{ gridColumn: { xs: 2, sm: 'auto' }, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
               >
-                {formatDuration(total.seconds)}
+                {formatElapsed(total.seconds)}
               </Typography>
             </Box>
           ))
@@ -476,7 +462,7 @@ export function ReportsPanel({
             </Box>
             <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flex: '0 0 auto' }}>
               <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                {formatDuration(duration(entry))}
+                {formatElapsed(duration(entry))}
               </Typography>
               {entry.billable && <BillableChip />}
             </Stack>
