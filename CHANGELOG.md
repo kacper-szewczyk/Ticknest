@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.2.1...ticknest-v1.3.0) (2026-10-18)
+
+
+### Features
+
+* move timer into an always-visible header bar ([#61](https://github.com/kacper-szewczyk/Ticknest/issues/61)) ([0b99913](https://github.com/kacper-szewczyk/Ticknest/commit/0b99913ed0c6179c8c10d99ad41be96b18880683))
+
+## [1.2.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.2.0...ticknest-v1.2.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* allow time entry display name and catalog changes in rules ([#59](https://github.com/kacper-szewczyk/Ticknest/issues/59)) ([ef939da](https://github.com/kacper-szewczyk/Ticknest/commit/ef939da8d845f3abb282ae9e2679f38b1fc331ff))
+
 ## [1.2.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.1.0...ticknest-v1.2.0) (2026-10-17)
 
 
