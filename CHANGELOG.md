@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.4.0...ticknest-v1.4.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* make manual time-entry overlap validation atomic ([#67](https://github.com/kacper-szewczyk/Ticknest/issues/67)) ([2c30fea](https://github.com/kacper-szewczyk/Ticknest/commit/2c30fea4b0ee377a047767dbe68597f6c659126c)), closes [#30](https://github.com/kacper-szewczyk/Ticknest/issues/30)
+
 ## [1.4.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.3.0...ticknest-v1.4.0) (2026-10-18)
 
 

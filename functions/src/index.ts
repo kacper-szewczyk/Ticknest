@@ -297,6 +297,162 @@ export const removeWorkspaceMember = onCall(FUNCTION_OPTIONS, async (request) =>
   return { memberUid }
 })
 
+type CatalogRef = { id: string | null; name: string | null }
+
+function getOptionalDocumentId(data: CallableData, field: string): string | null {
+  return data[field] == null ? null : getDocumentId(data, field)
+}
+
+function getInstant(data: CallableData, field: string): Timestamp {
+  const value = data[field]
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new HttpsError('invalid-argument', `Enter a valid ${field}.`)
+  }
+  return Timestamp.fromMillis(value)
+}
+
+function isAbortedError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'code' in error && (error.code === 10 || error.code === 'aborted')
+  )
+}
+
+// Creates or edits a completed entry. Overlap checks run in the same transaction as the write and every
+// manual write for a user reads and writes that user's lock document, so concurrent saves are serialized:
+// the later one retries, sees the earlier entry, and is rejected.
+export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const entryId = getOptionalDocumentId(data, 'entryId')
+  const description = getRequiredText(data, 'description', 500)
+  const clientId = getOptionalDocumentId(data, 'clientId')
+  const projectId = getOptionalDocumentId(data, 'projectId')
+  const taskId = getOptionalDocumentId(data, 'taskId')
+  if (typeof data.billable !== 'boolean') throw new HttpsError('invalid-argument', 'Enter a valid billable value.')
+  const billable = data.billable
+  const startAt = getInstant(data, 'startAt')
+  const endAt = getInstant(data, 'endAt')
+  if (endAt.toMillis() <= startAt.toMillis()) {
+    throw new HttpsError('invalid-argument', 'The end time must be later than the start time.')
+  }
+
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const callerRef = workspaceRef.collection('members').doc(user.uid)
+  const entriesRef = workspaceRef.collection('timeEntries')
+  const entryRef = entryId ? entriesRef.doc(entryId) : entriesRef.doc()
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const [caller, existing] = await Promise.all([
+        transaction.get(callerRef),
+        entryId ? transaction.get(entryRef) : Promise.resolve(null),
+      ])
+      if (!caller.exists || caller.data()?.status === 'removed') {
+        throw new HttpsError('permission-denied', 'You are not a member of this workspace.')
+      }
+      const existingData = existing?.data()
+      if (existing && (!existing.exists || !existingData)) {
+        throw new HttpsError('not-found', 'This time entry no longer exists.')
+      }
+      if (existingData && !(existingData.endAt instanceof Timestamp)) {
+        throw new HttpsError('failed-precondition', 'Stop the running timer before editing its entry.')
+      }
+      const userId = existingData ? (existingData.userId as string) : user.uid
+      if (userId !== user.uid && caller.data()?.role !== 'owner') {
+        throw new HttpsError('permission-denied', 'You can only edit your own time entries.')
+      }
+
+      // An unchanged reference keeps its stored snapshot even if the catalog item was archived later.
+      async function resolveRef(collectionName: string, id: string | null, idField: string, nameField: string) {
+        if (id === null) return { ref: { id: null, name: null } satisfies CatalogRef, item: null, isNew: false }
+        if (existingData && existingData[idField] === id) {
+          return { ref: { id, name: (existingData[nameField] as string | null) ?? null }, item: null, isNew: false }
+        }
+        const item = (await transaction.get(workspaceRef.collection(collectionName).doc(id))).data()
+        if (!item || item.archived !== false || typeof item.name !== 'string') {
+          throw new HttpsError('failed-precondition', 'Choose an active client, project, and task.')
+        }
+        return { ref: { id, name: item.name.slice(0, 100) }, item, isNew: true }
+      }
+      const [client, project, task] = await Promise.all([
+        resolveRef('clients', clientId, 'clientId', 'clientName'),
+        resolveRef('projects', projectId, 'projectId', 'projectName'),
+        resolveRef('tasks', taskId, 'taskId', 'taskName'),
+      ])
+      if (project.isNew && project.item?.clientId != null && project.item.clientId !== clientId) {
+        throw new HttpsError('failed-precondition', 'This project belongs to a different client.')
+      }
+      if (task.isNew && task.item?.projectId !== projectId) {
+        throw new HttpsError('failed-precondition', 'This task belongs to a different project.')
+      }
+
+      const lockRef = workspaceRef.collection('timeEntryLocks').doc(userId)
+      const activeRef = workspaceRef.collection('activeTimers').doc(userId)
+      const [, active, overlapping] = await Promise.all([
+        transaction.get(lockRef),
+        transaction.get(activeRef),
+        transaction.get(
+          entriesRef.where('userId', '==', userId).where('endAt', '>', startAt).where('startAt', '<', endAt),
+        ),
+      ])
+      if (overlapping.docs.some((entry) => entry.id !== entryRef.id)) {
+        throw new HttpsError(
+          'failed-precondition',
+          'This time overlaps another entry for this user. Adjust the start or end time.',
+        )
+      }
+      const activeStartAt = active.data()?.startAt
+      if (activeStartAt instanceof Timestamp && endAt.toMillis() > activeStartAt.toMillis()) {
+        throw new HttpsError(
+          'failed-precondition',
+          'This time overlaps the user’s running timer. Stop the timer or choose a different time.',
+        )
+      }
+
+      const now = FieldValue.serverTimestamp()
+      const values = {
+        description,
+        clientId: client.ref.id,
+        clientName: client.ref.name,
+        projectId: project.ref.id,
+        projectName: project.ref.name,
+        taskId: task.ref.id,
+        taskName: task.ref.name,
+        billable,
+        startAt,
+        endAt,
+        updatedAt: now,
+      }
+      transaction.set(lockRef, { updatedAt: now })
+      if (existingData) {
+        transaction.update(entryRef, values)
+      } else {
+        const name = request.auth?.token.name
+        transaction.create(entryRef, {
+          ...values,
+          userId,
+          userDisplayName: (typeof name === 'string' && name.trim() ? name.trim() : user.email || user.uid).slice(
+            0,
+            320,
+          ),
+          createdAt: now,
+        })
+      }
+    })
+  } catch (error) {
+    if (isAbortedError(error)) {
+      throw new HttpsError(
+        'aborted',
+        'Another change to these time entries was saved at the same moment. Try saving again.',
+      )
+    }
+    throw error
+  }
+
+  return { entryId: entryRef.id }
+})
+
 function matchesTokenHash(token: string, expectedHash: string): boolean {
   if (!/^[a-f0-9]{64}$/i.test(expectedHash)) return false
   const actualHash = createHash('sha256').update(token).digest()

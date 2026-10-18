@@ -235,17 +235,6 @@ service cloud.firestore {
             && (data.endAt == null || (data.endAt is timestamp && data.endAt > data.startAt));
         }
 
-        // Unchanged or cleared references stay valid even if the catalog item was archived later.
-        function validCatalogRefUpdate(collectionName, idField, nameField) {
-          let newId = request.resource.data.get(idField, null);
-          let itemPath = /databases/$(database)/documents/workspaces/$(workspaceId)/$(collectionName)/$(newId);
-          return newId == null
-            || newId == resource.data.get(idField, null)
-            || (exists(itemPath)
-              && get(itemPath).data.archived == false
-              && get(itemPath).data.name == request.resource.data.get(nameField, null));
-        }
-
         function validEntryCreate(data) {
           return validEntry(data)
             && data.createdAt == request.time
@@ -275,40 +264,20 @@ service cloud.firestore {
               && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.archived == false
               && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.name == request.resource.data.taskName
               && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.projectId == request.resource.data.get('projectId', null)))
-          && (
-            request.resource.data.endAt == null
-              ? request.resource.data.startAt == request.time
-                && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)).data.entryId == entryId
-              : (!exists(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid))
-                || request.resource.data.endAt <= get(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)).data.startAt)
-          );
+          // Clients create only running timers. Completed entries are written by the saveManualTimeEntry
+          // callable, which checks overlaps in the same transaction as the write.
+          && request.resource.data.endAt == null
+          && request.resource.data.startAt == request.time
+          && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)).data.entryId == entryId;
+        // Clients may only stop their own running timer; edits to completed entries go through the callable.
         allow update: if isMember(workspaceId)
-          && request.resource.data.userId == resource.data.userId
-          && request.resource.data.createdAt == resource.data.createdAt
+          && resource.data.endAt == null
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endAt', 'updatedAt'])
           && request.resource.data.updatedAt == request.time
-          && (
-            (
-              resource.data.endAt == null
-              && resource.data.userId == request.auth.uid
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endAt', 'updatedAt'])
-              && request.resource.data.endAt is timestamp
-              && request.resource.data.endAt > resource.data.startAt
-              && !existsAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid))
-            )
-            ||
-            (
-              resource.data.endAt is timestamp
-              && (isOwner(workspaceId) || resource.data.userId == request.auth.uid)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['description', 'clientName', 'projectName', 'taskName', 'clientId', 'projectId', 'taskId', 'billable', 'startAt', 'endAt', 'updatedAt'])
-              && request.resource.data.endAt is timestamp
-              && validEntry(request.resource.data)
-              && validCatalogRefUpdate('clients', 'clientId', 'clientName')
-              && validCatalogRefUpdate('projects', 'projectId', 'projectName')
-              && validCatalogRefUpdate('tasks', 'taskId', 'taskName')
-              && (!exists(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(resource.data.userId))
-                || request.resource.data.endAt <= get(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(resource.data.userId)).data.startAt)
-            )
-          );
+          && request.resource.data.endAt is timestamp
+          && request.resource.data.endAt > resource.data.startAt
+          && !existsAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid));
         allow delete: if isMember(workspaceId)
           && resource.data.endAt is timestamp
           && (isOwner(workspaceId) || resource.data.userId == request.auth.uid);

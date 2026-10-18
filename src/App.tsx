@@ -25,6 +25,7 @@ import {
 } from './lib/workspaces'
 import {
   deleteCurrentAccount,
+  getReauthMethod,
   registerWithEmail,
   sendPasswordReset,
   signInWithEmail,
@@ -80,6 +81,9 @@ function readableError(error: unknown): string {
     'auth/unauthorized-domain':
       'This site is not authorized for Firebase sign-in. Add its domain in Firebase Authentication settings.',
     'auth/requires-recent-login': 'Sign in again before deleting your account.',
+    'auth/wrong-password': 'The password is incorrect.',
+    'auth/missing-password': 'Enter your password to confirm account deletion.',
+    'auth/user-mismatch': 'Choose the Google account you signed in with, then try deleting your account again.',
     'auth/popup-closed-by-user': 'Google sign-in was closed before it finished.',
     'auth/popup-blocked': 'Allow pop-ups for this site, then try Google sign-in again.',
     'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Authentication.',
@@ -471,18 +475,33 @@ function WorkspaceScreen({ user }: { user: User }) {
   }
 
   async function handleDeleteAccount() {
+    const method = getReauthMethod(user)
+    setError('')
+    if (!method) {
+      setError(
+        'Account deletion needs a Google or email/password sign-in. Sign out and sign in with one of those methods, then try again.',
+      )
+      return
+    }
     const confirmed = window.confirm(
-      'Delete this Ticknest account? This will sign you out. Workspace data is retained in the Firebase project.',
+      `Delete this Ticknest account? This will sign you out. Workspace data is retained in the Firebase project.\n\n${method === 'google' ? 'You’ll be asked to confirm with Google next.' : 'You’ll be asked for your password next.'}`,
     )
     if (!confirmed) return
-    const password = window.prompt('Enter your password to confirm account deletion.')
-    if (password === null) return
+    let password: string | undefined
+    if (method === 'password') {
+      const entered = window.prompt('Enter your password to confirm account deletion.')
+      if (entered === null) return
+      if (!entered) {
+        setError('Enter your password to confirm account deletion.')
+        return
+      }
+      password = entered
+    }
     setPending(true)
-    setError('')
     try {
-      await deleteCurrentAccount(user, password)
+      await deleteCurrentAccount(user, method, password)
     } catch (requestError) {
-      setError(readableError(requestError))
+      setError(`Your account was not deleted. ${readableError(requestError)}`)
     } finally {
       setPending(false)
     }
@@ -1248,9 +1267,6 @@ function TimeEntriesPanel({
   const entries = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart ? entryState.entries : []
   const [editId, setEditId] = useState<string | null>(null)
   const [description, setDescription] = useState('')
-  const [clientName, setClientName] = useState('')
-  const [projectName, setProjectName] = useState('')
-  const [taskName, setTaskName] = useState('')
   const [clientId, setClientId] = useState('')
   const [projectId, setProjectId] = useState('')
   const [taskId, setTaskId] = useState('')
@@ -1282,9 +1298,6 @@ function TimeEntriesPanel({
   function clearForm(forDay = weekStart) {
     setEditId(null)
     setDescription('')
-    setClientName('')
-    setProjectName('')
-    setTaskName('')
     setClientId('')
     setProjectId('')
     setTaskId('')
@@ -1298,9 +1311,6 @@ function TimeEntriesPanel({
     if (entry.endAt === null) return
     setEditId(entry.id)
     setDescription(entry.description)
-    setClientName(entry.clientName ?? '')
-    setProjectName(entry.projectName ?? '')
-    setTaskName(entry.taskName ?? '')
     setClientId(entry.clientId ?? '')
     setProjectId(entry.projectId ?? '')
     setTaskId(entry.taskId ?? '')
@@ -1317,23 +1327,17 @@ function TimeEntriesPanel({
     setError('')
     setNotice('')
     try {
-      const existing = entries.find((entry) => entry.id === editId)
       await saveManualTimeEntry(
-        user,
         workspaceId,
         {
           description,
           clientId: clientId || null,
           projectId: projectId || null,
           taskId: taskId || null,
-          clientName: catalog.clients.find((item) => item.id === clientId)?.name ?? (clientName || null),
-          projectName: catalog.projects.find((item) => item.id === projectId)?.name ?? (projectName || null),
-          taskName: catalog.tasks.find((item) => item.id === taskId)?.name ?? (taskName || null),
           billable,
           startAt: new Date(startAt),
           endAt: new Date(endAt),
         },
-        existing?.userId,
         editId ?? undefined,
       )
       clearForm()
@@ -1487,9 +1491,6 @@ function TimeEntriesPanel({
             value={clientId}
             onChange={(event) => {
               setClientId(event.target.value)
-              setClientName('')
-              setProjectName('')
-              setTaskName('')
               setProjectId('')
               setTaskId('')
             }}
@@ -1509,8 +1510,6 @@ function TimeEntriesPanel({
             value={projectId}
             onChange={(event) => {
               setProjectId(event.target.value)
-              setProjectName('')
-              setTaskName('')
               setTaskId('')
             }}
           >
@@ -1531,14 +1530,7 @@ function TimeEntriesPanel({
                 </option>
               ))}
           </SelectField>
-          <SelectField
-            label="Task"
-            value={taskId}
-            onChange={(event) => {
-              setTaskId(event.target.value)
-              setTaskName('')
-            }}
-          >
+          <SelectField label="Task" value={taskId} onChange={(event) => setTaskId(event.target.value)}>
             <option value="">No task</option>
             {catalog.tasks
               .filter(

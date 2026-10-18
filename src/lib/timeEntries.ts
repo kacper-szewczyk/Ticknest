@@ -10,14 +10,13 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  setDoc,
   Timestamp,
-  updateDoc,
   where,
   type QueryConstraint,
 } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
 import type { User } from 'firebase/auth'
-import { db } from './firebase'
+import { db, functions } from './firebase'
 
 export type TimeEntry = {
   id: string
@@ -37,7 +36,20 @@ export type TimeEntry = {
 
 export type TimerDetails = Pick<TimeEntry, 'description' | 'clientName' | 'projectName' | 'taskName' | 'billable'> &
   Pick<TimeEntry, 'clientId' | 'projectId' | 'taskId'>
-export type ManualEntryInput = TimerDetails & { startAt: Date; endAt: Date }
+export type ManualEntryInput = Pick<TimeEntry, 'description' | 'billable'> &
+  Pick<TimeEntry, 'clientId' | 'projectId' | 'taskId'> & { startAt: Date; endAt: Date }
+
+type SaveManualTimeEntryRequest = {
+  workspaceId: string
+  entryId: string | null
+  description: string
+  clientId: string | null
+  projectId: string | null
+  taskId: string | null
+  billable: boolean
+  startAt: number
+  endAt: number
+}
 
 function entriesPath(workspaceId: string) {
   return collection(db, 'workspaces', workspaceId, 'timeEntries')
@@ -124,35 +136,28 @@ export function subscribeToEntriesForRange(
   )
 }
 
-async function assertNoOverlap(
-  workspaceId: string,
-  userId: string,
-  startAt: Date,
-  endAt: Date | null,
-  excludedEntryId?: string,
-): Promise<void> {
-  const filters: QueryConstraint[] = [
-    where('userId', '==', userId),
-    where('endAt', '>', Timestamp.fromDate(startAt)),
-    orderBy('endAt'),
-  ]
-  if (endAt) filters.push(where('startAt', '<', Timestamp.fromDate(endAt)), orderBy('startAt'))
-  const overlapping = await getDocs(query(entriesPath(workspaceId), ...filters))
-  if (overlapping.docs.some((entry) => entry.id !== excludedEntryId)) {
+// Browser-side guard for starting a timer; the rules also block entries that overlap a running timer.
+async function assertNoOverlapFromNow(workspaceId: string, userId: string): Promise<void> {
+  const overlapping = await getDocs(
+    query(
+      entriesPath(workspaceId),
+      where('userId', '==', userId),
+      where('endAt', '>', Timestamp.now()),
+      orderBy('endAt'),
+    ),
+  )
+  if (!overlapping.empty) {
     throw new Error('This time overlaps another entry for this user. Adjust the start or end time.')
   }
 
   const activeSnapshot = await getDoc(doc(db, 'workspaces', workspaceId, 'activeTimers', userId))
   if (activeSnapshot.exists()) {
-    const activeStart = (activeSnapshot.data().startAt as Timestamp).toMillis()
-    if (endAt === null || endAt.getTime() > activeStart) {
-      throw new Error('This time overlaps the user’s running timer. Stop the timer or choose a different time.')
-    }
+    throw new Error('This time overlaps the user’s running timer. Stop the timer or choose a different time.')
   }
 }
 
 export async function startTimer(user: User, workspaceId: string, details: TimerDetails): Promise<string> {
-  await assertNoOverlap(workspaceId, user.uid, new Date(), null)
+  await assertNoOverlapFromNow(workspaceId, user.uid)
   const entryRef = doc(entriesPath(workspaceId))
   const activeRef = doc(db, 'workspaces', workspaceId, 'activeTimers', user.uid)
 
@@ -175,23 +180,15 @@ export async function startTimer(user: User, workspaceId: string, details: Timer
   return entryRef.id
 }
 
+// Manual entries are saved by a callable so the overlap check and the write happen in one transaction.
 export async function saveManualTimeEntry(
-  user: User,
   workspaceId: string,
   input: ManualEntryInput,
-  userId = user.uid,
   entryId?: string,
 ): Promise<string> {
   const description = input.description.trim()
   if (!description) throw new Error('Add a description for this entry.')
   if (description.length > 500) throw new Error('Descriptions must be 500 characters or fewer.')
-  for (const [label, value] of [
-    ['Client', input.clientName],
-    ['Project', input.projectName],
-    ['Task', input.taskName],
-  ] as const) {
-    if ((value?.trim().length ?? 0) > 100) throw new Error(`${label} names must be 100 characters or fewer.`)
-  }
   if (
     !Number.isFinite(input.startAt.getTime()) ||
     !Number.isFinite(input.endAt.getTime()) ||
@@ -200,30 +197,19 @@ export async function saveManualTimeEntry(
     throw new Error('The end time must be later than the start time.')
   }
 
-  await assertNoOverlap(workspaceId, userId, input.startAt, input.endAt, entryId)
-  const entryRef = entryId ? doc(entriesPath(workspaceId), entryId) : doc(entriesPath(workspaceId))
-  const values = {
-    userId,
+  const call = httpsCallable<SaveManualTimeEntryRequest, { entryId: string }>(functions, 'saveManualTimeEntry')
+  const result = await call({
+    workspaceId,
+    entryId: entryId ?? null,
     description,
-    clientName: input.clientName?.trim() || null,
-    projectName: input.projectName?.trim() || null,
-    taskName: input.taskName?.trim() || null,
     clientId: input.clientId ?? null,
     projectId: input.projectId ?? null,
     taskId: input.taskId ?? null,
     billable: input.billable,
-    startAt: Timestamp.fromDate(input.startAt),
-    endAt: Timestamp.fromDate(input.endAt),
-    updatedAt: serverTimestamp(),
-  }
-  if (entryId) await updateDoc(entryRef, values)
-  else
-    await setDoc(entryRef, {
-      ...values,
-      userDisplayName: user.displayName?.trim() || user.email || user.uid,
-      createdAt: serverTimestamp(),
-    })
-  return entryRef.id
+    startAt: input.startAt.getTime(),
+    endAt: input.endAt.getTime(),
+  })
+  return result.data.entryId
 }
 
 export async function deleteTimeEntry(workspaceId: string, entry: TimeEntry): Promise<void> {

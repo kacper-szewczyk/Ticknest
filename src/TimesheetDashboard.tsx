@@ -947,7 +947,6 @@ function MemberDialog({
       </DialogContent>
       {editor && (
         <EntryEditor
-          user={user}
           workspaceId={workspaceId}
           catalog={catalog}
           entry={editor.entry}
@@ -1251,7 +1250,6 @@ function EntryList({
 }
 
 function EntryEditor({
-  user,
   workspaceId,
   catalog,
   entry,
@@ -1259,7 +1257,6 @@ function EntryEditor({
   onClose,
   onSaved,
 }: {
-  user: User
   workspaceId: string
   catalog: Catalog
   entry?: TimeEntry
@@ -1283,27 +1280,16 @@ function EntryEditor({
     setError('')
     try {
       await saveManualTimeEntry(
-        user,
         workspaceId,
         {
           description,
           clientId: clientId || null,
           projectId: projectId || null,
           taskId: taskId || null,
-          // Keep the stored snapshot name when the catalog item no longer exists.
-          clientName:
-            catalog.clients.find((item) => item.id === clientId)?.name ??
-            (clientId ? (entry?.clientName ?? null) : null),
-          projectName:
-            catalog.projects.find((item) => item.id === projectId)?.name ??
-            (projectId ? (entry?.projectName ?? null) : null),
-          taskName:
-            catalog.tasks.find((item) => item.id === taskId)?.name ?? (taskId ? (entry?.taskName ?? null) : null),
           billable,
           startAt: new Date(startAt),
           endAt: new Date(endAt),
         },
-        entry?.userId,
         entry?.id,
       )
       onSaved(entry ? 'Time entry updated.' : 'Time entry added.')
