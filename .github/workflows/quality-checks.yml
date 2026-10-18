@@ -44,6 +44,8 @@ jobs:
         run: npm run lint
       - name: Typecheck app
         run: npm run typecheck
+      - name: Run unit tests
+        run: npm test
       - name: Build app
         run: npm run build
 
@@ -67,3 +69,37 @@ jobs:
         run: npm run lint:functions
       - name: Typecheck Functions
         run: npm run typecheck:functions
+
+  emulator-tests:
+    name: Firestore rules and Functions tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      # The Firestore emulator runs on the JVM.
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Cache Firebase emulators
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
+      - name: Run Firestore rules and Functions tests
+        run: npm run test:emulators

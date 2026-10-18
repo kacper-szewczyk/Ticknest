@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { ManualEntryFieldError, type ManualEntryField } from './lib/timeEntries'
+import { ManualEntryFieldError, type ManualEntryField } from './lib/timeEntryValidation'
 
 type FieldErrors = Partial<Record<ManualEntryField, string>>
 

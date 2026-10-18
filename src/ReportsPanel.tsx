@@ -11,13 +11,8 @@ import type { QueryDocumentSnapshot } from 'firebase/firestore'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed, localDayString } from './lib/dates'
-import {
-  IN_MEMORY_EXPORT_ROW_LIMIT,
-  loadReportPage,
-  loadReportSummary,
-  streamReportCsv,
-  type ReportFilters,
-} from './lib/reports'
+import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportPage, loadReportSummary, streamReportCsv } from './lib/reports'
+import type { ReportFilters } from './lib/reportFormat'
 import type { TimeEntry } from './lib/timeEntries'
 import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 

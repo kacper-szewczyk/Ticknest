@@ -17,6 +17,8 @@ import {
 import { httpsCallable } from 'firebase/functions'
 import type { User } from 'firebase/auth'
 import { db, functions } from './firebase'
+import { localDayBounds } from './dates'
+import { validateManualEntryFields } from './timeEntryValidation'
 
 export type TimeEntry = {
   id: string
@@ -75,14 +77,6 @@ export function subscribeToTimeEntries(
     },
     onError,
   )
-}
-
-function localDayBounds(day: string): [Date, Date] {
-  const [year, month, date] = day.split('-').map(Number)
-  const start = new Date(year, month - 1, date)
-  const end = new Date(year, month - 1, date + 1)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new Error('Choose a valid date.')
-  return [start, end]
 }
 
 export function subscribeToEntriesForDay(
@@ -178,32 +172,6 @@ export async function startTimer(user: User, workspaceId: string, details: Timer
   })
 
   return entryRef.id
-}
-
-export type ManualEntryField = 'description' | 'startAt' | 'endAt'
-
-// A validation failure the form can attach to one input instead of announcing it for the whole form.
-export class ManualEntryFieldError extends Error {
-  readonly field: ManualEntryField
-
-  constructor(field: ManualEntryField, message: string) {
-    super(message)
-    this.name = 'ManualEntryFieldError'
-    this.field = field
-  }
-}
-
-export function validateManualEntryFields(input: Pick<ManualEntryInput, 'description' | 'startAt' | 'endAt'>): void {
-  const description = input.description.trim()
-  if (!description) throw new ManualEntryFieldError('description', 'Add a description for this entry.')
-  if (description.length > 500)
-    throw new ManualEntryFieldError('description', 'Descriptions must be 500 characters or fewer.')
-  if (!Number.isFinite(input.startAt.getTime()))
-    throw new ManualEntryFieldError('startAt', 'Enter a valid start date and time.')
-  if (!Number.isFinite(input.endAt.getTime()))
-    throw new ManualEntryFieldError('endAt', 'Enter a valid end date and time.')
-  if (input.endAt <= input.startAt)
-    throw new ManualEntryFieldError('endAt', 'The end time must be later than the start time.')
 }
 
 // Manual entries are saved by a callable so the overlap check and the write happen in one transaction.

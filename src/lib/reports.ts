@@ -12,16 +12,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { TimeEntry } from './timeEntries'
-
-export type ReportFilters = {
-  startDay: string
-  endDay: string
-  userId: string
-  clientId: string
-  projectId: string
-  taskId: string
-  billable: '' | 'yes' | 'no'
-}
+import { csvHeader, csvRow, matchesFilters, reportRange, type ReportFilters } from './reportFormat'
 
 const PAGE_SIZE = 25
 const SUMMARY_BATCH_SIZE = 250
@@ -35,10 +26,7 @@ function constraints(
   batchSize: number,
   cursor?: QueryDocumentSnapshot,
 ) {
-  const [startYear, startMonth, startDate] = filters.startDay.split('-').map(Number)
-  const [endYear, endMonth, endDate] = filters.endDay.split('-').map(Number)
-  const start = new Date(startYear, startMonth - 1, startDate)
-  const end = new Date(endYear, endMonth - 1, endDate + 1)
+  const [start, end] = reportRange(filters)
   const queryParts: QueryConstraint[] = [
     where('startAt', '>=', Timestamp.fromDate(start)),
     where('startAt', '<', Timestamp.fromDate(end)),
@@ -55,56 +43,6 @@ function toEntry(snapshot: QueryDocumentSnapshot): TimeEntry {
   return { id: snapshot.id, ...snapshot.data() } as TimeEntry
 }
 
-function matchesFilters(entry: TimeEntry, filters: ReportFilters) {
-  return (
-    (!filters.clientId || entry.clientId === filters.clientId) &&
-    (!filters.projectId || entry.projectId === filters.projectId) &&
-    (!filters.taskId || entry.taskId === filters.taskId) &&
-    (!filters.billable || entry.billable === (filters.billable === 'yes'))
-  )
-}
-
-function csvField(value: string | number | boolean | null | undefined): string {
-  const text = value == null ? '' : String(value)
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
-}
-
-function localDate(date: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date)
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
-  return `${part('year')}-${part('month')}-${part('day')}`
-}
-
-function localDateTime(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('sv-SE', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-    timeZoneName: 'short',
-  }).format(date)
-}
-
-function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600)
-    .toString()
-    .padStart(2, '0')
-  const minutes = Math.floor((seconds % 3600) / 60)
-    .toString()
-    .padStart(2, '0')
-  const remainder = (seconds % 60).toString().padStart(2, '0')
-  return `${hours}:${minutes}:${remainder}`
-}
-
 export async function streamReportCsv(
   workspaceId: string,
   isOwner: boolean,
@@ -115,20 +53,7 @@ export async function streamReportCsv(
   onProgress: (rows: number) => void,
 ): Promise<number> {
   const timezone = timeZone || 'UTC'
-  const timezoneSuffix = timezone === 'UTC' ? 'UTC' : timezone
-  const headers = [
-    'Date',
-    'User',
-    'Description',
-    'Client',
-    'Project',
-    'Task',
-    `Start (${timezoneSuffix})`,
-    `End (${timezoneSuffix})`,
-    'Duration',
-    'Billable',
-  ]
-  await onChunk(`\uFEFF${headers.map(csvField).join(',')}\r\n`, 0)
+  await onChunk(`\uFEFF${csvHeader(timezone)}\r\n`, 0)
 
   let cursor: QueryDocumentSnapshot | undefined
   let totalRows = 0
@@ -140,25 +65,7 @@ export async function streamReportCsv(
     for (const document of snapshot.docs) {
       const entry = toEntry(document)
       if (entry.endAt === null || !matchesFilters(entry, filters)) continue
-      const start = entry.startAt.toDate()
-      const end = entry.endAt.toDate()
-      const seconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
-      lines.push(
-        [
-          localDate(start, timezone),
-          entry.userDisplayName ?? entry.userId,
-          entry.description,
-          entry.clientName,
-          entry.projectName,
-          entry.taskName,
-          localDateTime(start, timezone),
-          localDateTime(end, timezone),
-          formatDuration(seconds),
-          entry.billable ? 'Yes' : 'No',
-        ]
-          .map(csvField)
-          .join(','),
-      )
+      lines.push(csvRow({ ...entry, endAt: entry.endAt }, timezone))
     }
     if (lines.length > 0) {
       totalRows += lines.length

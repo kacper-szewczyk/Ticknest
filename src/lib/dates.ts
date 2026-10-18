@@ -5,6 +5,15 @@ export function localDayString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
+/** Returns the start and the exclusive end of a local day, which is 23 or 25 hours long on DST changes. */
+export function localDayBounds(day: string): [Date, Date] {
+  const [year, month, date] = day.split('-').map(Number)
+  const start = new Date(year, month - 1, date)
+  const end = new Date(year, month - 1, date + 1)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new Error('Choose a valid date.')
+  return [start, end]
+}
+
 // Noon avoids DST transitions moving a calendar day across midnight.
 export function dayDate(day: string): Date {
   return new Date(`${day}T12:00:00`)
