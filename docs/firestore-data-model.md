@@ -6,7 +6,7 @@ Ticknest stores each workspace's business data under its workspace document. Fir
 
 | Path | Document fields | Notes |
 | --- | --- | --- |
-| `users/{uid}` | `displayName`, `email`, `timezone`, `createdAt`, `updatedAt` | Private profile; a user can read and update only their own profile. The email is a display copy, not an identity authority. |
+| `users/{uid}` | `displayName`, `email`, `timezone`, optional `palette`, `createdAt`, `updatedAt` | Private profile; a user can read and update only their own profile. The email is a display copy, not an identity authority. `palette` is the user's color palette (`system`, `forest`, `ocean`, `plum`, `terracotta`, `forest-night`, `midnight`, or `graphite`); a missing value means the default, `forest`. |
 | `workspaces/{workspaceId}` | `name`, `ownerUid`, `weekStartsOn`, `createdAt`, `updatedAt` | `ownerUid` is assigned by a trusted callable function and cannot be changed from the browser. |
 | `workspaces/{workspaceId}/members/{uid}` | `uid`, `email`, `displayName`, `role`, `status`, `joinedAt`, optional `removedAt` | Role is `owner` or `member`; status is `active` or `removed`. Callable functions are the only writers. Removed member records remain as historical attribution, while security rules deny them workspace access. |
 | `workspaces/{workspaceId}/invitations/{invitationId}` | `email`, `role`, `tokenHash`, `expiresAt`, `status`, `createdBy`, `createdAt`, optional `acceptedBy`, `acceptedAt`, `revokedAt` | Invitation writes are reserved for trusted functions. The accept flow verifies the authenticated, verified email and single-use expiration in a transaction. |

@@ -213,7 +213,7 @@ export function ReportsPanel({ user, workspaceId, isOwner, catalog }: { user: Us
     </Box>
     {error && <FormMessage severity="error">{error}</FormMessage>}
     <Box aria-live="polite" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 0.75, sm: 1.25 }, mt: 2.5 }}>
-      {[['Total tracked', formatDuration(totalSeconds)], ['Billable', formatDuration(billableSeconds)], ['Entries', `${summaryEntries.length}${summaryLoading ? '…' : ''}`]].map(([label, value]) => <Paper key={label} variant="outlined" sx={{ display: 'grid', gap: 0.75, p: { xs: 1.25, sm: 1.75 }, minWidth: 0, bgcolor: '#fbfcfa' }}>
+      {[['Total tracked', formatDuration(totalSeconds)], ['Billable', formatDuration(billableSeconds)], ['Entries', `${summaryEntries.length}${summaryLoading ? '…' : ''}`]].map(([label, value]) => <Paper key={label} variant="outlined" sx={{ display: 'grid', gap: 0.75, p: { xs: 1.25, sm: 1.75 }, minWidth: 0, bgcolor: 'app.surface' }}>
         <Typography variant="caption" color="text.secondary">{label}</Typography>
         <Typography sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: { xs: 15, sm: 18 }, fontWeight: 700 }}>{value}</Typography>
       </Paper>)}

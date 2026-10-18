@@ -4,12 +4,21 @@ import ButtonBase from '@mui/material/ButtonBase'
 import Drawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
+import { alpha, type Theme } from '@mui/material/styles'
 
 const SIDEBAR_WIDTH = 264
 
 export type NavItem<V extends string> = { value: V; label: string; icon: ReactNode; section: string; badge?: ReactNode }
 
-const sidebarColors = { bg: '#17271f', text: '#c3d0c6', muted: '#7f9383', activeBg: 'rgba(233, 242, 223, .09)', accent: '#a8d29a', border: 'rgba(233, 242, 223, .08)' }
+const sidebarColors = {
+  bg: 'app.sidebar.bg',
+  text: 'app.sidebar.text',
+  muted: 'app.sidebar.muted',
+  strong: 'app.sidebar.strong',
+  accent: 'app.sidebar.accent',
+  activeBg: (theme: Theme) => alpha(theme.palette.app.sidebar.strong, 0.09),
+  border: (theme: Theme) => alpha(theme.palette.app.sidebar.strong, 0.08),
+}
 
 type ShellProps<V extends string> = {
   brand: ReactNode
@@ -36,7 +45,7 @@ export function AppShell<V extends string>({ brand, header, topBar, items, activ
       <Box component="aside" aria-label="Sidebar" sx={{ display: { xs: 'none', md: 'flex' }, position: 'fixed', inset: '0 auto 0 0', width: SIDEBAR_WIDTH, zIndex: (theme) => theme.zIndex.appBar }}>
         {sidebar}
       </Box>
-      <Box component="header" sx={{ display: { xs: 'flex', md: 'none' }, position: 'sticky', top: 0, zIndex: (theme) => theme.zIndex.appBar, alignItems: 'center', gap: 1.5, height: 60, px: 1.5, bgcolor: sidebarColors.bg, color: '#fff' }}>
+      <Box component="header" sx={{ display: { xs: 'flex', md: 'none' }, position: 'sticky', top: 0, zIndex: (theme) => theme.zIndex.appBar, alignItems: 'center', gap: 1.5, height: 60, px: 1.5, bgcolor: sidebarColors.bg, color: sidebarColors.strong }}>
         <IconButton aria-label="Open navigation" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)} sx={{ color: 'inherit' }}>
           <NavIcon><path d="M4 7h16M4 12h16M4 17h16" /></NavIcon>
         </IconButton>
@@ -46,8 +55,8 @@ export function AppShell<V extends string>({ brand, header, topBar, items, activ
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} sx={{ display: { md: 'none' } }} slotProps={{ paper: { sx: { width: SIDEBAR_WIDTH, maxWidth: '85vw', border: 0 } } }}>
         {sidebar}
       </Drawer>
-      <Box sx={{ ml: { md: `${SIDEBAR_WIDTH}px` }, minWidth: 0, background: 'radial-gradient(ellipse at 12% 0%, rgba(217, 231, 221, .48), transparent 32rem), #f8f8f5', minHeight: { xs: 'calc(100vh - 60px)', md: '100vh' } }}>
-        {topBar && <Box sx={{ position: 'sticky', top: { xs: 60, md: 0 }, zIndex: (theme) => theme.zIndex.appBar - 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'rgba(255, 255, 255, .94)', backdropFilter: 'blur(8px)' }}>{topBar}</Box>}
+      <Box sx={{ ml: { md: `${SIDEBAR_WIDTH}px` }, minWidth: 0, background: (theme) => `radial-gradient(ellipse at 12% 0%, ${alpha(theme.palette.app.glow, 0.48)}, transparent 32rem), ${theme.palette.background.default}`, minHeight: { xs: 'calc(100vh - 60px)', md: '100vh' } }}>
+        {topBar && <Box sx={{ position: 'sticky', top: { xs: 60, md: 0 }, zIndex: (theme) => theme.zIndex.appBar - 1, borderBottom: 1, borderColor: 'divider', bgcolor: (theme) => alpha(theme.palette.background.paper, 0.94), backdropFilter: 'blur(8px)' }}>{topBar}</Box>}
         {children}
       </Box>
     </Box>
@@ -82,11 +91,11 @@ function SidebarContent<V extends string>({ brand, header, items, active, footer
                         borderRadius: '10px',
                         fontSize: 14,
                         fontWeight: isActive ? 650 : 500,
-                        color: isActive ? '#fff' : sidebarColors.text,
+                        color: isActive ? sidebarColors.strong : sidebarColors.text,
                         bgcolor: isActive ? sidebarColors.activeBg : 'transparent',
                         transition: 'background-color .15s, color .15s',
-                        '&:hover': { bgcolor: sidebarColors.activeBg, color: '#fff' },
-                        '&.Mui-focusVisible': { outline: `3px solid ${sidebarColors.accent}`, outlineOffset: 1 },
+                        '&:hover': { bgcolor: sidebarColors.activeBg, color: sidebarColors.strong },
+                        '&.Mui-focusVisible': { outline: (theme) => `3px solid ${theme.palette.app.sidebar.accent}`, outlineOffset: 1 },
                         '&::before': isActive ? { content: '""', position: 'absolute', left: -12, top: 8, bottom: 8, width: 4, borderRadius: '0 4px 4px 0', bgcolor: sidebarColors.accent } : undefined,
                       }}
                     >

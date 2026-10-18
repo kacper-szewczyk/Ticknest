@@ -1,20 +1,15 @@
 import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import Box from '@mui/material/Box'
-import CssBaseline from '@mui/material/CssBaseline'
 import Typography from '@mui/material/Typography'
-import { ThemeProvider } from '@mui/material/styles'
-import { theme } from './theme'
+import { AppThemeProvider } from './AppThemeProvider'
 
 const root = createRoot(document.getElementById('root')!)
 
 function withProviders(children: ReactNode) {
   return (
     <StrictMode>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-      </ThemeProvider>
+      <AppThemeProvider>{children}</AppThemeProvider>
     </StrictMode>
   )
 }

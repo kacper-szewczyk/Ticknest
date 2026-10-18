@@ -36,12 +36,15 @@ service cloud.firestore {
     }
 
     function validUserProfile(data) {
-      return data.keys().hasOnly(['displayName', 'email', 'timezone', 'createdAt', 'updatedAt'])
+      return data.keys().hasOnly(['displayName', 'email', 'timezone', 'palette', 'createdAt', 'updatedAt'])
         && data.displayName is string
         && data.displayName.size() <= 80
         && data.email == request.auth.token.email
         && data.timezone is string
-        && data.timezone.size() <= 100;
+        && data.timezone.size() <= 100
+        && data.get('palette', 'system') in [
+          'system', 'forest', 'ocean', 'plum', 'terracotta', 'forest-night', 'midnight', 'graphite'
+        ];
     }
 
     function validName(data) {
@@ -102,7 +105,7 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'email', 'timezone', 'updatedAt'])
+          .hasOnly(['displayName', 'email', 'timezone', 'palette', 'updatedAt'])
         && validUserProfile(request.resource.data);
       allow delete: if signedIn() && request.auth.uid == uid;
     }

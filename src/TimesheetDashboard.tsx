@@ -23,7 +23,7 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import { useTheme } from '@mui/material/styles'
+import { alpha, useTheme, type Theme } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
 import type { Catalog } from './lib/catalog'
 import { deleteTimeEntry, saveManualTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
@@ -47,8 +47,8 @@ type PersonStats = {
 
 const WEEKLY_TARGET_SECONDS = 40 * 3600
 const LONG_DAY_SECONDS = 10 * 3600
-const SEGMENT_COLORS = { billable: '#386b43', nonBillable: '#9fbfa8', running: '#c4892f', gap: '#d6e6ee' }
-const AVATAR_COLORS = ['#dbe8d7', '#efe3cf', '#dfe6ef', '#eedcd8', '#e5def0', '#d8ebe7']
+// Theme palette paths, resolved by `sx` against the user's selected palette.
+const SEGMENT_COLORS = { billable: 'app.segment.billable', nonBillable: 'app.segment.nonBillable', running: 'app.segment.running', gap: 'app.segment.gap' }
 const STATUS_LABELS: Record<Status, { label: string; color: 'default' | 'success' | 'warning' | 'error' }> = {
   running: { label: 'Running', color: 'warning' },
   'long-day': { label: 'Long day', color: 'error' },
@@ -107,9 +107,9 @@ function initials(name: string): string {
   return name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || '?'
 }
 
-function avatarColor(uid: string): string {
+function avatarColor(uid: string): (theme: Theme) => string {
   const hash = [...uid].reduce((total, char) => total + char.charCodeAt(0), 0)
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
+  return (theme: Theme) => theme.palette.app.avatars[hash % theme.palette.app.avatars.length]
 }
 
 // Returns a signed percentage change, or null when there is no baseline to compare against.
@@ -248,7 +248,7 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
         <Box sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ minWidth: { xs: 0, md: 860 }, '& td, & th': { borderColor: 'divider' } }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: '#f6f7f3', '& th': { color: 'text.secondary', fontSize: 12, fontWeight: 650, py: 1.25 } }}>
+              <TableRow sx={{ bgcolor: 'app.surfaceMuted', '& th': { color: 'text.secondary', fontSize: 12, fontWeight: 650, py: 1.25 } }}>
                 <TableCell>Member</TableCell>
                 {weekDays.map((day) => <TableCell key={day} align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, ...(day === today && { color: 'primary.main !important' }) }}>{dayDate(day).toLocaleDateString(undefined, { weekday: 'short' })}<Box component="span" sx={{ display: 'block', fontWeight: 400 }}>{dayDate(day).getDate()}</Box></TableCell>)}
                 <TableCell align="right">Total</TableCell>
@@ -324,7 +324,7 @@ function StatTile({ label, value, change, caption, tone }: { label: string; valu
 }
 
 function PersonAvatar({ person, size = 34 }: { person: Person; size?: number }) {
-  return <Avatar aria-hidden="true" sx={{ width: size, height: size, fontSize: size * 0.38, fontWeight: 700, bgcolor: avatarColor(person.uid), color: '#24342a' }}>{initials(person.name)}</Avatar>
+  return <Avatar aria-hidden="true" sx={{ width: size, height: size, fontSize: size * 0.38, fontWeight: 700, bgcolor: avatarColor(person.uid), color: 'app.avatarText' }}>{initials(person.name)}</Avatar>
 }
 
 function PersonLabel({ person, isSelf }: { person: Person; isSelf?: boolean }) {
@@ -343,7 +343,7 @@ function DayCell({ seconds }: { seconds: number }) {
   if (seconds === 0) return <Typography variant="caption" color="text.disabled">–</Typography>
   const isLong = seconds > LONG_DAY_SECONDS
   return (
-    <Box sx={{ display: 'inline-block', minWidth: 52, whiteSpace: 'nowrap', px: 0.75, py: 0.25, borderRadius: '6px', fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums', bgcolor: isLong ? '#f6e3df' : `rgba(56, 107, 67, ${0.08 + Math.min(seconds / (8 * 3600), 1) * 0.22})`, color: isLong ? 'error.main' : 'primary.dark' }}>
+    <Box sx={{ display: 'inline-block', minWidth: 52, whiteSpace: 'nowrap', px: 0.75, py: 0.25, borderRadius: '6px', fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums', bgcolor: (theme) => isLong ? theme.palette.app.errorSoft : alpha(theme.palette.app.segment.billable, 0.08 + Math.min(seconds / (8 * 3600), 1) * 0.22), color: isLong ? 'error.main' : 'primary.dark' }}>
       {formatHours(seconds)}
     </Box>
   )
@@ -352,7 +352,7 @@ function DayCell({ seconds }: { seconds: number }) {
 function WeekProgress({ seconds }: { seconds: number }) {
   const ratio = Math.min(seconds / WEEKLY_TARGET_SECONDS, 1)
   return (
-    <Box role="img" aria-label={`${Math.round((seconds / WEEKLY_TARGET_SECONDS) * 100)}% of 40 hour week`} sx={{ width: 72, height: 4, ml: 'auto', mt: 0.5, borderRadius: 2, bgcolor: '#eef0eb', overflow: 'hidden' }}>
+    <Box role="img" aria-label={`${Math.round((seconds / WEEKLY_TARGET_SECONDS) * 100)}% of 40 hour week`} sx={{ width: 72, height: 4, ml: 'auto', mt: 0.5, borderRadius: 2, bgcolor: 'app.track', overflow: 'hidden' }}>
       <Box sx={{ width: `${ratio * 100}%`, height: '100%', bgcolor: seconds > WEEKLY_TARGET_SECONDS ? 'warning.main' : 'primary.light' }} />
     </Box>
   )
@@ -548,7 +548,7 @@ function DayTimeline({ day, today, entries, axisStart, axisEnd, now, canEdit, on
           <Box aria-hidden="true" sx={{ position: 'relative', height: 18 }}>
             {ticks.map((hour) => <Typography key={hour} variant="caption" color="text.secondary" sx={{ position: 'absolute', left: `${((hour - axisStart) / (axisEnd - axisStart)) * 100}%`, transform: hour === axisStart ? 'none' : hour === axisEnd ? 'translateX(-100%)' : 'translateX(-50%)', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{`${hour}`.padStart(2, '0')}:00</Typography>)}
           </Box>
-          <Box sx={{ position: 'relative', height: 26, borderRadius: '7px', bgcolor: '#f1f2ee', overflow: 'hidden' }}>
+          <Box sx={{ position: 'relative', height: 26, borderRadius: '7px', bgcolor: 'app.track', overflow: 'hidden' }}>
             {sorted.map((entry, index) => {
               const start = entry.startAt.toMillis()
               const end = entry.endAt?.toMillis() ?? now
@@ -559,7 +559,7 @@ function DayTimeline({ day, today, entries, axisStart, axisEnd, now, canEdit, on
               const label = `${entry.description || 'Untitled entry'}, ${formatClock(new Date(start))}–${entry.endAt ? formatClock(new Date(end)) : 'running'}, ${formatHours(entrySeconds(entry, now))}`
               return [gap, (
                 <Tooltip key={entry.id} title={<><b>{entry.description || 'Untitled entry'}</b><br />{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No project'}<br />{formatClock(new Date(start))} – {entry.endAt ? formatClock(new Date(end)) : 'running'} · {formatHours(entrySeconds(entry, now))}</>}>
-                  <Box component="button" type="button" aria-label={editable ? `Edit ${label}` : label} onClick={() => editable && onEdit(entry)} sx={{ position: 'absolute', top: 3, bottom: 3, left: `${position(start)}%`, width: `max(4px, calc(${position(end) - position(start)}% - 2px))`, p: 0, border: 0, borderRadius: '5px', bgcolor: color, cursor: editable ? 'pointer' : 'default', transition: 'filter .15s', '&:hover': { filter: 'brightness(1.1)' }, '&:focus-visible': { outline: '3px solid #2f6e42', outlineOffset: 1 } }} />
+                  <Box component="button" type="button" aria-label={editable ? `Edit ${label}` : label} onClick={() => editable && onEdit(entry)} sx={{ position: 'absolute', top: 3, bottom: 3, left: `${position(start)}%`, width: `max(4px, calc(${position(end) - position(start)}% - 2px))`, p: 0, border: 0, borderRadius: '5px', bgcolor: color, cursor: editable ? 'pointer' : 'default', transition: 'filter .15s', '&:hover': { filter: 'brightness(1.1)' }, '&:focus-visible': { outline: (theme) => `3px solid ${theme.palette.app.focus}`, outlineOffset: 1 } }} />
                 </Tooltip>
               )]
             })}
