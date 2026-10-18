@@ -47,12 +47,12 @@ import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
 import { TimesheetDashboard } from './TimesheetDashboard'
 import { AppShell, NavIcon, type NavItem } from './AppShell'
-import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
+import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading, SelectField } from './ui'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
-type WorkspaceView = 'timer' | 'timesheet' | 'dashboard' | 'reports' | 'catalog' | 'members' | 'settings'
+type WorkspaceView = 'timesheet' | 'dashboard' | 'reports' | 'catalog' | 'members' | 'settings'
 
-const WORKSPACE_VIEWS: WorkspaceView[] = ['timer', 'timesheet', 'dashboard', 'reports', 'catalog', 'members', 'settings']
+const WORKSPACE_VIEWS: WorkspaceView[] = ['timesheet', 'dashboard', 'reports', 'catalog', 'members', 'settings']
 const OWNER_VIEWS: WorkspaceView[] = ['catalog', 'members']
 
 // The current page lives in the URL hash so refreshes and the back button keep it.
@@ -211,10 +211,10 @@ function WorkspaceScreen({ user }: { user: User }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [catalog, setCatalog] = useState<Catalog>({ clients: [], projects: [], tasks: [] })
-  const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : 'timer'))
+  const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : 'timesheet'))
 
   useEffect(() => {
-    const syncView = () => setView(viewFromHash() ?? 'timer')
+    const syncView = () => setView(viewFromHash() ?? 'timesheet')
     window.addEventListener('hashchange', syncView)
     return () => window.removeEventListener('hashchange', syncView)
   }, [])
@@ -306,9 +306,8 @@ function WorkspaceScreen({ user }: { user: User }) {
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId)
   const isOwner = activeWorkspace?.role === 'owner'
-  const currentView: WorkspaceView = !isOwner && OWNER_VIEWS.includes(view) ? 'timer' : view
+  const currentView: WorkspaceView = !isOwner && OWNER_VIEWS.includes(view) ? 'timesheet' : view
   const navItems: NavItem<WorkspaceView>[] = activeWorkspace ? [
-    { value: 'timer', label: 'Timer', icon: navIcons.timer, section: 'Track' },
     { value: 'timesheet', label: 'Timesheet', icon: navIcons.timesheet, section: 'Track' },
     { value: 'dashboard', label: isOwner ? 'Team dashboard' : 'Dashboard', icon: navIcons.dashboard, section: 'Analyze' },
     { value: 'reports', label: 'Reports', icon: navIcons.reports, section: 'Analyze' },
@@ -360,14 +359,13 @@ function WorkspaceScreen({ user }: { user: User }) {
   )
 
   return (
-    <AppShell brand={<Brand tone="light" />} header={workspaceSwitcher} items={navItems} active={activeWorkspace ? currentView : null} onNavigate={navigate} footer={sidebarFooter}>
+    <AppShell brand={<Brand tone="light" />} header={workspaceSwitcher} topBar={activeWorkspace && <TimerBar key={activeWorkspace.id} user={user} workspaceId={activeWorkspace.id} catalog={catalog} />} items={navItems} active={activeWorkspace ? currentView : null} onNavigate={navigate} footer={sidebarFooter}>
       <Box component="main" sx={{ width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'calc(100% - 64px)' }, maxWidth: activeWorkspace && currentView === 'dashboard' ? 1120 : 960, mx: 'auto', pt: { xs: 3, md: 5 }, pb: 5 }}>
         {error && <FormMessage severity="error">{error}</FormMessage>}
         {notice && <FormMessage severity="success">{notice}</FormMessage>}
         {!user.emailVerified && <EmailVerificationNotice user={user} />}
         {activeWorkspace ? (
           <>
-            {currentView === 'timer' && <TimerPanel user={user} workspaceId={activeWorkspace.id} catalog={catalog} />}
             {currentView === 'timesheet' && <TimeEntriesPanel user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />}
             {currentView === 'dashboard' && <TimesheetDashboard key={activeWorkspace.id} user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} weekStartsOn={activeWorkspace.weekStartsOn} catalog={catalog} />}
             {currentView === 'reports' && <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} catalog={catalog} />}
@@ -414,7 +412,6 @@ function WorkspaceScreen({ user }: { user: User }) {
 }
 
 const navIcons = {
-  timer: <NavIcon><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9.5 2.5h5" /></NavIcon>,
   timesheet: <NavIcon><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></NavIcon>,
   dashboard: <NavIcon><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></NavIcon>,
   reports: <NavIcon><path d="M5 20V11M12 20V5M19 20v-6M3 20h18" /></NavIcon>,
@@ -433,13 +430,15 @@ function formatElapsed(seconds: number): string {
   return `${hours}:${minutes}:${remainder}`
 }
 
-function TimerPanel({ user, workspaceId, catalog }: { user: User; workspaceId: string; catalog: Catalog }) {
+// Always-visible timer at the top of every workspace page.
+function TimerBar({ user, workspaceId, catalog }: { user: User; workspaceId: string; catalog: Catalog }) {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [description, setDescription] = useState('')
   const [clientName, setClientName] = useState('')
   const [projectName, setProjectName] = useState('')
   const [taskName, setTaskName] = useState('')
   const [billable, setBillable] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const [now, setNow] = useState(Date.now())
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -451,7 +450,6 @@ function TimerPanel({ user, workspaceId, catalog }: { user: User; workspaceId: s
   }, [])
 
   const runningEntry = entries.find((entry) => entry.endAt === null)
-  const recentEntries = entries.filter((entry) => entry.endAt !== null).slice(0, 5)
 
   async function handleStart(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -473,6 +471,7 @@ function TimerPanel({ user, workspaceId, catalog }: { user: User; workspaceId: s
       setProjectName('')
       setTaskName('')
       setBillable(false)
+      setShowDetails(false)
     } catch (requestError) {
       setError(readableError(requestError))
     } finally {
@@ -492,52 +491,36 @@ function TimerPanel({ user, workspaceId, catalog }: { user: User; workspaceId: s
     }
   }
 
-  async function handleContinue(entry: TimeEntry) {
-    setPending(true)
-    setError('')
-    try {
-      await continueTimer(user, workspaceId, entry)
-    } catch (requestError) {
-      setError(readableError(requestError))
-    } finally {
-      setPending(false)
-    }
-  }
-
   const elapsed = runningEntry?.startAt ? Math.max(0, Math.floor(now / 1000 - runningEntry.startAt.toMillis() / 1000)) : 0
+  const elapsedText = <Typography component="span" aria-label={`Elapsed time ${formatElapsed(elapsed)}`} sx={{ color: runningEntry ? 'primary.main' : 'text.secondary', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 650, letterSpacing: 0.5, flexShrink: 0 }}>{formatElapsed(elapsed)}</Typography>
 
   return (
-    <SectionCard labelledBy="timer-heading">
-      <SectionHeading id="timer-heading" kicker="TIME TRACKING" title="Timer" action={runningEntry && <Typography component="span" aria-label={`Elapsed time ${formatElapsed(elapsed)}`} sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: 'clamp(27px, 5vw, 38px)', fontWeight: 600, letterSpacing: 1 }}>{formatElapsed(elapsed)}</Typography>} />
+    <Box component="section" aria-label="Timer" sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25 }}>
       {error && <FormMessage severity="error">{error}</FormMessage>}
       {runningEntry ? (
-        <Paper variant="outlined" sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 2, mt: 2.75, p: 2, borderRadius: '12px', borderColor: '#dce9d8', bgcolor: '#f7faf4' }}>
-          <Box sx={{ display: 'grid', gap: 0.75, justifyItems: 'start' }}>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>{runningEntry.description || 'Untitled entry'}</Typography>
-            <Typography variant="caption" color="text.secondary">{[runningEntry.clientName, runningEntry.projectName, runningEntry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}</Typography>
-            {runningEntry.billable && <BillableChip />}
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center', minHeight: 48 }}>
+          <Box sx={{ display: 'grid', gap: 0.25, minWidth: 0, flex: 1 }}>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{runningEntry.description || 'Untitled entry'}</Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>{[runningEntry.clientName, runningEntry.projectName, runningEntry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{runningEntry.billable && ' · Billable'}</Typography>
           </Box>
-          <Button variant="contained" color="error" onClick={() => void handleStop(runningEntry.id)} disabled={pending}>{pending ? 'Saving…' : 'Stop timer'}</Button>
-        </Paper>
-      ) : (
-        <Stack component="form" spacing={2} onSubmit={handleStart} aria-busy={pending} sx={{ mt: 2.75 }}>
-          <TextField label="What are you working on?" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="e.g. Prepare project proposal" required slotProps={{ htmlInput: { maxLength: 500 } }} />
-          <Box sx={associationsSx}>
-            <SelectField label="Client" value={clientName} onChange={(event) => { setClientName(event.target.value); setProjectName(''); setTaskName('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
-            <SelectField label="Project" value={projectName} onChange={(event) => { setProjectName(event.target.value); setTaskName('') }}><option value="">No project</option>{catalog.projects.filter((item) => !item.archived && (!clientName || item.clientId === clientName) && (!item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
-            <SelectField label="Task" value={taskName} onChange={(event) => setTaskName(event.target.value)}><option value="">No task</option>{catalog.tasks.filter((item) => !item.archived && (!projectName || item.projectId === projectName) && catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived)))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
-          </Box>
-          <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <FormControlLabel control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />} label="Billable" sx={{ mr: 'auto' }} />
-            <Button variant="contained" type="submit" disabled={pending}>{pending ? 'Starting…' : 'Start timer'}</Button>
-          </Stack>
+          {elapsedText}
+          <Button variant="contained" color="error" onClick={() => void handleStop(runningEntry.id)} disabled={pending} sx={{ flexShrink: 0 }}>{pending ? 'Saving…' : 'Stop'}</Button>
         </Stack>
+      ) : (
+        <Box component="form" onSubmit={handleStart} aria-busy={pending} sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr) auto auto', sm: 'minmax(0, 1fr) auto auto auto', lg: 'minmax(0, 2fr) repeat(3, minmax(0, 1fr)) auto auto auto' }, alignItems: 'center', gap: 1.25 }}>
+          <TextField size="small" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What are you working on?" required slotProps={{ htmlInput: { maxLength: 500, 'aria-label': 'What are you working on?' } }} />
+          <Box sx={{ display: { xs: showDetails ? 'grid' : 'none', lg: 'contents' }, gridColumn: { xs: '1 / -1', lg: 'auto' }, gridRow: { xs: 2, lg: 'auto' }, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr)) auto' }, alignItems: 'center', gap: 1.25 }}>
+            <SelectField size="small" label="Client" value={clientName} onChange={(event) => { setClientName(event.target.value); setProjectName(''); setTaskName('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
+            <SelectField size="small" label="Project" value={projectName} onChange={(event) => { setProjectName(event.target.value); setTaskName('') }}><option value="">No project</option>{catalog.projects.filter((item) => !item.archived && (!clientName || item.clientId === clientName) && (!item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
+            <SelectField size="small" label="Task" value={taskName} onChange={(event) => setTaskName(event.target.value)}><option value="">No task</option>{catalog.tasks.filter((item) => !item.archived && (!projectName || item.projectId === projectName) && catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived)))).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</SelectField>
+            <FormControlLabel control={<Checkbox size="small" checked={billable} onChange={(event) => setBillable(event.target.checked)} />} label="Billable" sx={{ mr: 0 }} />
+          </Box>
+          <Button size="small" aria-expanded={showDetails} onClick={() => setShowDetails((open) => !open)} sx={{ display: { lg: 'none' }, minWidth: 0 }}>{showDetails ? 'Less' : 'Details'}</Button>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{elapsedText}</Box>
+          <Button variant="contained" type="submit" disabled={pending} sx={{ flexShrink: 0 }}>{pending ? 'Starting…' : 'Start'}</Button>
+        </Box>
       )}
-      {recentEntries.length > 0 && <Box sx={{ mt: 3, pt: 2.25, borderTop: 1, borderColor: 'divider' }}><Typography variant="h3" sx={{ mb: 1 }}>Recent entries</Typography>{recentEntries.map((entry) => {
-        const duration = entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : 0
-        return <ListRow key={entry.id}><Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{entry.description || 'Untitled entry'}</Typography><Typography variant="caption" color="text.secondary">{entry.startAt.toDate().toLocaleString()} · {formatElapsed(duration)}</Typography></Box><Button size="small" onClick={() => void handleContinue(entry)} disabled={pending}>Continue</Button></ListRow>
-      })}</Box>}
-    </SectionCard>
+    </Box>
   )
 }
 
@@ -689,6 +672,19 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
     }
   }
 
+  async function handleContinue(entry: TimeEntry) {
+    setPending(true)
+    setError('')
+    setNotice('')
+    try {
+      await continueTimer(user, workspaceId, entry)
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
   function changeWeek(value: string) {
     if (!value) return
     const nextWeekStart = startOfWeekString(value, weekStartsOn)
@@ -755,7 +751,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
               <Box sx={{ display: 'grid', gap: 0.5, fontVariantNumeric: 'tabular-nums' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography><Typography variant="caption" color="text.secondary">{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</Typography></Box>
               <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{entry.description || 'Untitled entry'}</Typography><Typography variant="caption" color="text.secondary" noWrap>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</Typography></Box>
               <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 650 }}>{formatElapsed(secondsFor(entry))}</Typography>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', sm: 'auto' } }}>{entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}{entry.billable && <BillableChip />}<Button size="small" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</Button><Button size="small" color="error" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</Button></Stack>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', sm: 'auto' } }}>{entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}{entry.billable && <BillableChip />}{entry.endAt !== null && entry.userId === user.uid && <Button size="small" onClick={() => void handleContinue(entry)} disabled={pending}>Continue</Button>}<Button size="small" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>Edit</Button><Button size="small" color="error" onClick={() => void handleDelete(entry)} disabled={pending || entry.endAt === null}>Delete</Button></Stack>
             </Box>)}
           </Box>
         })}
