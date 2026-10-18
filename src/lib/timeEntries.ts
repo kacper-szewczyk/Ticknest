@@ -35,7 +35,8 @@ export type TimeEntry = {
   endAt: Timestamp | null
 }
 
-export type TimerDetails = Pick<TimeEntry, 'description' | 'clientName' | 'projectName' | 'taskName' | 'billable'> & Pick<TimeEntry, 'clientId' | 'projectId' | 'taskId'>
+export type TimerDetails = Pick<TimeEntry, 'description' | 'clientName' | 'projectName' | 'taskName' | 'billable'> &
+  Pick<TimeEntry, 'clientId' | 'projectId' | 'taskId'>
 export type ManualEntryInput = TimerDetails & { startAt: Date; endAt: Date }
 
 function entriesPath(workspaceId: string) {
@@ -54,10 +55,14 @@ export function subscribeToTimeEntries(
     orderBy('startAt', 'desc'),
     limit(20),
   )
-  return onSnapshot(entriesQuery, (snapshot) => {
-    const entries = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry)
-    onEntries(entries)
-  }, onError)
+  return onSnapshot(
+    entriesQuery,
+    (snapshot) => {
+      const entries = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry)
+      onEntries(entries)
+    },
+    onError,
+  )
 }
 
 function localDayBounds(day: string): [Date, Date] {
@@ -83,9 +88,13 @@ export function subscribeToEntriesForDay(
     where('startAt', '<', Timestamp.fromDate(end)),
     orderBy('startAt', 'desc'),
   ]
-  return onSnapshot(query(entriesPath(workspaceId), ...filters), (snapshot) => {
-    onEntries(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry))
-  }, onError)
+  return onSnapshot(
+    query(entriesPath(workspaceId), ...filters),
+    (snapshot) => {
+      onEntries(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry))
+    },
+    onError,
+  )
 }
 
 export function subscribeToEntriesForRange(
@@ -106,9 +115,13 @@ export function subscribeToEntriesForRange(
     where('startAt', '<', Timestamp.fromDate(end)),
     orderBy('startAt', 'desc'),
   ]
-  return onSnapshot(query(entriesPath(workspaceId), ...filters), (snapshot) => {
-    onEntries(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry))
-  }, onError)
+  return onSnapshot(
+    query(entriesPath(workspaceId), ...filters),
+    (snapshot) => {
+      onEntries(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry))
+    },
+    onError,
+  )
 }
 
 async function assertNoOverlap(
@@ -145,7 +158,8 @@ export async function startTimer(user: User, workspaceId: string, details: Timer
 
   await runTransaction(db, async (transaction) => {
     const active = await transaction.get(activeRef)
-    if (active.exists()) throw new Error('You already have a running timer in this workspace. Stop it before starting another.')
+    if (active.exists())
+      throw new Error('You already have a running timer in this workspace. Stop it before starting another.')
     transaction.set(entryRef, {
       userId: user.uid,
       userDisplayName: user.displayName?.trim() || user.email || user.uid,
@@ -171,10 +185,18 @@ export async function saveManualTimeEntry(
   const description = input.description.trim()
   if (!description) throw new Error('Add a description for this entry.')
   if (description.length > 500) throw new Error('Descriptions must be 500 characters or fewer.')
-  for (const [label, value] of [['Client', input.clientName], ['Project', input.projectName], ['Task', input.taskName]] as const) {
+  for (const [label, value] of [
+    ['Client', input.clientName],
+    ['Project', input.projectName],
+    ['Task', input.taskName],
+  ] as const) {
     if ((value?.trim().length ?? 0) > 100) throw new Error(`${label} names must be 100 characters or fewer.`)
   }
-  if (!Number.isFinite(input.startAt.getTime()) || !Number.isFinite(input.endAt.getTime()) || input.endAt <= input.startAt) {
+  if (
+    !Number.isFinite(input.startAt.getTime()) ||
+    !Number.isFinite(input.endAt.getTime()) ||
+    input.endAt <= input.startAt
+  ) {
     throw new Error('The end time must be later than the start time.')
   }
 
@@ -195,11 +217,12 @@ export async function saveManualTimeEntry(
     updatedAt: serverTimestamp(),
   }
   if (entryId) await updateDoc(entryRef, values)
-  else await setDoc(entryRef, {
-    ...values,
-    userDisplayName: user.displayName?.trim() || user.email || user.uid,
-    createdAt: serverTimestamp(),
-  })
+  else
+    await setDoc(entryRef, {
+      ...values,
+      userDisplayName: user.displayName?.trim() || user.email || user.uid,
+      createdAt: serverTimestamp(),
+    })
   return entryRef.id
 }
 
@@ -213,10 +236,7 @@ export async function stopTimer(user: User, workspaceId: string, entryId: string
   const activeRef = doc(db, 'workspaces', workspaceId, 'activeTimers', user.uid)
 
   await runTransaction(db, async (transaction) => {
-    const [entrySnapshot, activeSnapshot] = await Promise.all([
-      transaction.get(entryRef),
-      transaction.get(activeRef),
-    ])
+    const [entrySnapshot, activeSnapshot] = await Promise.all([transaction.get(entryRef), transaction.get(activeRef)])
     if (!entrySnapshot.exists() || !activeSnapshot.exists() || activeSnapshot.data().entryId !== entryId) {
       throw new Error('This timer is no longer running. Refresh the page and try again.')
     }
@@ -237,4 +257,3 @@ export async function continueTimer(user: User, workspaceId: string, entry: Time
     billable: entry.billable,
   })
 }
-

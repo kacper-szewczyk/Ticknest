@@ -36,6 +36,8 @@ function getTimeZone(data: CallableData): string {
     throw new HttpsError('invalid-argument', 'Enter a valid time zone.')
   }
   try {
+    // Constructing a formatter throws a RangeError for an unknown time zone.
+    // oxlint-disable-next-line no-new
     new Intl.DateTimeFormat('en', { timeZone: timezone })
     return timezone
   } catch {
@@ -155,14 +157,14 @@ export const acceptWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request
     const invitation = invitationSnapshot.data()
     const expiresAt = invitation?.expiresAt
     if (
-      invitation?.status !== 'pending'
-      || invitation.role !== 'member'
-      || typeof invitation.email !== 'string'
-      || invitation.email.toLowerCase() !== user.email
-      || typeof invitation.tokenHash !== 'string'
-      || !matchesTokenHash(invitationToken, invitation.tokenHash)
-      || !(expiresAt instanceof Timestamp)
-      || expiresAt.toMillis() <= Date.now()
+      invitation?.status !== 'pending' ||
+      invitation.role !== 'member' ||
+      typeof invitation.email !== 'string' ||
+      invitation.email.toLowerCase() !== user.email ||
+      typeof invitation.tokenHash !== 'string' ||
+      !matchesTokenHash(invitationToken, invitation.tokenHash) ||
+      !(expiresAt instanceof Timestamp) ||
+      expiresAt.toMillis() <= Date.now()
     ) {
       throw new HttpsError('failed-precondition', 'This invitation has expired or is not for your account.')
     }
@@ -264,13 +266,18 @@ export const removeWorkspaceMember = onCall(FUNCTION_OPTIONS, async (request) =>
   const data = getData(request.data)
   const workspaceId = getDocumentId(data, 'workspaceId')
   const memberUid = getDocumentId(data, 'memberUid')
-  if (memberUid === user.uid) throw new HttpsError('failed-precondition', 'The workspace owner cannot remove themselves.')
+  if (memberUid === user.uid)
+    throw new HttpsError('failed-precondition', 'The workspace owner cannot remove themselves.')
   const workspaceRef = db.collection('workspaces').doc(workspaceId)
   const ownerRef = workspaceRef.collection('members').doc(user.uid)
   const memberRef = workspaceRef.collection('members').doc(memberUid)
   const timerRef = workspaceRef.collection('activeTimers').doc(memberUid)
   await db.runTransaction(async (transaction) => {
-    const [owner, member, timer] = await Promise.all([transaction.get(ownerRef), transaction.get(memberRef), transaction.get(timerRef)])
+    const [owner, member, timer] = await Promise.all([
+      transaction.get(ownerRef),
+      transaction.get(memberRef),
+      transaction.get(timerRef),
+    ])
     if (!owner.exists || owner.data()?.role !== 'owner' || owner.data()?.status === 'removed') {
       throw new HttpsError('permission-denied', 'Only the workspace owner can manage members.')
     }

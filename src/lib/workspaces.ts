@@ -21,8 +21,21 @@ export type Workspace = {
   weekStartsOn: number
 }
 
-export type WorkspaceMember = { uid: string; email: string; displayName: string; role: 'owner' | 'member'; status?: 'active' | 'removed'; joinedAt: unknown }
-export type WorkspaceInvitation = { id: string; email: string; role: 'member'; status: 'pending' | 'accepted' | 'revoked'; expiresAt: { toDate(): Date } }
+export type WorkspaceMember = {
+  uid: string
+  email: string
+  displayName: string
+  role: 'owner' | 'member'
+  status?: 'active' | 'removed'
+  joinedAt: unknown
+}
+export type WorkspaceInvitation = {
+  id: string
+  email: string
+  role: 'member'
+  status: 'pending' | 'accepted' | 'revoked'
+  expiresAt: { toDate(): Date }
+}
 
 function activeWorkspaceKey(uid: string): string {
   return `ticknest.activeWorkspace.${uid}`
@@ -43,23 +56,23 @@ export function subscribeToMembershipStatus(workspaceId: string, uid: string, on
 }
 
 export async function loadWorkspaces(user: User): Promise<Workspace[]> {
-  const memberships = await getDocs(
-    query(collectionGroup(db, 'members'), where('uid', '==', user.uid)),
-  )
+  const memberships = await getDocs(query(collectionGroup(db, 'members'), where('uid', '==', user.uid)))
   const workspaces = await Promise.all(
-    memberships.docs.filter((membership) => membership.data().status !== 'removed').map(async (membership) => {
-      const workspaceRef = doc(db, 'workspaces', membership.ref.parent.parent!.id)
-      const workspaceSnapshot = await getDoc(workspaceRef)
-      if (!workspaceSnapshot.exists()) return null
-      const workspace = workspaceSnapshot.data()
-      return {
-        id: workspaceSnapshot.id,
-        name: workspace.name as string,
-        ownerUid: workspace.ownerUid as string,
-        role: membership.data().role as Workspace['role'],
-        weekStartsOn: typeof workspace.weekStartsOn === 'number' ? workspace.weekStartsOn : 1,
-      }
-    }),
+    memberships.docs
+      .filter((membership) => membership.data().status !== 'removed')
+      .map(async (membership) => {
+        const workspaceRef = doc(db, 'workspaces', membership.ref.parent.parent!.id)
+        const workspaceSnapshot = await getDoc(workspaceRef)
+        if (!workspaceSnapshot.exists()) return null
+        const workspace = workspaceSnapshot.data()
+        return {
+          id: workspaceSnapshot.id,
+          name: workspace.name as string,
+          ownerUid: workspace.ownerUid as string,
+          role: membership.data().role as Workspace['role'],
+          weekStartsOn: typeof workspace.weekStartsOn === 'number' ? workspace.weekStartsOn : 1,
+        }
+      }),
   )
   return workspaces.filter((workspace): workspace is Workspace => workspace !== null)
 }
@@ -94,29 +107,57 @@ export async function acceptWorkspaceInvitation(
   saveActiveWorkspaceId(user.uid, workspaceId)
 }
 
-export function subscribeToWorkspaceMembers(workspaceId: string, onChange: (members: WorkspaceMember[]) => void, onError: (error: Error) => void): Unsubscribe {
-  return onSnapshot(collection(db, 'workspaces', workspaceId, 'members'), (snapshot) => {
-    onChange(snapshot.docs.map((item) => ({ uid: item.id, ...item.data() }) as WorkspaceMember))
-  }, onError)
+export function subscribeToWorkspaceMembers(
+  workspaceId: string,
+  onChange: (members: WorkspaceMember[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    collection(db, 'workspaces', workspaceId, 'members'),
+    (snapshot) => {
+      onChange(snapshot.docs.map((item) => ({ uid: item.id, ...item.data() }) as WorkspaceMember))
+    },
+    onError,
+  )
 }
 
-export function subscribeToWorkspaceInvitations(workspaceId: string, onChange: (invitations: WorkspaceInvitation[]) => void, onError: (error: Error) => void): Unsubscribe {
-  return onSnapshot(query(collection(db, 'workspaces', workspaceId, 'invitations'), where('status', '==', 'pending')), (snapshot) => {
-    onChange(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as WorkspaceInvitation))
-  }, onError)
+export function subscribeToWorkspaceInvitations(
+  workspaceId: string,
+  onChange: (invitations: WorkspaceInvitation[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(collection(db, 'workspaces', workspaceId, 'invitations'), where('status', '==', 'pending')),
+    (snapshot) => {
+      onChange(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as WorkspaceInvitation))
+    },
+    onError,
+  )
 }
 
-export async function createWorkspaceInvitation(workspaceId: string, email: string): Promise<{ invitationId: string; token: string; expiresAt: number }> {
-  const call = httpsCallable<{ workspaceId: string; email: string }, { invitationId: string; token: string; expiresAt: number }>(functions, 'createWorkspaceInvitation')
+export async function createWorkspaceInvitation(
+  workspaceId: string,
+  email: string,
+): Promise<{ invitationId: string; token: string; expiresAt: number }> {
+  const call = httpsCallable<
+    { workspaceId: string; email: string },
+    { invitationId: string; token: string; expiresAt: number }
+  >(functions, 'createWorkspaceInvitation')
   return (await call({ workspaceId, email })).data
 }
 
 export async function revokeWorkspaceInvitation(workspaceId: string, invitationId: string): Promise<void> {
-  const call = httpsCallable<{ workspaceId: string; invitationId: string }, { invitationId: string }>(functions, 'revokeWorkspaceInvitation')
+  const call = httpsCallable<{ workspaceId: string; invitationId: string }, { invitationId: string }>(
+    functions,
+    'revokeWorkspaceInvitation',
+  )
   await call({ workspaceId, invitationId })
 }
 
 export async function removeWorkspaceMember(workspaceId: string, memberUid: string): Promise<void> {
-  const call = httpsCallable<{ workspaceId: string; memberUid: string }, { memberUid: string }>(functions, 'removeWorkspaceMember')
+  const call = httpsCallable<{ workspaceId: string; memberUid: string }, { memberUid: string }>(
+    functions,
+    'removeWorkspaceMember',
+  )
   await call({ workspaceId, memberUid })
 }

@@ -7,7 +7,10 @@ export type PaletteContextValue = {
   applyPalette: (choice: PaletteChoice) => void
 }
 
-export const PaletteContext = createContext<PaletteContextValue>({ choice: DEFAULT_PALETTE_CHOICE, applyPalette: () => {} })
+export const PaletteContext = createContext<PaletteContextValue>({
+  choice: DEFAULT_PALETTE_CHOICE,
+  applyPalette: () => {},
+})
 
 export function usePalette(): PaletteContextValue {
   return useContext(PaletteContext)
