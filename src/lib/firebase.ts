@@ -4,15 +4,11 @@ import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions'
 
 const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
-const projectId =
-  import.meta.env.VITE_FIREBASE_PROJECT_ID ||
-  (useEmulators ? 'demo-ticknest' : undefined)
+const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || (useEmulators ? 'demo-ticknest' : undefined)
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (useEmulators ? 'demo-api-key' : undefined),
-  authDomain:
-    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ||
-    (useEmulators ? `${projectId}.firebaseapp.com` : undefined),
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (useEmulators ? `${projectId}.firebaseapp.com` : undefined),
   projectId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || (useEmulators ? 'demo-app-id' : undefined),
 }

@@ -12,11 +12,12 @@ export function useManualEntryFieldErrors() {
   const pendingFocus = useRef<ManualEntryField | null>(null)
   const inputs = useRef<Partial<Record<ManualEntryField, HTMLInputElement | null>>>({})
 
+  // Runs after every render so focus moves only once the error text and aria attributes are in the DOM.
   useEffect(() => {
     if (!pendingFocus.current) return
     inputs.current[pendingFocus.current]?.focus()
     pendingFocus.current = null
-  }, [fieldErrors])
+  })
 
   // Returns true when the error belonged to a field and is now shown next to it.
   function showFieldError(error: unknown): boolean {
@@ -40,7 +41,9 @@ export function useManualEntryFieldErrors() {
       id: `${idPrefix}-${field}`,
       error: Boolean(message),
       helperText: message,
-      inputRef: (element: HTMLInputElement | null) => { inputs.current[field] = element },
+      inputRef: (element: HTMLInputElement | null) => {
+        inputs.current[field] = element
+      },
     }
   }
 
