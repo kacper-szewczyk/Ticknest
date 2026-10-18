@@ -14,6 +14,7 @@
     "emulators": "npm --prefix functions run build && firebase emulators:start --only auth,firestore,functions,hosting --project demo-ticknest",
     "test:emulators": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"vitest run --project emulator && node --test functions/test/*.test.mjs\"",
     "build": "tsc -b && vite build",
+    "check:bundle-size": "node scripts/check-bundle-size.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:firebase": "firebase deploy --only hosting,firestore:rules,firestore:indexes,functions",
