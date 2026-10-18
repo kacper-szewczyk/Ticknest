@@ -26,6 +26,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme, type Theme } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
 import type { Catalog } from './lib/catalog'
+import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
 import { deleteTimeEntry, saveManualTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import { BillableChip, EmptyText, FormMessage, SelectField } from './ui'
@@ -1273,11 +1274,13 @@ function EntryEditor({
   const [endAt, setEndAt] = useState(entry?.endAt ? localDateTimeValue(entry.endAt.toDate()) : `${day}T10:00`)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const { fieldProps, showFieldError, clearFieldError, clearFieldErrors } = useManualEntryFieldErrors()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
     setError('')
+    clearFieldErrors()
     try {
       await saveManualTimeEntry(
         workspaceId,
@@ -1294,7 +1297,9 @@ function EntryEditor({
       )
       onSaved(entry ? 'Time entry updated.' : 'Time entry added.')
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not save this entry.')
+      if (!showFieldError(requestError)) {
+        setError(requestError instanceof Error ? requestError.message : 'Could not save this entry.')
+      }
       setPending(false)
     }
   }
@@ -1319,9 +1324,13 @@ function EntryEditor({
           <TextField
             label="Description"
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(event) => {
+              setDescription(event.target.value)
+              clearFieldError('description')
+            }}
             required
             autoFocus
+            {...fieldProps('description')}
             slotProps={{ htmlInput: { maxLength: 500 } }}
           />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
@@ -1329,16 +1338,25 @@ function EntryEditor({
               label="Start"
               type="datetime-local"
               value={startAt}
-              onChange={(event) => setStartAt(event.target.value)}
+              onChange={(event) => {
+                setStartAt(event.target.value)
+                clearFieldError('startAt')
+                clearFieldError('endAt')
+              }}
               required
+              {...fieldProps('startAt')}
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
               label="End"
               type="datetime-local"
               value={endAt}
-              onChange={(event) => setEndAt(event.target.value)}
+              onChange={(event) => {
+                setEndAt(event.target.value)
+                clearFieldError('endAt')
+              }}
               required
+              {...fieldProps('endAt')}
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Box>

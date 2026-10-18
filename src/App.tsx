@@ -48,6 +48,7 @@ import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
 import { TimesheetDashboard } from './TimesheetDashboard'
+import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
 import { AppearancePanel } from './AppearancePanel'
 import { subscribeToPalettePreference } from './lib/userPreferences'
 import { usePalette } from './paletteContext'
@@ -1278,6 +1279,7 @@ function TimeEntriesPanel({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [now, setNow] = useState(() => Date.now())
+  const { fieldProps, showFieldError, clearFieldError, clearFieldErrors } = useManualEntryFieldErrors()
 
   useEffect(() => {
     return subscribeToEntriesForRange(
@@ -1305,6 +1307,7 @@ function TimeEntriesPanel({
     setEditorDay(forDay)
     setStartAt(dateTimeForDay(forDay, 9))
     setEndAt(dateTimeForDay(forDay, 10))
+    clearFieldErrors()
   }
 
   function beginEdit(entry: TimeEntry) {
@@ -1319,6 +1322,7 @@ function TimeEntriesPanel({
     setEndAt(localDateTimeValue(entry.endAt.toDate()))
     setError('')
     setNotice('')
+    clearFieldErrors()
   }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
@@ -1326,6 +1330,7 @@ function TimeEntriesPanel({
     setPending(true)
     setError('')
     setNotice('')
+    clearFieldErrors()
     try {
       await saveManualTimeEntry(
         workspaceId,
@@ -1343,7 +1348,7 @@ function TimeEntriesPanel({
       clearForm()
       setNotice(editId ? 'Time entry updated.' : 'Time entry added.')
     } catch (requestError) {
-      setError(readableError(requestError))
+      if (!showFieldError(requestError)) setError(readableError(requestError))
     } finally {
       setPending(false)
     }
@@ -1463,8 +1468,12 @@ function TimeEntriesPanel({
         <TextField
           label="Description"
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(event) => {
+            setDescription(event.target.value)
+            clearFieldError('description')
+          }}
           required
+          {...fieldProps('description')}
           slotProps={{ htmlInput: { maxLength: 500 } }}
         />
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
@@ -1472,16 +1481,25 @@ function TimeEntriesPanel({
             label="Start"
             type="datetime-local"
             value={startAt}
-            onChange={(event) => setStartAt(event.target.value)}
+            onChange={(event) => {
+              setStartAt(event.target.value)
+              clearFieldError('startAt')
+              clearFieldError('endAt')
+            }}
             required
+            {...fieldProps('startAt')}
             slotProps={{ inputLabel: { shrink: true } }}
           />
           <TextField
             label="End"
             type="datetime-local"
             value={endAt}
-            onChange={(event) => setEndAt(event.target.value)}
+            onChange={(event) => {
+              setEndAt(event.target.value)
+              clearFieldError('endAt')
+            }}
             required
+            {...fieldProps('endAt')}
             slotProps={{ inputLabel: { shrink: true } }}
           />
         </Box>
