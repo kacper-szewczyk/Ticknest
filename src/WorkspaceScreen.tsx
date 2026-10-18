@@ -2,13 +2,14 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { type Theme, alpha } from '@mui/material/styles'
 import { type User, sendEmailVerification } from 'firebase/auth'
-import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
+import { type ChangeEvent, type FormEvent, lazy, Suspense, useEffect, useState } from 'react'
 import { deleteCurrentAccount, getReauthMethod, signOutUser } from './lib/auth'
 import { type Catalog, subscribeToCatalog } from './lib/catalog'
 import { readableError } from './lib/errors'
@@ -25,12 +26,16 @@ import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { AppearancePanel } from './AppearancePanel'
 import { Brand } from './Brand'
 import { CatalogPanel } from './CatalogPanel'
-import { MemberManagementPanel } from './MemberManagementPanel'
-import { ReportsPanel } from './ReportsPanel'
 import { TimeEntriesPanel } from './TimeEntriesPanel'
 import { TimerBar } from './TimerBar'
 import { TimesheetDashboard } from './TimesheetDashboard'
 import { FormMessage } from './ui'
+
+// Reports and member management are visited less often, so they load on demand to keep the initial bundle small.
+const ReportsPanel = lazy(() => import('./ReportsPanel').then((module) => ({ default: module.ReportsPanel })))
+const MemberManagementPanel = lazy(() =>
+  import('./MemberManagementPanel').then((module) => ({ default: module.MemberManagementPanel })),
+)
 
 type WorkspaceView = 'timesheet' | 'dashboard' | 'reports' | 'catalog' | 'members' | 'settings'
 
@@ -376,15 +381,19 @@ export function WorkspaceScreen({ user }: { user: User }) {
               />
             )}
             {currentView === 'reports' && (
-              <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} catalog={catalog} />
+              <Suspense fallback={<PanelLoading />}>
+                <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} catalog={catalog} />
+              </Suspense>
             )}
             {currentView === 'catalog' && <CatalogPanel workspaceId={activeWorkspace.id} />}
             {currentView === 'members' && (
-              <MemberManagementPanel
-                key={activeWorkspace.id}
-                workspaceId={activeWorkspace.id}
-                currentUserId={user.uid}
-              />
+              <Suspense fallback={<PanelLoading />}>
+                <MemberManagementPanel
+                  key={activeWorkspace.id}
+                  workspaceId={activeWorkspace.id}
+                  currentUserId={user.uid}
+                />
+              </Suspense>
             )}
             {currentView === 'settings' && (
               <>
@@ -636,5 +645,14 @@ function EmailVerificationNotice({ user }: { user: User }) {
     >
       {message}
     </Alert>
+  )
+}
+
+function PanelLoading() {
+  return (
+    <Stack role="status" spacing={2} sx={{ alignItems: 'center', py: 8, color: 'text.secondary' }}>
+      <CircularProgress size={28} />
+      <Typography variant="body2">Loading…</Typography>
+    </Stack>
   )
 }

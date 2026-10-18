@@ -14,9 +14,8 @@ import {
   where,
   type QueryConstraint,
 } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
 import type { User } from 'firebase/auth'
-import { db, functions } from './firebase'
+import { callFunction, db } from './firebase'
 import { localDayBounds } from './dates'
 import { validateManualEntryFields } from './timeEntryValidation'
 
@@ -183,19 +182,21 @@ export async function saveManualTimeEntry(
   validateManualEntryFields(input)
   const description = input.description.trim()
 
-  const call = httpsCallable<SaveManualTimeEntryRequest, { entryId: string }>(functions, 'saveManualTimeEntry')
-  const result = await call({
-    workspaceId,
-    entryId: entryId ?? null,
-    description,
-    clientId: input.clientId ?? null,
-    projectId: input.projectId ?? null,
-    taskId: input.taskId ?? null,
-    billable: input.billable,
-    startAt: input.startAt.getTime(),
-    endAt: input.endAt.getTime(),
-  })
-  return result.data.entryId
+  const { entryId: savedEntryId } = await callFunction<SaveManualTimeEntryRequest, { entryId: string }>(
+    'saveManualTimeEntry',
+    {
+      workspaceId,
+      entryId: entryId ?? null,
+      description,
+      clientId: input.clientId ?? null,
+      projectId: input.projectId ?? null,
+      taskId: input.taskId ?? null,
+      billable: input.billable,
+      startAt: input.startAt.getTime(),
+      endAt: input.endAt.getTime(),
+    },
+  )
+  return savedEntryId
 }
 
 export async function deleteTimeEntry(workspaceId: string, entry: TimeEntry): Promise<void> {

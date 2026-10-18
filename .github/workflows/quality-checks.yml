@@ -48,6 +48,8 @@ jobs:
         run: npm test
       - name: Build app
         run: npm run build
+      - name: Check bundle size
+        run: npm run check:bundle-size
 
   functions:
     name: Functions lint and typecheck

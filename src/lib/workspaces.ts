@@ -9,9 +9,8 @@ import {
   where,
   type Unsubscribe,
 } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
 import type { User } from 'firebase/auth'
-import { db, functions } from './firebase'
+import { callFunction, db } from './firebase'
 
 export type Workspace = {
   id: string
@@ -78,14 +77,13 @@ export async function loadWorkspaces(user: User): Promise<Workspace[]> {
 }
 
 export async function createWorkspace(user: User, name: string): Promise<string> {
-  const createWorkspaceCall = httpsCallable<
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const { workspaceId } = await callFunction<
     { name: string; displayName: string; timezone: string },
     { workspaceId: string }
-  >(functions, 'createWorkspace')
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  const result = await createWorkspaceCall({ name, displayName: user.displayName ?? '', timezone })
-  saveActiveWorkspaceId(user.uid, result.data.workspaceId)
-  return result.data.workspaceId
+  >('createWorkspace', { name, displayName: user.displayName ?? '', timezone })
+  saveActiveWorkspaceId(user.uid, workspaceId)
+  return workspaceId
 }
 
 export async function acceptWorkspaceInvitation(
@@ -98,12 +96,11 @@ export async function acceptWorkspaceInvitation(
     throw new Error('Verify your email address before accepting a workspace invitation.')
   }
 
-  const acceptInvitationCall = httpsCallable<
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  await callFunction<
     { workspaceId: string; invitationId: string; token: string; displayName: string; timezone: string },
     { workspaceId: string }
-  >(functions, 'acceptWorkspaceInvitation')
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  await acceptInvitationCall({ workspaceId, invitationId, token, displayName: user.displayName ?? '', timezone })
+  >('acceptWorkspaceInvitation', { workspaceId, invitationId, token, displayName: user.displayName ?? '', timezone })
   saveActiveWorkspaceId(user.uid, workspaceId)
 }
 
@@ -139,25 +136,22 @@ export async function createWorkspaceInvitation(
   workspaceId: string,
   email: string,
 ): Promise<{ invitationId: string; token: string; expiresAt: number }> {
-  const call = httpsCallable<
+  return callFunction<
     { workspaceId: string; email: string },
     { invitationId: string; token: string; expiresAt: number }
-  >(functions, 'createWorkspaceInvitation')
-  return (await call({ workspaceId, email })).data
+  >('createWorkspaceInvitation', { workspaceId, email })
 }
 
 export async function revokeWorkspaceInvitation(workspaceId: string, invitationId: string): Promise<void> {
-  const call = httpsCallable<{ workspaceId: string; invitationId: string }, { invitationId: string }>(
-    functions,
+  await callFunction<{ workspaceId: string; invitationId: string }, { invitationId: string }>(
     'revokeWorkspaceInvitation',
+    { workspaceId, invitationId },
   )
-  await call({ workspaceId, invitationId })
 }
 
 export async function removeWorkspaceMember(workspaceId: string, memberUid: string): Promise<void> {
-  const call = httpsCallable<{ workspaceId: string; memberUid: string }, { memberUid: string }>(
-    functions,
-    'removeWorkspaceMember',
-  )
-  await call({ workspaceId, memberUid })
+  await callFunction<{ workspaceId: string; memberUid: string }, { memberUid: string }>('removeWorkspaceMember', {
+    workspaceId,
+    memberUid,
+  })
 }
