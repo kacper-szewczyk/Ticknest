@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.2.0...ticknest-v1.2.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* allow time entry display name and catalog changes in rules ([#59](https://github.com/kacper-szewczyk/Ticknest/issues/59)) ([ef939da](https://github.com/kacper-szewczyk/Ticknest/commit/ef939da8d845f3abb282ae9e2679f38b1fc331ff))
+
 ## [1.2.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.1.0...ticknest-v1.2.0) (2026-10-17)
 
 
