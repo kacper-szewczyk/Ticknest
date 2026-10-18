@@ -578,9 +578,6 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
   const entries = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart ? entryState.entries : []
   const [editId, setEditId] = useState<string | null>(null)
   const [description, setDescription] = useState('')
-  const [clientName, setClientName] = useState('')
-  const [projectName, setProjectName] = useState('')
-  const [taskName, setTaskName] = useState('')
   const [clientId, setClientId] = useState('')
   const [projectId, setProjectId] = useState('')
   const [taskId, setTaskId] = useState('')
@@ -604,9 +601,6 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
   function clearForm(forDay = weekStart) {
     setEditId(null)
     setDescription('')
-    setClientName('')
-    setProjectName('')
-    setTaskName('')
     setClientId('')
     setProjectId('')
     setTaskId('')
@@ -620,9 +614,6 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
     if (entry.endAt === null) return
     setEditId(entry.id)
     setDescription(entry.description)
-    setClientName(entry.clientName ?? '')
-    setProjectName(entry.projectName ?? '')
-    setTaskName(entry.taskName ?? '')
     setClientId(entry.clientId ?? '')
     setProjectId(entry.projectId ?? '')
     setTaskId(entry.taskId ?? '')
@@ -639,19 +630,15 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
     setError('')
     setNotice('')
     try {
-      const existing = entries.find((entry) => entry.id === editId)
-      await saveManualTimeEntry(user, workspaceId, {
+      await saveManualTimeEntry(workspaceId, {
         description,
         clientId: clientId || null,
         projectId: projectId || null,
         taskId: taskId || null,
-        clientName: catalog.clients.find((item) => item.id === clientId)?.name ?? (clientName || null),
-        projectName: catalog.projects.find((item) => item.id === projectId)?.name ?? (projectName || null),
-        taskName: catalog.tasks.find((item) => item.id === taskId)?.name ?? (taskName || null),
         billable,
         startAt: new Date(startAt),
         endAt: new Date(endAt),
-      }, existing?.userId, editId ?? undefined)
+      }, editId ?? undefined)
       clearForm()
       setNotice(editId ? 'Time entry updated.' : 'Time entry added.')
     } catch (requestError) {
@@ -728,9 +715,9 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
           <TextField label="End" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
         </Box>
         <Box sx={associationsSx}>
-          <SelectField label="Client" value={clientId} onChange={(event) => { setClientId(event.target.value); setClientName(''); setProjectName(''); setTaskName(''); setProjectId(''); setTaskId('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived || item.id === clientId).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
-          <SelectField label="Project" value={projectId} onChange={(event) => { setProjectId(event.target.value); setProjectName(''); setTaskName(''); setTaskId('') }}><option value="">No project</option>{catalog.projects.filter((item) => (!item.archived || item.id === projectId) && (!clientId || item.clientId === clientId) && (item.id === projectId || !item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
-          <SelectField label="Task" value={taskId} onChange={(event) => { setTaskId(event.target.value); setTaskName('') }}><option value="">No task</option>{catalog.tasks.filter((item) => (!item.archived || item.id === taskId) && (!projectId || item.projectId === projectId) && (item.id === taskId || catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived))))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
+          <SelectField label="Client" value={clientId} onChange={(event) => { setClientId(event.target.value); setProjectId(''); setTaskId('') }}><option value="">No client</option>{catalog.clients.filter((item) => !item.archived || item.id === clientId).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
+          <SelectField label="Project" value={projectId} onChange={(event) => { setProjectId(event.target.value); setTaskId('') }}><option value="">No project</option>{catalog.projects.filter((item) => (!item.archived || item.id === projectId) && (!clientId || item.clientId === clientId) && (item.id === projectId || !item.clientId || catalog.clients.some((client) => client.id === item.clientId && !client.archived))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
+          <SelectField label="Task" value={taskId} onChange={(event) => setTaskId(event.target.value)}><option value="">No task</option>{catalog.tasks.filter((item) => (!item.archived || item.id === taskId) && (!projectId || item.projectId === projectId) && (item.id === taskId || catalog.projects.some((project) => project.id === item.projectId && !project.archived && (!project.clientId || catalog.clients.some((client) => client.id === project.clientId && !client.archived))))).map((item) => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}</SelectField>
         </Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
           <FormControlLabel control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />} label="Billable" sx={{ mr: 'auto' }} />

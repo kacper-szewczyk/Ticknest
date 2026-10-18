@@ -487,7 +487,6 @@ function MemberDialog({ stats, user, isOwner, workspaceId, catalog, weekStart, t
       </DialogContent>
       {editor && (
         <EntryEditor
-          user={user}
           workspaceId={workspaceId}
           catalog={catalog}
           entry={editor.entry}
@@ -615,8 +614,7 @@ function EntryList({ entries, now, pending, canEdit, onEdit, onDelete }: {
   )
 }
 
-function EntryEditor({ user, workspaceId, catalog, entry, day, onClose, onSaved }: {
-  user: User
+function EntryEditor({ workspaceId, catalog, entry, day, onClose, onSaved }: {
   workspaceId: string
   catalog: Catalog
   entry?: TimeEntry
@@ -639,19 +637,15 @@ function EntryEditor({ user, workspaceId, catalog, entry, day, onClose, onSaved 
     setPending(true)
     setError('')
     try {
-      await saveManualTimeEntry(user, workspaceId, {
+      await saveManualTimeEntry(workspaceId, {
         description,
         clientId: clientId || null,
         projectId: projectId || null,
         taskId: taskId || null,
-        // Keep the stored snapshot name when the catalog item no longer exists.
-        clientName: catalog.clients.find((item) => item.id === clientId)?.name ?? (clientId ? entry?.clientName ?? null : null),
-        projectName: catalog.projects.find((item) => item.id === projectId)?.name ?? (projectId ? entry?.projectName ?? null : null),
-        taskName: catalog.tasks.find((item) => item.id === taskId)?.name ?? (taskId ? entry?.taskName ?? null : null),
         billable,
         startAt: new Date(startAt),
         endAt: new Date(endAt),
-      }, entry?.userId, entry?.id)
+      }, entry?.id)
       onSaved(entry ? 'Time entry updated.' : 'Time entry added.')
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not save this entry.')
