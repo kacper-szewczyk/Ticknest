@@ -25,6 +25,7 @@ import {
 } from './lib/workspaces'
 import {
   deleteCurrentAccount,
+  getReauthMethod,
   registerWithEmail,
   sendPasswordReset,
   signInWithEmail,
@@ -78,6 +79,9 @@ function readableError(error: unknown): string {
     'auth/user-disabled': 'This account is disabled. Contact the workspace administrator.',
     'auth/unauthorized-domain': 'This site is not authorized for Firebase sign-in. Add its domain in Firebase Authentication settings.',
     'auth/requires-recent-login': 'Sign in again before deleting your account.',
+    'auth/wrong-password': 'The password is incorrect.',
+    'auth/missing-password': 'Enter your password to confirm account deletion.',
+    'auth/user-mismatch': 'Choose the Google account you signed in with, then try deleting your account again.',
     'auth/popup-closed-by-user': 'Google sign-in was closed before it finished.',
     'auth/popup-blocked': 'Allow pop-ups for this site, then try Google sign-in again.',
     'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Authentication.',
@@ -293,16 +297,29 @@ function WorkspaceScreen({ user }: { user: User }) {
   }
 
   async function handleDeleteAccount() {
-    const confirmed = window.confirm('Delete this Ticknest account? This will sign you out. Workspace data is retained in the Firebase project.')
-    if (!confirmed) return
-    const password = window.prompt('Enter your password to confirm account deletion.')
-    if (password === null) return
-    setPending(true)
+    const method = getReauthMethod(user)
     setError('')
+    if (!method) {
+      setError('Account deletion needs a Google or email/password sign-in. Sign out and sign in with one of those methods, then try again.')
+      return
+    }
+    const confirmed = window.confirm(`Delete this Ticknest account? This will sign you out. Workspace data is retained in the Firebase project.\n\n${method === 'google' ? 'You’ll be asked to confirm with Google next.' : 'You’ll be asked for your password next.'}`)
+    if (!confirmed) return
+    let password: string | undefined
+    if (method === 'password') {
+      const entered = window.prompt('Enter your password to confirm account deletion.')
+      if (entered === null) return
+      if (!entered) {
+        setError('Enter your password to confirm account deletion.')
+        return
+      }
+      password = entered
+    }
+    setPending(true)
     try {
-      await deleteCurrentAccount(user, password)
+      await deleteCurrentAccount(user, method, password)
     } catch (requestError) {
-      setError(readableError(requestError))
+      setError(`Your account was not deleted. ${readableError(requestError)}`)
     } finally {
       setPending(false)
     }
