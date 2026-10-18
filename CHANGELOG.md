@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.2.1...ticknest-v1.3.0) (2026-10-18)
+
+
+### Features
+
+* move timer into an always-visible header bar ([#61](https://github.com/kacper-szewczyk/Ticknest/issues/61)) ([0b99913](https://github.com/kacper-szewczyk/Ticknest/commit/0b99913ed0c6179c8c10d99ad41be96b18880683))
+
 ## [1.2.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.2.0...ticknest-v1.2.1) (2026-10-18)
 
 
