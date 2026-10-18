@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.5.1...ticknest-v1.5.2) (2026-10-18)
+
+
+### Performance Improvements
+
+* reduce initial bundle size ([#76](https://github.com/kacper-szewczyk/Ticknest/issues/76)) ([c173ecb](https://github.com/kacper-szewczyk/Ticknest/commit/c173ecbb5e734bc1b24d869c43a75cab691bdaf5)), closes [#38](https://github.com/kacper-szewczyk/Ticknest/issues/38)
+
 ## [1.5.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.5.0...ticknest-v1.5.1) (2026-10-18)
 
 
