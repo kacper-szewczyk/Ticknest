@@ -15,6 +15,8 @@ type ShellProps<V extends string> = {
   brand: ReactNode
   /** Rendered under the brand, above the navigation (e.g. a workspace switcher). */
   header?: ReactNode
+  /** Sticky bar shown above the page content on every view (e.g. the timer). */
+  topBar?: ReactNode
   items: NavItem<V>[]
   active: V | null
   onNavigate: (value: V) => void
@@ -22,7 +24,7 @@ type ShellProps<V extends string> = {
   children: ReactNode
 }
 
-export function AppShell<V extends string>({ brand, header, items, active, onNavigate, footer, children }: ShellProps<V>) {
+export function AppShell<V extends string>({ brand, header, topBar, items, active, onNavigate, footer, children }: ShellProps<V>) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const activeLabel = items.find((item) => item.value === active)?.label
   const sidebar = (
@@ -45,6 +47,7 @@ export function AppShell<V extends string>({ brand, header, items, active, onNav
         {sidebar}
       </Drawer>
       <Box sx={{ ml: { md: `${SIDEBAR_WIDTH}px` }, minWidth: 0, background: 'radial-gradient(ellipse at 12% 0%, rgba(217, 231, 221, .48), transparent 32rem), #f8f8f5', minHeight: { xs: 'calc(100vh - 60px)', md: '100vh' } }}>
+        {topBar && <Box sx={{ position: 'sticky', top: { xs: 60, md: 0 }, zIndex: (theme) => theme.zIndex.appBar - 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'rgba(255, 255, 255, .94)', backdropFilter: 'blur(8px)' }}>{topBar}</Box>}
         {children}
       </Box>
     </Box>
