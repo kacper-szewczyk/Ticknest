@@ -26,6 +26,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme, type Theme } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
 import type { Catalog } from './lib/catalog'
+import { dayDate, localDateTimeValue, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
 import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
 import { deleteTimeEntry, saveManualTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
@@ -63,25 +64,6 @@ const STATUS_LABELS: Record<Status, { label: string; color: 'default' | 'success
   'on-track': { label: 'On track', color: 'success' },
 }
 
-function localDay(date: Date): string {
-  return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`
-}
-
-function shiftDay(day: string, days: number): string {
-  const date = new Date(`${day}T12:00:00`)
-  date.setDate(date.getDate() + days)
-  return localDay(date)
-}
-
-function startOfWeek(day: string, weekStartsOn: number): string {
-  const date = new Date(`${day}T12:00:00`)
-  return shiftDay(day, -((date.getDay() - weekStartsOn + 7) % 7))
-}
-
-function dayDate(day: string): Date {
-  return new Date(`${day}T12:00:00`)
-}
-
 function entrySeconds(entry: TimeEntry, now: number): number {
   const end = entry.endAt ? entry.endAt.toMillis() : now
   return Math.max(0, Math.floor((end - entry.startAt.toMillis()) / 1000))
@@ -100,13 +82,9 @@ function formatClock(date: Date): string {
 
 function formatRange(startDay: string): string {
   const start = dayDate(startDay)
-  const end = dayDate(shiftDay(startDay, 6))
+  const end = dayDate(shiftDayString(startDay, 6))
   const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
   return `${startLabel} – ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
-}
-
-function localDateTimeValue(date: Date): string {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 }
 
 function initials(name: string): string {
@@ -142,12 +120,12 @@ function breakSeconds(dayEntries: TimeEntry[]): number {
 }
 
 function buildStats(person: Person, entries: TimeEntry[], weekStart: string, now: number): PersonStats {
-  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDay(weekStart, index))
-  const current = entries.filter((entry) => localDay(entry.startAt.toDate()) >= weekStart)
-  const previous = entries.filter((entry) => localDay(entry.startAt.toDate()) < weekStart)
+  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
+  const current = entries.filter((entry) => localDayString(entry.startAt.toDate()) >= weekStart)
+  const previous = entries.filter((entry) => localDayString(entry.startAt.toDate()) < weekStart)
   const byDay = weekDays.map((day) =>
     current
-      .filter((entry) => localDay(entry.startAt.toDate()) === day)
+      .filter((entry) => localDayString(entry.startAt.toDate()) === day)
       .reduce((total, entry) => total + entrySeconds(entry, now), 0),
   )
   const total = byDay.reduce((sum, value) => sum + value, 0)
@@ -176,9 +154,9 @@ function buildStats(person: Person, entries: TimeEntry[], weekStart: string, now
 }
 
 export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, catalog }: Props) {
-  const [today] = useState(() => localDay(new Date()))
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(today, weekStartsOn))
-  const previousWeekStart = shiftDay(weekStart, -7)
+  const [today] = useState(() => localDayString(new Date()))
+  const [weekStart, setWeekStart] = useState(() => startOfWeekString(today, weekStartsOn))
+  const previousWeekStart = shiftDayString(weekStart, -7)
   const [entryState, setEntryState] = useState<{ key: string; entries: TimeEntry[] }>({ key: '', entries: [] })
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [search, setSearch] = useState('')
@@ -255,7 +233,7 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
       (!statusFilter || item.status === statusFilter) &&
       (!query || item.person.name.toLowerCase().includes(query) || item.person.email.toLowerCase().includes(query)),
   )
-  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDay(weekStart, index))
+  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
 
   const sum = (pick: (item: PersonStats) => number) => stats.reduce((total, item) => total + pick(item), 0)
   const total = sum((item) => item.total)
@@ -271,7 +249,7 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
 
   function changeWeek(day: string) {
     if (!day) return
-    setWeekStart(startOfWeek(day, weekStartsOn))
+    setWeekStart(startOfWeekString(day, weekStartsOn))
     setError('')
   }
 
@@ -511,7 +489,7 @@ function WeekPicker({
       <Button
         variant="outlined"
         aria-label="Previous week"
-        onClick={() => onChange(shiftDay(weekStart, -7))}
+        onClick={() => onChange(shiftDayString(weekStart, -7))}
         sx={{ minWidth: 44, px: 1 }}
       >
         ‹
@@ -527,7 +505,7 @@ function WeekPicker({
       <Button
         variant="outlined"
         aria-label="Next week"
-        onClick={() => onChange(shiftDay(weekStart, 7))}
+        onClick={() => onChange(shiftDayString(weekStart, 7))}
         sx={{ minWidth: 44, px: 1 }}
       >
         ›
@@ -733,12 +711,12 @@ function MemberDialog({
   const { person, entries } = stats
   const isSelf = person.uid === user.uid
   const canEdit = (entry: TimeEntry) => entry.endAt !== null && (isSelf || isOwner)
-  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDay(weekStart, index))
-    .filter((day) => day <= today || entries.some((entry) => localDay(entry.startAt.toDate()) === day))
+  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
+    .filter((day) => day <= today || entries.some((entry) => localDayString(entry.startAt.toDate()) === day))
     .reverse()
   const daysTracked = stats.byDay.filter(Boolean).length
   const totalBreaks = weekDays.reduce(
-    (total, day) => total + breakSeconds(entries.filter((entry) => localDay(entry.startAt.toDate()) === day)),
+    (total, day) => total + breakSeconds(entries.filter((entry) => localDayString(entry.startAt.toDate()) === day)),
     0,
   )
 
@@ -750,7 +728,7 @@ function MemberDialog({
       const startDate = entry.startAt.toDate()
       const endDate = entry.endAt?.toDate() ?? new Date(now)
       start = Math.min(start, startDate.getHours())
-      const sameDay = localDay(endDate) === localDay(startDate)
+      const sameDay = localDayString(endDate) === localDayString(startDate)
       end = Math.max(end, sameDay ? endDate.getHours() + (endDate.getMinutes() > 0 ? 1 : 0) : 24)
     }
     return [start, Math.min(24, end)]
@@ -855,7 +833,7 @@ function MemberDialog({
             <Button
               variant="outlined"
               onClick={() => {
-                setEditor({ day: today >= weekStart && today <= shiftDay(weekStart, 6) ? today : weekStart })
+                setEditor({ day: today >= weekStart && today <= shiftDayString(weekStart, 6) ? today : weekStart })
                 setNotice('')
               }}
             >
@@ -919,7 +897,7 @@ function MemberDialog({
                   key={day}
                   day={day}
                   today={today}
-                  entries={entries.filter((entry) => localDay(entry.startAt.toDate()) === day)}
+                  entries={entries.filter((entry) => localDayString(entry.startAt.toDate()) === day)}
                   axisStart={axisStart}
                   axisEnd={axisEnd}
                   now={now}
@@ -939,7 +917,7 @@ function MemberDialog({
             pending={pending}
             canEdit={canEdit}
             onEdit={(entry) => {
-              setEditor({ entry, day: localDay(entry.startAt.toDate()) })
+              setEditor({ entry, day: localDayString(entry.startAt.toDate()) })
               setNotice('')
             }}
             onDelete={(entry) => void handleDelete(entry)}
@@ -986,7 +964,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 
 function dayLabel(day: string, today: string): string {
   if (day === today) return 'Today'
-  if (day === shiftDay(today, -1)) return 'Yesterday'
+  if (day === shiftDayString(today, -1)) return 'Yesterday'
   return dayDate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
