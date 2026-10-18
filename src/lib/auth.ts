@@ -16,11 +16,7 @@ import {
 import { deleteDoc, doc } from 'firebase/firestore'
 import { auth, db } from './firebase'
 
-export async function registerWithEmail(
-  name: string,
-  email: string,
-  password: string,
-): Promise<User> {
+export async function registerWithEmail(name: string, email: string, password: string): Promise<User> {
   const credential = await createUserWithEmailAndPassword(auth, email.trim(), password)
   await updateProfile(credential.user, { displayName: name.trim() })
   await sendEmailVerification(credential.user)

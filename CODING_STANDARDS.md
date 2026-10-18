@@ -19,7 +19,7 @@ These standards apply to all application code and contributions to Ticknest. The
 - Use `const` by default; use `let` only when reassignment is needed. Avoid `var`.
 - Use descriptive names. Boolean names should read as predicates (`isRunning`, `hasAccess`).
 - Keep functions small and cohesive. Extract logic when it has a clear name, responsibility, and reuse or test value.
-- Use the repository formatter and linter once selected. Do not hand-format code to a conflicting convention.
+- Format with Prettier (`npm run format`) and lint with oxlint (`npm run lint`, `npm run lint:functions`); CI runs `npm run format:check`. Do not hand-format code to a conflicting convention.
 - Use single responsibility modules; avoid broad `index.ts` barrels that obscure dependency direction.
 
 ## 3. Application structure and boundaries

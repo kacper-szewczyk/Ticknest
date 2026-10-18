@@ -36,6 +36,8 @@ function getTimeZone(data: CallableData): string {
     throw new HttpsError('invalid-argument', 'Enter a valid time zone.')
   }
   try {
+    // Constructing a formatter throws a RangeError for an unknown time zone.
+    // oxlint-disable-next-line no-new
     new Intl.DateTimeFormat('en', { timeZone: timezone })
     return timezone
   } catch {
@@ -155,14 +157,14 @@ export const acceptWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request
     const invitation = invitationSnapshot.data()
     const expiresAt = invitation?.expiresAt
     if (
-      invitation?.status !== 'pending'
-      || invitation.role !== 'member'
-      || typeof invitation.email !== 'string'
-      || invitation.email.toLowerCase() !== user.email
-      || typeof invitation.tokenHash !== 'string'
-      || !matchesTokenHash(invitationToken, invitation.tokenHash)
-      || !(expiresAt instanceof Timestamp)
-      || expiresAt.toMillis() <= Date.now()
+      invitation?.status !== 'pending' ||
+      invitation.role !== 'member' ||
+      typeof invitation.email !== 'string' ||
+      invitation.email.toLowerCase() !== user.email ||
+      typeof invitation.tokenHash !== 'string' ||
+      !matchesTokenHash(invitationToken, invitation.tokenHash) ||
+      !(expiresAt instanceof Timestamp) ||
+      expiresAt.toMillis() <= Date.now()
     ) {
       throw new HttpsError('failed-precondition', 'This invitation has expired or is not for your account.')
     }
@@ -264,13 +266,18 @@ export const removeWorkspaceMember = onCall(FUNCTION_OPTIONS, async (request) =>
   const data = getData(request.data)
   const workspaceId = getDocumentId(data, 'workspaceId')
   const memberUid = getDocumentId(data, 'memberUid')
-  if (memberUid === user.uid) throw new HttpsError('failed-precondition', 'The workspace owner cannot remove themselves.')
+  if (memberUid === user.uid)
+    throw new HttpsError('failed-precondition', 'The workspace owner cannot remove themselves.')
   const workspaceRef = db.collection('workspaces').doc(workspaceId)
   const ownerRef = workspaceRef.collection('members').doc(user.uid)
   const memberRef = workspaceRef.collection('members').doc(memberUid)
   const timerRef = workspaceRef.collection('activeTimers').doc(memberUid)
   await db.runTransaction(async (transaction) => {
-    const [owner, member, timer] = await Promise.all([transaction.get(ownerRef), transaction.get(memberRef), transaction.get(timerRef)])
+    const [owner, member, timer] = await Promise.all([
+      transaction.get(ownerRef),
+      transaction.get(memberRef),
+      transaction.get(timerRef),
+    ])
     if (!owner.exists || owner.data()?.role !== 'owner' || owner.data()?.status === 'removed') {
       throw new HttpsError('permission-denied', 'Only the workspace owner can manage members.')
     }
@@ -305,7 +312,9 @@ function getInstant(data: CallableData, field: string): Timestamp {
 }
 
 function isAbortedError(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && (error.code === 10 || error.code === 'aborted')
+  return (
+    typeof error === 'object' && error !== null && 'code' in error && (error.code === 10 || error.code === 'aborted')
+  )
 }
 
 // Creates or edits a completed entry. Overlap checks run in the same transaction as the write and every
@@ -349,7 +358,7 @@ export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
       if (existingData && !(existingData.endAt instanceof Timestamp)) {
         throw new HttpsError('failed-precondition', 'Stop the running timer before editing its entry.')
       }
-      const userId = existingData ? existingData.userId as string : user.uid
+      const userId = existingData ? (existingData.userId as string) : user.uid
       if (userId !== user.uid && caller.data()?.role !== 'owner') {
         throw new HttpsError('permission-denied', 'You can only edit your own time entries.')
       }
@@ -383,17 +392,22 @@ export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
       const [, active, overlapping] = await Promise.all([
         transaction.get(lockRef),
         transaction.get(activeRef),
-        transaction.get(entriesRef
-          .where('userId', '==', userId)
-          .where('endAt', '>', startAt)
-          .where('startAt', '<', endAt)),
+        transaction.get(
+          entriesRef.where('userId', '==', userId).where('endAt', '>', startAt).where('startAt', '<', endAt),
+        ),
       ])
       if (overlapping.docs.some((entry) => entry.id !== entryRef.id)) {
-        throw new HttpsError('failed-precondition', 'This time overlaps another entry for this user. Adjust the start or end time.')
+        throw new HttpsError(
+          'failed-precondition',
+          'This time overlaps another entry for this user. Adjust the start or end time.',
+        )
       }
       const activeStartAt = active.data()?.startAt
       if (activeStartAt instanceof Timestamp && endAt.toMillis() > activeStartAt.toMillis()) {
-        throw new HttpsError('failed-precondition', 'This time overlaps the user’s running timer. Stop the timer or choose a different time.')
+        throw new HttpsError(
+          'failed-precondition',
+          'This time overlaps the user’s running timer. Stop the timer or choose a different time.',
+        )
       }
 
       const now = FieldValue.serverTimestamp()
@@ -418,14 +432,20 @@ export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
         transaction.create(entryRef, {
           ...values,
           userId,
-          userDisplayName: (typeof name === 'string' && name.trim() ? name.trim() : user.email || user.uid).slice(0, 320),
+          userDisplayName: (typeof name === 'string' && name.trim() ? name.trim() : user.email || user.uid).slice(
+            0,
+            320,
+          ),
           createdAt: now,
         })
       }
     })
   } catch (error) {
     if (isAbortedError(error)) {
-      throw new HttpsError('aborted', 'Another change to these time entries was saved at the same moment. Try saving again.')
+      throw new HttpsError(
+        'aborted',
+        'Another change to these time entries was saved at the same moment. Try saving again.',
+      )
     }
     throw error
   }

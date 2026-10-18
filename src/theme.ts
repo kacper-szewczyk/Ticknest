@@ -29,10 +29,22 @@ export function createAppTheme(palette: PaletteDefinition): Theme {
     shape: { borderRadius: 8 },
     typography: {
       fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      h1: { fontFamily: serif, fontWeight: 400, fontSize: 'clamp(2.25rem, 6vw, 3.5rem)', letterSpacing: '-0.035em', lineHeight: 1.06 },
+      h1: {
+        fontFamily: serif,
+        fontWeight: 400,
+        fontSize: 'clamp(2.25rem, 6vw, 3.5rem)',
+        letterSpacing: '-0.035em',
+        lineHeight: 1.06,
+      },
       h2: { fontFamily: serif, fontWeight: 400, fontSize: '1.65rem', lineHeight: 1.2 },
       h3: { fontSize: '0.8125rem', fontWeight: 700, lineHeight: 1.4, color: app.heading },
-      overline: { fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.12em', lineHeight: 1.6, color: palette.text.secondary },
+      overline: {
+        fontSize: '0.625rem',
+        fontWeight: 700,
+        letterSpacing: '0.12em',
+        lineHeight: 1.6,
+        color: palette.text.secondary,
+      },
       button: { textTransform: 'none', fontWeight: 650 },
     },
     components: {
@@ -42,7 +54,10 @@ export function createAppTheme(palette: PaletteDefinition): Theme {
           '#root': { minHeight: '100vh' },
           '::selection': { background: app.selection, color: app.selectionText },
           // Keep a strong, consistent keyboard focus ring on buttons, checkboxes, and links.
-          '.MuiButtonBase-root.Mui-focusVisible, a:focus-visible': { outline: `3px solid ${app.focus}`, outlineOffset: 2 },
+          '.MuiButtonBase-root.Mui-focusVisible, a:focus-visible': {
+            outline: `3px solid ${app.focus}`,
+            outlineOffset: 2,
+          },
           '@media (prefers-reduced-motion: reduce)': {
             '*, *::before, *::after': {
               scrollBehavior: 'auto !important',

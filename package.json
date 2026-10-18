@@ -20,7 +20,9 @@
     "lint": "oxlint",
     "typecheck": "tsc -b --pretty",
     "lint:functions": "npm --prefix functions run lint",
-    "typecheck:functions": "npm --prefix functions run build"
+    "typecheck:functions": "npm --prefix functions run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -37,6 +39,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "firebase-tools": "^15.34.0",
     "oxlint": "^1.81.0",
+    "prettier": "3.9.10",
     "typescript": "~7.0.2",
     "vite": "^8.3.0"
   }

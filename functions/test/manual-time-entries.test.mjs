@@ -42,7 +42,9 @@ async function save(user, data) {
     body: JSON.stringify({ data: { workspaceId, ...data } }),
   })
   const body = await response.json()
-  return body.error ? { ok: false, status: body.error.status, message: body.error.message } : { ok: true, entryId: body.result.entryId }
+  return body.error
+    ? { ok: false, status: body.error.status, message: body.error.message }
+    : { ok: true, entryId: body.result.entryId }
 }
 
 function entry(startHour, endHour, extra = {}) {
@@ -59,7 +61,12 @@ function entry(startHour, endHour, extra = {}) {
 }
 
 async function entriesFor(uid) {
-  const snapshot = await db.collection('workspaces').doc(workspaceId).collection('timeEntries').where('userId', '==', uid).get()
+  const snapshot = await db
+    .collection('workspaces')
+    .doc(workspaceId)
+    .collection('timeEntries')
+    .where('userId', '==', uid)
+    .get()
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
 }
 
@@ -69,9 +76,29 @@ before(async () => {
   const workspaceRef = db.collection('workspaces').doc()
   workspaceId = workspaceRef.id
   const now = FieldValue.serverTimestamp()
-  await workspaceRef.set({ name: 'Test workspace', ownerUid: owner.uid, weekStartsOn: 1, createdAt: now, updatedAt: now })
-  await workspaceRef.collection('members').doc(owner.uid).set({ uid: owner.uid, email: 'owner@example.test', displayName: 'Owner', role: 'owner', status: 'active', joinedAt: now })
-  await workspaceRef.collection('members').doc(member.uid).set({ uid: member.uid, email: 'member@example.test', displayName: 'Member', role: 'member', status: 'active', joinedAt: now })
+  await workspaceRef.set({
+    name: 'Test workspace',
+    ownerUid: owner.uid,
+    weekStartsOn: 1,
+    createdAt: now,
+    updatedAt: now,
+  })
+  await workspaceRef.collection('members').doc(owner.uid).set({
+    uid: owner.uid,
+    email: 'owner@example.test',
+    displayName: 'Owner',
+    role: 'owner',
+    status: 'active',
+    joinedAt: now,
+  })
+  await workspaceRef.collection('members').doc(member.uid).set({
+    uid: member.uid,
+    email: 'member@example.test',
+    displayName: 'Member',
+    role: 'member',
+    status: 'active',
+    joinedAt: now,
+  })
 })
 
 after(async () => {
@@ -79,7 +106,9 @@ after(async () => {
 })
 
 test('concurrent conflicting creates save exactly one entry', async () => {
-  const results = await Promise.all(Array.from({ length: 5 }, (_, index) => save(member, entry(index * 0.1, 2 + index * 0.1))))
+  const results = await Promise.all(
+    Array.from({ length: 5 }, (_, index) => save(member, entry(index * 0.1, 2 + index * 0.1))),
+  )
   const saved = results.filter((result) => result.ok)
   const rejected = results.filter((result) => !result.ok)
   assert.equal(saved.length, 1, JSON.stringify(results))
@@ -114,10 +143,21 @@ test('edits exclude the edited entry and adjacent entries are allowed', async ()
 test('entries cannot overlap a running timer', async () => {
   const timerStart = BASE + 1000 * HOUR
   const timerEntryRef = db.collection('workspaces').doc(workspaceId).collection('timeEntries').doc()
-  await timerEntryRef.set({ userId: owner.uid, description: 'Running', billable: false, startAt: Timestamp.fromMillis(timerStart), endAt: null })
-  await db.collection('workspaces').doc(workspaceId).collection('activeTimers').doc(owner.uid).set({ entryId: timerEntryRef.id, startAt: Timestamp.fromMillis(timerStart) })
-  const before = await save(owner, entry(998, 1000))
-  assert.ok(before.ok, JSON.stringify(before))
+  await timerEntryRef.set({
+    userId: owner.uid,
+    description: 'Running',
+    billable: false,
+    startAt: Timestamp.fromMillis(timerStart),
+    endAt: null,
+  })
+  await db
+    .collection('workspaces')
+    .doc(workspaceId)
+    .collection('activeTimers')
+    .doc(owner.uid)
+    .set({ entryId: timerEntryRef.id, startAt: Timestamp.fromMillis(timerStart) })
+  const earlier = await save(owner, entry(998, 1000))
+  assert.ok(earlier.ok, JSON.stringify(earlier))
   const overlapping = await save(owner, entry(1000.5, 1001))
   assert.equal(overlapping.status, 'FAILED_PRECONDITION')
   assert.match(overlapping.message, /running timer/)

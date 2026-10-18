@@ -27,7 +27,14 @@ const PAGE_SIZE = 25
 const SUMMARY_BATCH_SIZE = 250
 export const IN_MEMORY_EXPORT_ROW_LIMIT = 20_000
 
-function constraints(workspaceId: string, isOwner: boolean, currentUserId: string, filters: ReportFilters, batchSize: number, cursor?: QueryDocumentSnapshot) {
+function constraints(
+  workspaceId: string,
+  isOwner: boolean,
+  currentUserId: string,
+  filters: ReportFilters,
+  batchSize: number,
+  cursor?: QueryDocumentSnapshot,
+) {
   const [startYear, startMonth, startDate] = filters.startDay.split('-').map(Number)
   const [endYear, endMonth, endDate] = filters.endDay.split('-').map(Number)
   const start = new Date(startYear, startMonth - 1, startDate)
@@ -49,10 +56,12 @@ function toEntry(snapshot: QueryDocumentSnapshot): TimeEntry {
 }
 
 function matchesFilters(entry: TimeEntry, filters: ReportFilters) {
-  return (!filters.clientId || entry.clientId === filters.clientId)
-    && (!filters.projectId || entry.projectId === filters.projectId)
-    && (!filters.taskId || entry.taskId === filters.taskId)
-    && (!filters.billable || entry.billable === (filters.billable === 'yes'))
+  return (
+    (!filters.clientId || entry.clientId === filters.clientId) &&
+    (!filters.projectId || entry.projectId === filters.projectId) &&
+    (!filters.taskId || entry.taskId === filters.taskId) &&
+    (!filters.billable || entry.billable === (filters.billable === 'yes'))
+  )
 }
 
 function csvField(value: string | number | boolean | null | undefined): string {
@@ -86,8 +95,12 @@ function localDateTime(date: Date, timeZone: string): string {
 }
 
 function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600).toString().padStart(2, '0')
-  const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+  const hours = Math.floor(seconds / 3600)
+    .toString()
+    .padStart(2, '0')
+  const minutes = Math.floor((seconds % 3600) / 60)
+    .toString()
+    .padStart(2, '0')
   const remainder = (seconds % 60).toString().padStart(2, '0')
   return `${hours}:${minutes}:${remainder}`
 }
@@ -103,13 +116,26 @@ export async function streamReportCsv(
 ): Promise<number> {
   const timezone = timeZone || 'UTC'
   const timezoneSuffix = timezone === 'UTC' ? 'UTC' : timezone
-  const headers = ['Date', 'User', 'Description', 'Client', 'Project', 'Task', `Start (${timezoneSuffix})`, `End (${timezoneSuffix})`, 'Duration', 'Billable']
+  const headers = [
+    'Date',
+    'User',
+    'Description',
+    'Client',
+    'Project',
+    'Task',
+    `Start (${timezoneSuffix})`,
+    `End (${timezoneSuffix})`,
+    'Duration',
+    'Billable',
+  ]
   await onChunk(`\uFEFF${headers.map(csvField).join(',')}\r\n`, 0)
 
   let cursor: QueryDocumentSnapshot | undefined
   let totalRows = 0
   do {
-    const snapshot = await getDocs(constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor))
+    const snapshot = await getDocs(
+      constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor),
+    )
     const lines: string[] = []
     for (const document of snapshot.docs) {
       const entry = toEntry(document)
@@ -117,18 +143,22 @@ export async function streamReportCsv(
       const start = entry.startAt.toDate()
       const end = entry.endAt.toDate()
       const seconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
-      lines.push([
-        localDate(start, timezone),
-        entry.userDisplayName ?? entry.userId,
-        entry.description,
-        entry.clientName,
-        entry.projectName,
-        entry.taskName,
-        localDateTime(start, timezone),
-        localDateTime(end, timezone),
-        formatDuration(seconds),
-        entry.billable ? 'Yes' : 'No',
-      ].map(csvField).join(','))
+      lines.push(
+        [
+          localDate(start, timezone),
+          entry.userDisplayName ?? entry.userId,
+          entry.description,
+          entry.clientName,
+          entry.projectName,
+          entry.taskName,
+          localDateTime(start, timezone),
+          localDateTime(end, timezone),
+          formatDuration(seconds),
+          entry.billable ? 'Yes' : 'No',
+        ]
+          .map(csvField)
+          .join(','),
+      )
     }
     if (lines.length > 0) {
       totalRows += lines.length
@@ -140,12 +170,20 @@ export async function streamReportCsv(
   return totalRows
 }
 
-export async function loadReportPage(workspaceId: string, isOwner: boolean, currentUserId: string, filters: ReportFilters, cursor?: QueryDocumentSnapshot) {
+export async function loadReportPage(
+  workspaceId: string,
+  isOwner: boolean,
+  currentUserId: string,
+  filters: ReportFilters,
+  cursor?: QueryDocumentSnapshot,
+) {
   let nextCursor = cursor
   let exhausted = false
   const entries: TimeEntry[] = []
   while (entries.length < PAGE_SIZE && !exhausted) {
-    const snapshot = await getDocs(constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, nextCursor))
+    const snapshot = await getDocs(
+      constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, nextCursor),
+    )
     const docs = snapshot.docs
     let reachedPageSize = false
     for (const document of docs) {
@@ -167,10 +205,18 @@ export async function loadReportPage(workspaceId: string, isOwner: boolean, curr
   }
 }
 
-export async function loadReportSummary(workspaceId: string, isOwner: boolean, currentUserId: string, filters: ReportFilters, onProgress: (entries: TimeEntry[]) => void) {
+export async function loadReportSummary(
+  workspaceId: string,
+  isOwner: boolean,
+  currentUserId: string,
+  filters: ReportFilters,
+  onProgress: (entries: TimeEntry[]) => void,
+) {
   let cursor: QueryDocumentSnapshot | undefined
   do {
-    const snapshot = await getDocs(constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor))
+    const snapshot = await getDocs(
+      constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor),
+    )
     onProgress(snapshot.docs.map(toEntry).filter((entry) => entry.endAt !== null && matchesFilters(entry, filters)))
     cursor = snapshot.docs.length === SUMMARY_BATCH_SIZE ? snapshot.docs[snapshot.docs.length - 1] : undefined
   } while (cursor)
