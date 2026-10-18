@@ -84,7 +84,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
       <TextField label="Email address" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required placeholder="teammate@example.com" helperText="We’ll create a secure, single-use link. Copy it and send it to the invited email address." slotProps={{ htmlInput: { maxLength: 254 } }} />
       <Button variant="contained" type="submit" disabled={pending} sx={{ flex: '0 0 auto' }}>{pending ? 'Creating…' : 'Create invitation'}</Button>
     </Stack>
-    {invitationUrl && <Paper variant="outlined" sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' }, gap: 1.25, mt: 1.75, p: 1.5, bgcolor: '#f7faf4' }}>
+    {invitationUrl && <Paper variant="outlined" sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' }, gap: 1.25, mt: 1.75, p: 1.5, bgcolor: 'app.tint' }}>
       <TextField label="Invitation link" value={invitationUrl} onFocus={(event) => event.target.select()} slotProps={{ htmlInput: { readOnly: true } }} />
       <Button variant="outlined" onClick={() => void copyLink()} sx={{ flex: '0 0 auto' }}>Copy link</Button>
     </Paper>}
@@ -94,7 +94,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     </ListRow>)}</Box>}
     <Box sx={{ mt: 2.75 }}><Typography variant="h3">People with access</Typography>{activeMembers.map((member) => <ListRow key={member.uid}>
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-        <Avatar aria-hidden="true" sx={{ width: 32, height: 32, bgcolor: '#eaf1e7', color: 'primary.light', fontSize: 13, fontWeight: 700 }}>{(member.displayName || member.email || '?').slice(0, 1).toUpperCase()}</Avatar>
+        <Avatar aria-hidden="true" sx={{ width: 32, height: 32, bgcolor: 'app.accentSoft', color: 'app.accentSoftText', fontSize: 13, fontWeight: 700 }}>{(member.displayName || member.email || '?').slice(0, 1).toUpperCase()}</Avatar>
         <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{member.displayName || member.email}</Typography><Typography variant="caption" color="text.secondary" noWrap>{member.email} · {member.role === 'owner' ? 'Owner' : 'Member'}</Typography></Box>
       </Stack>
       {member.role === 'member' && member.uid !== currentUserId && <Button size="small" color="error" onClick={() => void remove(member)} disabled={pending}>Remove</Button>}

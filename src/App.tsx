@@ -13,6 +13,7 @@ import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { alpha, type Theme } from '@mui/material/styles'
 import {
   acceptWorkspaceInvitation,
   createWorkspace,
@@ -46,6 +47,9 @@ import { CatalogPanel } from './CatalogPanel'
 import { MemberManagementPanel } from './MemberManagementPanel'
 import { ReportsPanel } from './ReportsPanel'
 import { TimesheetDashboard } from './TimesheetDashboard'
+import { AppearancePanel } from './AppearancePanel'
+import { subscribeToPalettePreference } from './lib/userPreferences'
+import { usePalette } from './paletteContext'
 import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading, SelectField } from './ui'
 
@@ -90,9 +94,9 @@ function readableError(error: unknown): string {
 
 function Brand({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
   return (
-    <Link href="/" aria-label="Ticknest home" underline="none" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.25, color: tone === 'light' ? '#f3f7ef' : '#17271f', fontSize: 20, fontWeight: 700, letterSpacing: '-0.8px' }}>
-      <Box component="span" aria-hidden="true" sx={{ display: 'grid', width: 30, height: 30, placeItems: 'center', borderRadius: '10px', bgcolor: tone === 'light' ? '#e9f2df' : '#213b2c' }}>
-        <Box component="svg" viewBox="0 0 24 24" fill="none" sx={{ width: 19, stroke: tone === 'light' ? '#213b2c' : '#e9f2df', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2.5 }}><path d="M5 13.5 9.2 18 19 6" /></Box>
+    <Link href="/" aria-label="Ticknest home" underline="none" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.25, color: tone === 'light' ? 'app.sidebar.strong' : 'text.primary', fontSize: 20, fontWeight: 700, letterSpacing: '-0.8px' }}>
+      <Box component="span" aria-hidden="true" sx={{ display: 'grid', width: 30, height: 30, placeItems: 'center', borderRadius: '10px', bgcolor: tone === 'light' ? 'app.sidebar.strong' : 'primary.main' }}>
+        <Box component="svg" viewBox="0 0 24 24" fill="none" sx={{ width: 19, stroke: (theme) => tone === 'light' ? theme.palette.app.sidebar.bg : theme.palette.primary.contrastText, strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2.5 }}><path d="M5 13.5 9.2 18 19 6" /></Box>
       </Box>
       <span>ticknest</span>
     </Link>
@@ -149,7 +153,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
 
   return (
     <Box component="main" sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(300px, .92fr) 1.08fr' }, bgcolor: 'background.paper' }}>
-      <Box component="section" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: { md: '100vh' }, px: { xs: 3, md: 'clamp(32px, 7vw, 96px)' }, py: { xs: 3, md: 4.75 }, overflow: 'hidden', background: 'radial-gradient(ellipse at 20% 15%, rgba(213, 231, 213, .78), transparent 45%), #f3f5ef' }}>
+      <Box component="section" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: { md: '100vh' }, px: { xs: 3, md: 'clamp(32px, 7vw, 96px)' }, py: { xs: 3, md: 4.75 }, overflow: 'hidden', background: (theme) => `radial-gradient(ellipse at 20% 15%, ${alpha(theme.palette.app.glow, 0.78)}, transparent 45%), ${theme.palette.background.default}` }}>
         <Brand />
         <Box sx={{ maxWidth: 450, my: { xs: 5, md: 'auto' }, py: { md: 9 } }}>
           <Typography variant="overline" component="p">YOUR TIME, YOUR INFRASTRUCTURE</Typography>
@@ -337,8 +341,8 @@ function WorkspaceScreen({ user }: { user: User }) {
 
   const workspaceSwitcher = workspaces.length > 0 ? (
     <Box component="label" sx={{ display: 'grid', gap: 0.5, px: 1 }}>
-      <Typography component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#7f9383' }}>WORKSPACE</Typography>
-      <Box component="select" value={activeId ?? ''} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setActiveId(event.target.value); saveActiveWorkspaceId(user.uid, event.target.value) }} sx={{ width: '100%', minHeight: 40, px: 1.25, borderRadius: '9px', border: '1px solid rgba(233, 242, 223, .16)', bgcolor: 'rgba(233, 242, 223, .06)', color: '#f3f7ef', font: 'inherit', fontSize: 14, fontWeight: 600, '&:focus-visible': { outline: '3px solid #a8d29a', outlineOffset: 1 }, '& option': { color: '#24342a' } }}>
+      <Typography component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'app.sidebar.muted' }}>WORKSPACE</Typography>
+      <Box component="select" value={activeId ?? ''} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setActiveId(event.target.value); saveActiveWorkspaceId(user.uid, event.target.value) }} sx={{ width: '100%', minHeight: 40, px: 1.25, borderRadius: '9px', border: '1px solid', borderColor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.16), bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.06), color: 'app.sidebar.strong', font: 'inherit', fontSize: 14, fontWeight: 600, '&:focus-visible': { outline: (theme) => `3px solid ${theme.palette.app.sidebar.accent}`, outlineOffset: 1 }, '& option': { color: 'text.primary', bgcolor: 'background.paper' } }}>
         {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
       </Box>
     </Box>
@@ -347,14 +351,14 @@ function WorkspaceScreen({ user }: { user: User }) {
   const sidebarFooter = (
     <Stack spacing={1.25}>
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', px: 1, py: 0.5, minWidth: 0 }}>
-        <Box aria-hidden="true" sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, flexShrink: 0, borderRadius: '50%', bgcolor: '#dbe8d7', color: '#213b2c', fontSize: 13, fontWeight: 700 }}>{(user.displayName || user.email || '?').trim().charAt(0).toUpperCase()}</Box>
+        <Box aria-hidden="true" sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, flexShrink: 0, borderRadius: '50%', bgcolor: 'app.sidebar.avatarBg', color: 'app.sidebar.avatarText', fontSize: 13, fontWeight: 700 }}>{(user.displayName || user.email || '?').trim().charAt(0).toUpperCase()}</Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="body2" noWrap sx={{ color: '#f3f7ef', fontWeight: 600 }}>{user.displayName || 'Your account'}</Typography>
-          <Typography variant="caption" noWrap sx={{ display: 'block', color: '#7f9383' }}>{user.email}</Typography>
+          <Typography variant="body2" noWrap sx={{ color: 'app.sidebar.strong', fontWeight: 600 }}>{user.displayName || 'Your account'}</Typography>
+          <Typography variant="caption" noWrap sx={{ display: 'block', color: 'app.sidebar.muted' }}>{user.email}</Typography>
         </Box>
       </Stack>
-      <Button size="small" onClick={() => void signOutUser()} sx={{ minHeight: 36, color: '#c3d0c6', justifyContent: 'flex-start', px: 1, '&:hover': { bgcolor: 'rgba(233, 242, 223, .09)' } }}>Sign out</Button>
-      <Typography variant="caption" sx={{ px: 1, color: '#5f7363' }}>Ticknest v{__APP_VERSION__}</Typography>
+      <Button size="small" onClick={() => void signOutUser()} sx={{ minHeight: 36, color: 'app.sidebar.text', justifyContent: 'flex-start', px: 1, '&:hover': { bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.09) } }}>Sign out</Button>
+      <Typography variant="caption" sx={{ px: 1, color: 'app.sidebar.faint' }}>Ticknest v{__APP_VERSION__}</Typography>
     </Stack>
   )
 
@@ -376,8 +380,9 @@ function WorkspaceScreen({ user }: { user: User }) {
                 <Typography variant="overline" component="p">YOUR WORKSPACE</Typography>
                 <Typography variant="h2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{activeWorkspace.name}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>Signed in as {user.email}.{workspaces.length > 1 && ' Switch workspaces from the menu at the top of the sidebar.'}</Typography>
-                <Chip variant="outlined" color="success" icon={<Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#7fae72', boxShadow: '0 0 0 3px rgba(127,174,114,.13)' }} />} label={isOwner ? 'Workspace owner' : 'Workspace member'} sx={{ mt: 2, pl: 0.75 }} />
+                <Chip variant="outlined" color="success" icon={<Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: 'success.main', boxShadow: (theme) => `0 0 0 3px ${alpha(theme.palette.success.main, 0.13)}` }} />} label={isOwner ? 'Workspace owner' : 'Workspace member'} sx={{ mt: 2, pl: 0.75 }} />
               </Paper>
+              <AppearancePanel user={user} />
               {joinWorkspaceForm}
               <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ maxWidth: 750, mx: 'auto', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.75, sm: 2 }, mt: 4, pt: 2, borderTop: 1, borderColor: 'divider' }}>
                 <Button size="small" color="error" onClick={() => void handleDeleteAccount()} disabled={pending}>Delete account</Button>
@@ -390,12 +395,12 @@ function WorkspaceScreen({ user }: { user: User }) {
             <Box sx={{ mb: 3.75 }}><Typography variant="overline" component="p">ONE LAST STEP</Typography><Typography variant="h1" sx={{ my: 1.5 }}>Set up your workspace</Typography><Typography color="text.secondary" sx={{ maxWidth: 530, lineHeight: 1.6 }}>Hi {user.displayName?.split(' ')[0] ?? 'there'} — create a new workspace or join one you’ve been invited to.</Typography></Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <Paper component="form" variant="outlined" onSubmit={handleCreate} aria-busy={pending} sx={onboardingCardSx}>
-                <Box component="span" aria-hidden="true" sx={{ ...cardIconSx, bgcolor: '#eaf1e7', color: '#47744d' }}>✳</Box><Typography variant="h2" sx={{ fontSize: 23 }}>Create a workspace</Typography><Typography variant="body2" color="text.secondary">You’ll be the owner and can invite people later.</Typography>
+                <Box component="span" aria-hidden="true" sx={{ ...cardIconSx, bgcolor: 'app.accentSoft', color: 'app.accentSoftText' }}>✳</Box><Typography variant="h2" sx={{ fontSize: 23 }}>Create a workspace</Typography><Typography variant="body2" color="text.secondary">You’ll be the owner and can invite people later.</Typography>
                 <TextField label="Workspace name" value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} required placeholder="e.g. Acme Studio" slotProps={{ htmlInput: { maxLength: 80 } }} />
                 <Button variant="contained" type="submit" disabled={pending}>Create workspace</Button>
               </Paper>
               <Paper component="form" variant="outlined" onSubmit={handleAcceptInvite} aria-busy={pending} sx={onboardingCardSx}>
-                <Box component="span" aria-hidden="true" sx={{ ...cardIconSx, bgcolor: '#f1f0e7', color: '#8b7850' }}>↗</Box><Typography variant="h2" sx={{ fontSize: 23 }}>Join a workspace</Typography><Typography variant="body2" color="text.secondary">Paste the invitation link sent to your email.</Typography>
+                <Box component="span" aria-hidden="true" sx={{ ...cardIconSx, bgcolor: 'app.warmSoft', color: 'app.warmSoftText' }}>↗</Box><Typography variant="h2" sx={{ fontSize: 23 }}>Join a workspace</Typography><Typography variant="body2" color="text.secondary">Paste the invitation link sent to your email.</Typography>
                 <TextField label="Invitation link" type="url" value={inviteLink} onChange={(event) => setInviteLink(event.target.value)} required placeholder="https://…?workspace=…&invite=…&token=…" helperText={user.emailVerified ? undefined : 'Verify your email before accepting an invitation.'} />
                 <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified}>Accept invitation</Button>
               </Paper>
@@ -420,7 +425,7 @@ const navIcons = {
   settings: <NavIcon><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></NavIcon>,
 }
 
-const onboardingCardSx = { display: 'grid', alignContent: 'start', gap: 2, p: 3, borderRadius: '16px', bgcolor: 'rgba(255,255,255,.8)' }
+const onboardingCardSx = { display: 'grid', alignContent: 'start', gap: 2, p: 3, borderRadius: '16px', bgcolor: (theme: Theme) => alpha(theme.palette.background.paper, 0.8) }
 const cardIconSx = { display: 'grid', width: 34, height: 34, placeItems: 'center', borderRadius: '11px', fontSize: 17 }
 
 function formatElapsed(seconds: number): string {
@@ -715,7 +720,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
       } />
       {error && <FormMessage severity="error">{error}</FormMessage>}
       {notice && <FormMessage severity="success">{notice}</FormMessage>}
-      <Paper component="form" variant="outlined" onSubmit={handleSave} aria-busy={pending} sx={{ display: 'grid', gap: 2, mt: 3, p: 2.25, borderRadius: '12px', bgcolor: '#fbfcfa' }}>
+      <Paper component="form" variant="outlined" onSubmit={handleSave} aria-busy={pending} sx={{ display: 'grid', gap: 2, mt: 3, p: 2.25, borderRadius: '12px', bgcolor: 'app.surface' }}>
         <Typography variant="h3">{editId ? 'Edit entry' : `Add time · ${new Date(`${editorDay}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}</Typography>
         <TextField label="Description" value={description} onChange={(event) => setDescription(event.target.value)} required slotProps={{ htmlInput: { maxLength: 500 } }} />
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
@@ -733,7 +738,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
           <Button variant="contained" type="submit" disabled={pending}>{pending ? 'Saving…' : editId ? 'Save changes' : 'Add entry'}</Button>
         </Stack>
       </Paper>
-      <Paper variant="outlined" aria-live="polite" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mt: 3, px: 2, py: 1.75, borderRadius: '11px', borderColor: '#dce9d8', bgcolor: '#f7faf4' }}>
+      <Paper variant="outlined" aria-live="polite" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mt: 3, px: 2, py: 1.75, borderRadius: '11px', borderColor: 'app.tintBorder', bgcolor: 'app.tint' }}>
         <Box sx={{ display: 'grid', gap: 0.5 }}><Typography variant="caption" color="text.secondary">Week total</Typography><Typography sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 700 }}>{formatElapsed(weekTotal)}</Typography></Box>
         <Typography variant="caption" color="text.secondary">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week</Typography>
       </Paper>
@@ -747,7 +752,7 @@ function TimeEntriesPanel({ user, workspaceId, isOwner, weekStartsOn, catalog }:
               <Typography variant="h3" id={`timesheet-${weekDay}`} sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}><span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span><Typography component="time" variant="caption" color="text.secondary" dateTime={weekDay}>{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Typography></Typography>
               <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}><Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatElapsed(dayTotal)}</Typography><Button size="small" onClick={() => { clearForm(weekDay); setError(''); setNotice('') }}>Add entry</Button></Stack>
             </Stack>
-            {dayEntries.length === 0 ? <EmptyText>No entries</EmptyText> : dayEntries.map((entry) => <Box component="article" key={entry.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '54px minmax(0, 1fr) auto', sm: '78px minmax(0, 1fr) auto auto' }, alignItems: 'center', gap: { xs: 1, sm: 1.75 }, py: 1.5, borderTop: 1, borderColor: '#eef0eb', minWidth: 0 }}>
+            {dayEntries.length === 0 ? <EmptyText>No entries</EmptyText> : dayEntries.map((entry) => <Box component="article" key={entry.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '54px minmax(0, 1fr) auto', sm: '78px minmax(0, 1fr) auto auto' }, alignItems: 'center', gap: { xs: 1, sm: 1.75 }, py: 1.5, borderTop: 1, borderColor: 'app.track', minWidth: 0 }}>
               <Box sx={{ display: 'grid', gap: 0.5, fontVariantNumeric: 'tabular-nums' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography><Typography variant="caption" color="text.secondary">{entry.endAt ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Running'}</Typography></Box>
               <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}><Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{entry.description || 'Untitled entry'}</Typography><Typography variant="caption" color="text.secondary" noWrap>{[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') || 'No client, project, or task'}{entry.userId !== user.uid && ' · Workspace member'}</Typography></Box>
               <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 650 }}>{formatElapsed(secondsFor(entry))}</Typography>
@@ -772,11 +777,19 @@ function EmailVerificationNotice({ user }: { user: User }) {
 function App() {
   const [user, setUser] = useState<User | null>(auth.currentUser)
   const [authReady, setAuthReady] = useState(false)
+  const { applyPalette } = usePalette()
+  const uid = user?.uid
 
   useEffect(() => onAuthStateChanged(auth, (currentUser) => {
     setUser(currentUser)
     setAuthReady(true)
   }), [])
+
+  // The palette is a per-user preference stored on the profile, so it follows the user across devices.
+  useEffect(() => {
+    if (!uid) return
+    return subscribeToPalettePreference(uid, applyPalette)
+  }, [uid, applyPalette])
 
   if (!authReady) return <Stack component="main" role="status" spacing={2} sx={{ minHeight: '100vh', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}><CircularProgress size={28} /><Typography variant="body2">Loading your Ticknest account…</Typography></Stack>
   return (

@@ -63,7 +63,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
       {(['clients', 'projects', 'tasks'] as const).map((item) => <ToggleButton key={item} value={item} sx={{ px: 2 }}>{item[0].toUpperCase() + item.slice(1)}</ToggleButton>)}
     </ToggleButtonGroup>
     {error && <FormMessage severity="error">{error}</FormMessage>}
-    <Paper component="form" variant="outlined" onSubmit={(event) => void submit(event)} aria-busy={pending} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, alignItems: 'end', gap: 2, p: 2, bgcolor: '#fbfcfa' }}>
+    <Paper component="form" variant="outlined" onSubmit={(event) => void submit(event)} aria-busy={pending} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, alignItems: 'end', gap: 2, p: 2, bgcolor: 'app.surface' }}>
       <Typography variant="h3" sx={{ gridColumn: '1 / -1' }}>{editing ? `Edit ${kind.slice(0, -1)}` : `Add ${kind.slice(0, -1)}`}</Typography>
       <TextField label="Name" value={name} onChange={(event) => setName(event.target.value)} required slotProps={{ htmlInput: { maxLength: 120 } }} />
       {kind === 'projects' && <>

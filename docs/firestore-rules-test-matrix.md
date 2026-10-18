@@ -4,6 +4,9 @@ Run the Auth, Firestore, and Functions emulators with `npm run emulators`, then 
 
 | Operation | Unauthenticated | Non-member | Workspace member | Workspace owner |
 | --- | --- | --- | --- | --- |
+| Read or update own `users/{uid}` profile, including `palette` | Deny | Allow | Allow | Allow |
+| Read or update another user's profile | Deny | Deny | Deny | Deny |
+| Set `palette` to a value outside the predefined list | Deny | Deny | Deny | Deny |
 | Read workspace document | Deny | Deny | Allow | Allow |
 | Read workspace clients/projects/tasks | Deny | Deny | Allow | Allow |
 | Read own time entries (direct get and query constrained to `userId == auth.uid`) | Deny | Deny | Allow | Allow |

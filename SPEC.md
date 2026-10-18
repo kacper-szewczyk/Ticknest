@@ -89,6 +89,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 - Workspace settings include name and default week start day.
 - User settings include display name and preferred timezone (default to browser-detected timezone, editable by the user).
+- User settings include a color palette chosen from predefined light and dark palettes, or one that follows the device's light/dark preference. The choice is stored on the user's profile and applies only to that user.
 - Do not collect activity history, screenshots, keystrokes, or location.
 - Provide a privacy notice explaining that data is stored in the Firebase project chosen by the deployer.
 
@@ -119,7 +120,7 @@ The interface must be responsive and usable on desktop and mobile web. Keyboard 
 
 All workspace-owned documents are scoped under a workspace ID. Exact collection layout may change during implementation, but security boundaries must remain equivalent.
 
-- `users/{uid}`: display name, email (non-authoritative copy), timezone, created timestamp.
+- `users/{uid}`: display name, email (non-authoritative copy), timezone, color palette preference, created timestamp.
 - `workspaces/{workspaceId}`: name, owner UID, week start, created/updated timestamps.
 - `workspaces/{workspaceId}/members/{uid}`: role (`owner` or `member`), joined timestamp, display-name snapshot.
 - `workspaces/{workspaceId}/invitations/{inviteId}`: email, role, token hash, expiry, creator, status.
