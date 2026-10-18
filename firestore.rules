@@ -215,8 +215,9 @@ service cloud.firestore {
       match /timeEntries/{entryId} {
         function validEntry(data) {
           return data.keys().hasAll(['userId', 'description', 'clientName', 'projectName', 'taskName', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
-            && data.keys().hasOnly(['userId', 'description', 'clientName', 'projectName', 'taskName', 'clientId', 'projectId', 'taskId', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
+            && data.keys().hasOnly(['userId', 'userDisplayName', 'description', 'clientName', 'projectName', 'taskName', 'clientId', 'projectId', 'taskId', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
             && data.userId is string
+            && (data.get('userDisplayName', null) == null || (data.get('userDisplayName', null) is string && data.get('userDisplayName', null).size() <= 320))
             && data.description is string
             && data.description.size() > 0
             && data.description.size() <= 500
@@ -229,6 +230,17 @@ service cloud.firestore {
             && data.billable is bool
             && data.startAt is timestamp
             && (data.endAt == null || (data.endAt is timestamp && data.endAt > data.startAt));
+        }
+
+        // Unchanged or cleared references stay valid even if the catalog item was archived later.
+        function validCatalogRefUpdate(collectionName, idField, nameField) {
+          let newId = request.resource.data.get(idField, null);
+          let itemPath = /databases/$(database)/documents/workspaces/$(workspaceId)/$(collectionName)/$(newId);
+          return newId == null
+            || newId == resource.data.get(idField, null)
+            || (exists(itemPath)
+              && get(itemPath).data.archived == false
+              && get(itemPath).data.name == request.resource.data.get(nameField, null));
         }
 
         function validEntryCreate(data) {
@@ -284,9 +296,12 @@ service cloud.firestore {
             (
               resource.data.endAt is timestamp
               && (isOwner(workspaceId) || resource.data.userId == request.auth.uid)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['description', 'clientName', 'projectName', 'taskName', 'billable', 'startAt', 'endAt', 'updatedAt'])
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['description', 'clientName', 'projectName', 'taskName', 'clientId', 'projectId', 'taskId', 'billable', 'startAt', 'endAt', 'updatedAt'])
               && request.resource.data.endAt is timestamp
               && validEntry(request.resource.data)
+              && validCatalogRefUpdate('clients', 'clientId', 'clientName')
+              && validCatalogRefUpdate('projects', 'projectId', 'projectName')
+              && validCatalogRefUpdate('tasks', 'taskId', 'taskName')
               && (!exists(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(resource.data.userId))
                 || request.resource.data.endAt <= get(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(resource.data.userId)).data.startAt)
             )
