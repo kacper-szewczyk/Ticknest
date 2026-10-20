@@ -43,7 +43,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 ### 5.2 Timer
 
-- A prominent timer bar accepts a description and optional client, project, task, and billable toggle.
+- A prominent timer bar accepts a description and an optional project or task, chosen from one searchable list grouped by client → project → task. The entry's billable state follows the selected task, and the client, project, and task of a running timer can be changed until it stops.
 - Start creates a running time entry. Stop records its end time and duration.
 - A user can have at most one running timer per workspace. Starting another timer asks whether to stop the current timer first; it must never silently discard elapsed time.
 - The timer continues across page reloads, browser restarts, and sign-out/sign-in. The UI derives elapsed time from the saved start timestamp; it does not rely on a continuously running browser interval for accuracy.

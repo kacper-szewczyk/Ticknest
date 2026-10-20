@@ -189,6 +189,7 @@ function newTask(overrides: Record<string, unknown> = {}) {
     name: 'New task',
     projectId: PROJECT_ID_IN_WORKSPACE,
     estimateMinutes: 30,
+    billable: true,
     archived: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -344,7 +345,11 @@ describe('Firestore rules matrix', () => {
       estimateMinutes: null,
       updatedAt: serverTimestamp(),
     })
-    await updateDoc(doc(db, WS, 'tasks', TASK_ID), { estimateMinutes: 45, updatedAt: serverTimestamp() })
+    await updateDoc(doc(db, WS, 'tasks', TASK_ID), {
+      estimateMinutes: 45,
+      billable: true,
+      updatedAt: serverTimestamp(),
+    })
   })
 
   matrix('delete a client, project, and task', OWNER_ONLY, async ({ db }) => {
@@ -529,6 +534,65 @@ describe('running timers', () => {
     await assertFails(deleteDoc(doc(db, WS, 'timeEntries', 'running')))
   })
 
+  it('lets a member move their running timer to another project and task', async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore() as unknown as Firestore
+      await setDoc(
+        doc(db, WS, 'projects', 'project-other'),
+        newProject({ name: 'Other', clientId: null, createdAt: PAST, updatedAt: PAST }),
+      )
+      await setDoc(
+        doc(db, WS, 'tasks', 'task-other'),
+        newTask({ name: 'Review', projectId: 'project-other', createdAt: PAST, updatedAt: PAST }),
+      )
+    })
+    const db = firestoreFor(MEMBER)
+    await seedRunningTimer(MEMBER.uid, 'running')
+    await assertSucceeds(
+      updateDoc(doc(db, WS, 'timeEntries', 'running'), {
+        clientId: null,
+        clientName: null,
+        projectId: 'project-other',
+        projectName: 'Other',
+        taskId: 'task-other',
+        taskName: 'Review',
+        billable: true,
+        updatedAt: serverTimestamp(),
+      }),
+    )
+  })
+
+  it.each<[string, Record<string, unknown>]>([
+    ['a task from another project', { taskId: TASK_ID, taskName: 'Build', projectId: null, projectName: null }],
+    ['a name that does not match the reference', { taskName: 'Renamed' }],
+    ['a reference to a missing task', { taskId: 'task-missing' }],
+    ['a description change', { description: 'Changed' }],
+    ['a start time change', { startAt: PAST }],
+  ])('denies editing a running timer with %s', async (_, changes) => {
+    const db = firestoreFor(MEMBER)
+    await seedRunningTimer(MEMBER.uid, 'running')
+    await assertFails(updateDoc(doc(db, WS, 'timeEntries', 'running'), { ...changes, updatedAt: serverTimestamp() }))
+  })
+
+  it("denies editing another user's running timer", async () => {
+    await seedRunningTimer(OWNER.uid, 'owner-running')
+    await assertFails(
+      updateDoc(doc(firestoreFor(MEMBER), WS, 'timeEntries', 'owner-running'), {
+        billable: true,
+        updatedAt: serverTimestamp(),
+      }),
+    )
+  })
+
+  it('denies editing a completed entry directly', async () => {
+    await assertFails(
+      updateDoc(doc(firestoreFor(MEMBER), WS, 'timeEntries', MEMBER_ENTRY_ID), {
+        billable: true,
+        updatedAt: serverTimestamp(),
+      }),
+    )
+  })
+
   it('denies listing active timers', async () => {
     await assertFails(getDocs(collection(firestoreFor(OWNER), WS, 'activeTimers')))
   })
@@ -619,6 +683,17 @@ describe('boundary validation', () => {
         () => setDoc(doc(ownerDb(), WS, 'tasks', 't'), newTask({ estimateMinutes: -1 })),
       ],
       ['a task without a project', () => setDoc(doc(ownerDb(), WS, 'tasks', 't'), newTask({ projectId: '' }))],
+      [
+        'a task with a non-boolean billable flag',
+        () => setDoc(doc(ownerDb(), WS, 'tasks', 't'), newTask({ billable: 'yes' })),
+      ],
+      [
+        'a task missing its billable flag',
+        () => {
+          const { billable: _billable, ...task } = newTask()
+          return setDoc(doc(ownerDb(), WS, 'tasks', 't'), task)
+        },
+      ],
       [
         'a project update with a negative estimate',
         () =>

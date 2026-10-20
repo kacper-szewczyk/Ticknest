@@ -29,6 +29,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
   const [description, setDescription] = useState('')
   const [color, setColor] = useState('#668a6b')
   const [estimate, setEstimate] = useState('')
+  const [billable, setBillable] = useState(false)
   const [editing, setEditing] = useState<{ id: string } | undefined>()
   const [showArchived, setShowArchived] = useState(false)
   const [error, setError] = useState('')
@@ -41,6 +42,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     setName('')
     setDescription('')
     setEstimate('')
+    setBillable(false)
     setEditing(undefined)
   }
   function beginEdit(record: { id: string; name: string }) {
@@ -56,6 +58,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
       const item = catalog.tasks.find((task) => task.id === record.id)
       setProjectId(item?.projectId ?? '')
       setEstimate(item?.estimateMinutes?.toString() ?? '')
+      setBillable(item?.billable ?? false)
     }
   }
   async function submit(event: FormEvent) {
@@ -63,7 +66,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     setPending(true)
     setError('')
     const minutes = estimate ? Number(estimate) : null
-    const input: CatalogInput = { name, clientId, projectId, description, color, estimateMinutes: minutes }
+    const input: CatalogInput = { name, clientId, projectId, description, color, estimateMinutes: minutes, billable }
     try {
       await saveCatalogRecord(workspaceId, kind, input, editing)
       reset()
@@ -203,6 +206,12 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
             slotProps={{ htmlInput: { min: 0, step: 1 }, inputLabel: { shrink: true } }}
           />
         )}
+        {kind === 'tasks' && (
+          <FormControlLabel
+            control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />}
+            label="Billable"
+          />
+        )}
         <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', gridColumn: { sm: '2' } }}>
           {editing && (
             <Button variant="outlined" onClick={reset}>
@@ -221,8 +230,13 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
             kind === 'projects'
               ? (record as Catalog['projects'][number]).description
               : kind === 'tasks'
-                ? catalog.projects.find((project) => project.id === (record as Catalog['tasks'][number]).projectId)
-                    ?.name
+                ? [
+                    catalog.projects.find((project) => project.id === (record as Catalog['tasks'][number]).projectId)
+                      ?.name,
+                    (record as Catalog['tasks'][number]).billable && 'Billable',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
                 : ''
           return (
             <ListRow key={record.id} sx={archived ? { opacity: 0.65 } : undefined}>

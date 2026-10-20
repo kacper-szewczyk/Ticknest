@@ -11,7 +11,14 @@ export type Project = {
   estimateMinutes: number | null
   archived: boolean
 }
-export type Task = { id: string; name: string; projectId: string; estimateMinutes: number | null; archived: boolean }
+export type Task = {
+  id: string
+  name: string
+  projectId: string
+  estimateMinutes: number | null
+  billable: boolean
+  archived: boolean
+}
 export type Catalog = { clients: Client[]; projects: Project[]; tasks: Task[] }
 export type CatalogInput = {
   name: string
@@ -20,6 +27,7 @@ export type CatalogInput = {
   description?: string
   color?: string
   estimateMinutes?: number | null
+  billable?: boolean
 }
 
 const path = (workspaceId: string, group: string) => collection(db, 'workspaces', workspaceId, group)
@@ -39,7 +47,8 @@ export function subscribeToCatalog(
       (snapshot) => {
         if (group === 'clients') catalog.clients = records<Client>(snapshot)
         else if (group === 'projects') catalog.projects = records<Project>(snapshot)
-        else catalog.tasks = records<Task>(snapshot)
+        // Tasks created before the billable flag existed are non-billable.
+        else catalog.tasks = records<Task>(snapshot).map((task) => ({ ...task, billable: task.billable === true }))
         onChange({ ...catalog })
       },
       onError,
@@ -68,7 +77,12 @@ export async function saveCatalogRecord(
             color: input.color || '#668a6b',
             estimateMinutes: input.estimateMinutes ?? null,
           }
-        : { name, projectId: input.projectId ?? '', estimateMinutes: input.estimateMinutes ?? null }
+        : {
+            name,
+            projectId: input.projectId ?? '',
+            estimateMinutes: input.estimateMinutes ?? null,
+            billable: input.billable ?? false,
+          }
   if (existing) await updateDoc(ref, { ...fields, updatedAt: serverTimestamp() })
   else await setDoc(ref, { ...fields, archived: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
 }
