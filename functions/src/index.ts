@@ -1,13 +1,19 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { defineBoolean } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 
 initializeApp()
 
 const db = getFirestore()
 const REGION = 'europe-west1'
-const FUNCTION_OPTIONS = { region: REGION, maxInstances: 3 }
+// Optional so self-hosters without App Check keep working; set ENFORCE_APP_CHECK=true in functions/.env to enforce.
+const ENFORCE_APP_CHECK = defineBoolean('ENFORCE_APP_CHECK', {
+  default: false,
+  description: 'Reject callable requests without a valid Firebase App Check token.',
+})
+const FUNCTION_OPTIONS = { region: REGION, maxInstances: 3, enforceAppCheck: ENFORCE_APP_CHECK }
 
 type CallableData = Record<string, unknown>
 

@@ -20,6 +20,20 @@ Ticknest is software you deploy and operate in your own Firebase project. The re
 
 Hosting serves the `dist/` build, while deployment also publishes Firestore rules, indexes, and callable Functions. Functions run in `europe-west1`. Use HTTPS and review Firebase rules before exposing a project to users.
 
+### App Check (optional)
+
+[Firebase App Check](https://firebase.google.com/docs/app-check) rejects requests that do not come from your deployed web app, such as scripts calling the Functions or Firestore directly with a valid user's credentials. It is off by default, so a project without it keeps working. To enable it:
+
+1. Create a reCAPTCHA Enterprise key for your Hosting domains in Google Cloud, then register the Web app under App Check in the Firebase console with the reCAPTCHA Enterprise provider and that key.
+2. Set `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` in `.env.local` to the site key, then rebuild and deploy Hosting. The app now attaches App Check tokens to Firestore and Functions requests.
+3. Monitor the App Check request metrics for Firestore and Cloud Functions in the Firebase console until nearly all requests are verified. Older open tabs and clients built without the site key send unverified requests.
+4. Enforce App Check for the callable Functions by creating `functions/.env` with `ENFORCE_APP_CHECK=true` and deploying Functions. Requests without a valid token then fail with `unauthenticated`.
+5. Enforce App Check for Cloud Firestore in the App Check section of the Firebase console. This is a console setting; it is not deployed from the repository.
+
+To run a local build against a project that enforces App Check, add a debug token under App Check → Apps → Manage debug tokens and set `VITE_APP_CHECK_DEBUG_TOKEN` to it. Setting it to `true` instead prints a generated token in the browser console for you to register. Debug tokens bypass reCAPTCHA, so keep them secret and revoke unused ones; never set one in a production build.
+
+The Emulator Suite does not emulate App Check. With the default `demo-ticknest` setup, leave `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` empty and `ENFORCE_APP_CHECK` unset.
+
 ### Local development
 
 Use Node.js 22.12+ or 24.x, npm, and Java JDK 11+. Copy `.env.example` to `.env.local` and keep `VITE_USE_FIREBASE_EMULATORS=true`. The configured `demo-ticknest` project ID routes Auth, Firestore, Functions, and Hosting to local emulators; verification and password reset links are printed by the Auth emulator.
