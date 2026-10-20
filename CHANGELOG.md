@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.5.2...ticknest-v1.6.0) (2026-10-20)
+
+
+### Features
+
+* pick project and task from one grouped autocomplete ([#79](https://github.com/kacper-szewczyk/Ticknest/issues/79)) ([37ba08b](https://github.com/kacper-szewczyk/Ticknest/commit/37ba08b8a188b54c8ab255323c43ff9fe0446b2d))
+
 ## [1.5.2](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.5.1...ticknest-v1.5.2) (2026-10-18)
 
 
