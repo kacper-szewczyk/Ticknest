@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
 import { connectAuthEmulator, getAuth } from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 import type { Functions, httpsCallable } from 'firebase/functions'
@@ -24,6 +25,30 @@ if (missingConfig.length > 0) {
 }
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+
+// App Check is optional for self-hosters: it is enabled only when a reCAPTCHA Enterprise site key is configured.
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY
+const appCheckDebugToken = import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN
+
+if (recaptchaSiteKey) {
+  const appCheckState = self as typeof self & {
+    FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean
+    __ticknestAppCheckInitialized?: boolean
+  }
+
+  if (!appCheckState.__ticknestAppCheckInitialized) {
+    // The debug token must be set before App Check initializes. It replaces reCAPTCHA in local development and CI.
+    if (appCheckDebugToken) {
+      appCheckState.FIREBASE_APPCHECK_DEBUG_TOKEN = appCheckDebugToken === 'true' ? true : appCheckDebugToken
+    }
+
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+    appCheckState.__ticknestAppCheckInitialized = true
+  }
+}
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
