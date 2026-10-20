@@ -11,6 +11,7 @@ import {
   runTransaction,
   serverTimestamp,
   Timestamp,
+  updateDoc,
   where,
   type QueryConstraint,
 } from 'firebase/firestore'
@@ -18,6 +19,7 @@ import type { User } from 'firebase/auth'
 import { callFunction, db } from './firebase'
 import { localDayBounds } from './dates'
 import { validateManualEntryFields } from './timeEntryValidation'
+import type { WorkDetails } from './workOptions'
 
 export type TimeEntry = {
   id: string
@@ -202,6 +204,20 @@ export async function saveManualTimeEntry(
 export async function deleteTimeEntry(workspaceId: string, entry: TimeEntry): Promise<void> {
   if (entry.endAt === null) throw new Error('Stop a running timer before deleting its entry.')
   await deleteDoc(doc(entriesPath(workspaceId), entry.id))
+}
+
+// Lets a user fix the client, project, or task of the timer that is still running.
+export async function updateRunningTimer(workspaceId: string, entryId: string, details: WorkDetails): Promise<void> {
+  await updateDoc(doc(entriesPath(workspaceId), entryId), {
+    clientId: details.clientId,
+    clientName: details.clientName,
+    projectId: details.projectId,
+    projectName: details.projectName,
+    taskId: details.taskId,
+    taskName: details.taskName,
+    billable: details.billable,
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export async function stopTimer(user: User, workspaceId: string, entryId: string): Promise<void> {

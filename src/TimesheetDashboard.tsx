@@ -2,13 +2,11 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -30,7 +28,9 @@ import { dayDate, localDateTimeValue, localDayString, shiftDayString, startOfWee
 import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
 import { deleteTimeEntry, saveManualTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
+import { type WorkDetails, workDetails } from './lib/workOptions'
 import { BillableChip, EmptyText, FormMessage, SelectField } from './ui'
+import { WorkPicker } from './WorkPicker'
 
 type Props = { user: User; workspaceId: string; isOwner: boolean; weekStartsOn: number; catalog: Catalog }
 type Person = { uid: string; name: string; email: string }
@@ -1244,10 +1244,19 @@ function EntryEditor({
   onSaved: (message: string) => void
 }) {
   const [description, setDescription] = useState(entry?.description ?? '')
-  const [clientId, setClientId] = useState(entry?.clientId ?? '')
-  const [projectId, setProjectId] = useState(entry?.projectId ?? '')
-  const [taskId, setTaskId] = useState(entry?.taskId ?? '')
-  const [billable, setBillable] = useState(entry?.billable ?? false)
+  const [work, setWork] = useState<WorkDetails>(() =>
+    entry
+      ? {
+          clientId: entry.clientId ?? null,
+          clientName: entry.clientName,
+          projectId: entry.projectId ?? null,
+          projectName: entry.projectName,
+          taskId: entry.taskId ?? null,
+          taskName: entry.taskName,
+          billable: entry.billable,
+        }
+      : workDetails(null),
+  )
   const [startAt, setStartAt] = useState(entry ? localDateTimeValue(entry.startAt.toDate()) : `${day}T09:00`)
   const [endAt, setEndAt] = useState(entry?.endAt ? localDateTimeValue(entry.endAt.toDate()) : `${day}T10:00`)
   const [pending, setPending] = useState(false)
@@ -1264,10 +1273,10 @@ function EntryEditor({
         workspaceId,
         {
           description,
-          clientId: clientId || null,
-          projectId: projectId || null,
-          taskId: taskId || null,
-          billable,
+          clientId: work.clientId,
+          projectId: work.projectId,
+          taskId: work.taskId,
+          billable: work.billable,
           startAt: new Date(startAt),
           endAt: new Date(endAt),
         },
@@ -1282,8 +1291,6 @@ function EntryEditor({
     }
   }
 
-  const activeClient = (id: string | null) =>
-    !id || catalog.clients.some((client) => client.id === id && !client.archived)
   return (
     <Dialog
       open
@@ -1338,73 +1345,12 @@ function EntryEditor({
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
-            <SelectField
-              label="Client"
-              value={clientId}
-              onChange={(event) => {
-                setClientId(event.target.value)
-                setProjectId('')
-                setTaskId('')
-              }}
-            >
-              <option value="">No client</option>
-              {catalog.clients
-                .filter((item) => !item.archived || item.id === clientId)
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                    {item.archived ? ' (archived)' : ''}
-                  </option>
-                ))}
-            </SelectField>
-            <SelectField
-              label="Project"
-              value={projectId}
-              onChange={(event) => {
-                setProjectId(event.target.value)
-                setTaskId('')
-              }}
-            >
-              <option value="">No project</option>
-              {catalog.projects
-                .filter(
-                  (item) =>
-                    item.id === projectId ||
-                    (!item.archived && (!clientId || item.clientId === clientId) && activeClient(item.clientId)),
-                )
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                    {item.archived ? ' (archived)' : ''}
-                  </option>
-                ))}
-            </SelectField>
-            <SelectField label="Task" value={taskId} onChange={(event) => setTaskId(event.target.value)}>
-              <option value="">No task</option>
-              {catalog.tasks
-                .filter(
-                  (item) =>
-                    item.id === taskId ||
-                    (!item.archived &&
-                      (!projectId || item.projectId === projectId) &&
-                      catalog.projects.some(
-                        (project) =>
-                          project.id === item.projectId && !project.archived && activeClient(project.clientId),
-                      )),
-                )
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                    {item.archived ? ' (archived)' : ''}
-                  </option>
-                ))}
-            </SelectField>
-          </Box>
-          <FormControlLabel
-            control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />}
-            label="Billable"
-          />
+          <WorkPicker catalog={catalog} value={work} onChange={setWork} />
+          {work.billable && (
+            <Box>
+              <BillableChip />
+            </Box>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={onClose} disabled={pending}>

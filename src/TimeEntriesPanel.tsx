@@ -1,8 +1,6 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
@@ -28,14 +26,10 @@ import {
   saveManualTimeEntry,
   subscribeToEntriesForRange,
 } from './lib/timeEntries'
-import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading, SelectField } from './ui'
+import { type WorkDetails, workDetails } from './lib/workOptions'
+import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
 import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
-
-const associationsSx = {
-  display: 'grid',
-  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
-  gap: 1.5,
-}
+import { WorkPicker } from './WorkPicker'
 
 export function TimeEntriesPanel({
   user,
@@ -60,10 +54,7 @@ export function TimeEntriesPanel({
   const entries = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart ? entryState.entries : []
   const [editId, setEditId] = useState<string | null>(null)
   const [description, setDescription] = useState('')
-  const [clientId, setClientId] = useState('')
-  const [projectId, setProjectId] = useState('')
-  const [taskId, setTaskId] = useState('')
-  const [billable, setBillable] = useState(false)
+  const [work, setWork] = useState<WorkDetails>(() => workDetails(null))
   const [editorDay, setEditorDay] = useState(today)
   const [startAt, setStartAt] = useState(() => dateTimeForDay(today, 9))
   const [endAt, setEndAt] = useState(() => dateTimeForDay(today, 10))
@@ -92,10 +83,7 @@ export function TimeEntriesPanel({
   function clearForm(forDay = weekStart) {
     setEditId(null)
     setDescription('')
-    setClientId('')
-    setProjectId('')
-    setTaskId('')
-    setBillable(false)
+    setWork(workDetails(null))
     setEditorDay(forDay)
     setStartAt(dateTimeForDay(forDay, 9))
     setEndAt(dateTimeForDay(forDay, 10))
@@ -106,10 +94,15 @@ export function TimeEntriesPanel({
     if (entry.endAt === null) return
     setEditId(entry.id)
     setDescription(entry.description)
-    setClientId(entry.clientId ?? '')
-    setProjectId(entry.projectId ?? '')
-    setTaskId(entry.taskId ?? '')
-    setBillable(entry.billable)
+    setWork({
+      clientId: entry.clientId ?? null,
+      clientName: entry.clientName,
+      projectId: entry.projectId ?? null,
+      projectName: entry.projectName,
+      taskId: entry.taskId ?? null,
+      taskName: entry.taskName,
+      billable: entry.billable,
+    })
     setStartAt(localDateTimeValue(entry.startAt.toDate()))
     setEndAt(localDateTimeValue(entry.endAt.toDate()))
     setError('')
@@ -128,10 +121,10 @@ export function TimeEntriesPanel({
         workspaceId,
         {
           description,
-          clientId: clientId || null,
-          projectId: projectId || null,
-          taskId: taskId || null,
-          billable,
+          clientId: work.clientId,
+          projectId: work.projectId,
+          taskId: work.taskId,
+          billable: work.billable,
           startAt: new Date(startAt),
           endAt: new Date(endAt),
         },
@@ -295,81 +288,13 @@ export function TimeEntriesPanel({
             slotProps={{ inputLabel: { shrink: true } }}
           />
         </Box>
-        <Box sx={associationsSx}>
-          <SelectField
-            label="Client"
-            value={clientId}
-            onChange={(event) => {
-              setClientId(event.target.value)
-              setProjectId('')
-              setTaskId('')
-            }}
-          >
-            <option value="">No client</option>
-            {catalog.clients
-              .filter((item) => !item.archived || item.id === clientId)
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                  {item.archived ? ' (archived)' : ''}
-                </option>
-              ))}
-          </SelectField>
-          <SelectField
-            label="Project"
-            value={projectId}
-            onChange={(event) => {
-              setProjectId(event.target.value)
-              setTaskId('')
-            }}
-          >
-            <option value="">No project</option>
-            {catalog.projects
-              .filter(
-                (item) =>
-                  (!item.archived || item.id === projectId) &&
-                  (!clientId || item.clientId === clientId) &&
-                  (item.id === projectId ||
-                    !item.clientId ||
-                    catalog.clients.some((client) => client.id === item.clientId && !client.archived)),
-              )
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                  {item.archived ? ' (archived)' : ''}
-                </option>
-              ))}
-          </SelectField>
-          <SelectField label="Task" value={taskId} onChange={(event) => setTaskId(event.target.value)}>
-            <option value="">No task</option>
-            {catalog.tasks
-              .filter(
-                (item) =>
-                  (!item.archived || item.id === taskId) &&
-                  (!projectId || item.projectId === projectId) &&
-                  (item.id === taskId ||
-                    catalog.projects.some(
-                      (project) =>
-                        project.id === item.projectId &&
-                        !project.archived &&
-                        (!project.clientId ||
-                          catalog.clients.some((client) => client.id === project.clientId && !client.archived)),
-                    )),
-              )
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                  {item.archived ? ' (archived)' : ''}
-                </option>
-              ))}
-          </SelectField>
-        </Box>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          <FormControlLabel
-            control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />}
-            label="Billable"
-            sx={{ mr: 'auto' }}
-          />
+        <WorkPicker catalog={catalog} value={work} onChange={setWork} />
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          {work.billable && (
+            <Box sx={{ mr: 'auto' }}>
+              <BillableChip />
+            </Box>
+          )}
           {editId && (
             <Button variant="outlined" onClick={() => clearForm()} disabled={pending}>
               Cancel

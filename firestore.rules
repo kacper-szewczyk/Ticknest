@@ -196,16 +196,19 @@ service cloud.firestore {
       match /tasks/{taskId} {
         allow read: if isMember(workspaceId);
         allow create: if isOwner(workspaceId)
-          && request.resource.data.keys().hasAll(['name', 'projectId', 'estimateMinutes', 'archived', 'createdAt', 'updatedAt'])
-          && request.resource.data.keys().hasOnly(['name', 'projectId', 'estimateMinutes', 'archived', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['name', 'projectId', 'estimateMinutes', 'billable', 'archived', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['name', 'projectId', 'estimateMinutes', 'billable', 'archived', 'createdAt', 'updatedAt'])
           && validName(request.resource.data)
           && request.resource.data.projectId is string
           && request.resource.data.projectId.size() > 0
           && optionalNonNegativeInt(request.resource.data.estimateMinutes)
+          && request.resource.data.billable is bool
           && request.resource.data.archived is bool
           && validCreateTimestamps(request.resource.data);
+        // Tasks created before the billable flag existed may still lack it.
         allow update: if isOwner(workspaceId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'projectId', 'estimateMinutes', 'archived', 'updatedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'projectId', 'estimateMinutes', 'billable', 'archived', 'updatedAt'])
+          && request.resource.data.get('billable', false) is bool
           && validName(request.resource.data)
           && request.resource.data.projectId is string
           && request.resource.data.projectId.size() > 0
@@ -235,6 +238,29 @@ service cloud.firestore {
             && (data.endAt == null || (data.endAt is timestamp && data.endAt > data.startAt));
         }
 
+        // Every referenced catalog item exists, is active, matches its name snapshot, and belongs to the
+        // referenced parent.
+        function validEntryReferences(data) {
+          return (data.get('clientId', null) != null || data.clientName == null)
+            && (data.get('projectId', null) != null || data.projectName == null)
+            && (data.get('taskId', null) != null || data.taskName == null)
+            && (data.get('clientId', null) == null
+              || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(data.get('clientId', null)))
+                  && get(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(data.get('clientId', null))).data.archived == false
+                  && get(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(data.get('clientId', null))).data.name == data.clientName))
+            && (data.get('projectId', null) == null
+              || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(data.get('projectId', null)))
+                  && get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(data.get('projectId', null))).data.archived == false
+                  && get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(data.get('projectId', null))).data.name == data.projectName
+                  && (get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(data.get('projectId', null))).data.clientId == null
+                    || get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(data.get('projectId', null))).data.clientId == data.get('clientId', null))))
+            && (data.get('taskId', null) == null
+              || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(data.get('taskId', null)))
+                  && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(data.get('taskId', null))).data.archived == false
+                  && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(data.get('taskId', null))).data.name == data.taskName
+                  && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(data.get('taskId', null))).data.projectId == data.get('projectId', null)));
+        }
+
         function validEntryCreate(data) {
           return validEntry(data)
             && data.createdAt == request.time
@@ -246,38 +272,29 @@ service cloud.firestore {
         allow create: if isMember(workspaceId)
           && request.resource.data.userId == request.auth.uid
           && validEntryCreate(request.resource.data)
-          && (request.resource.data.get('clientId', null) != null || request.resource.data.clientName == null)
-          && (request.resource.data.get('projectId', null) != null || request.resource.data.projectName == null)
-          && (request.resource.data.get('taskId', null) != null || request.resource.data.taskName == null)
-          && (request.resource.data.get('clientId', null) == null
-            || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(request.resource.data.get('clientId', null)))
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(request.resource.data.get('clientId', null))).data.archived == false
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/clients/$(request.resource.data.get('clientId', null))).data.name == request.resource.data.clientName))
-          && (request.resource.data.get('projectId', null) == null
-            || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null)))
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.archived == false
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.name == request.resource.data.projectName
-              && (get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.clientId == null
-                || get(/databases/$(database)/documents/workspaces/$(workspaceId)/projects/$(request.resource.data.get('projectId', null))).data.clientId == request.resource.data.get('clientId', null))))
-          && (request.resource.data.get('taskId', null) == null
-            || (exists(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null)))
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.archived == false
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.name == request.resource.data.taskName
-              && get(/databases/$(database)/documents/workspaces/$(workspaceId)/tasks/$(request.resource.data.get('taskId', null))).data.projectId == request.resource.data.get('projectId', null)))
+          && validEntryReferences(request.resource.data)
           // Clients create only running timers. Completed entries are written by the saveManualTimeEntry
           // callable, which checks overlaps in the same transaction as the write.
           && request.resource.data.endAt == null
           && request.resource.data.startAt == request.time
           && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)).data.entryId == entryId;
-        // Clients may only stop their own running timer; edits to completed entries go through the callable.
+        // Clients may stop their own running timer or change its client, project, task, and billable state;
+        // edits to completed entries go through the callable.
         allow update: if isMember(workspaceId)
           && resource.data.endAt == null
           && resource.data.userId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endAt', 'updatedAt'])
           && request.resource.data.updatedAt == request.time
-          && request.resource.data.endAt is timestamp
-          && request.resource.data.endAt > resource.data.startAt
-          && !existsAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid));
+          && (
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endAt', 'updatedAt'])
+              && request.resource.data.endAt is timestamp
+              && request.resource.data.endAt > resource.data.startAt
+              && !existsAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)))
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'clientId', 'clientName', 'projectId', 'projectName', 'taskId', 'taskName', 'billable', 'updatedAt'
+              ])
+              && validEntry(request.resource.data)
+              && validEntryReferences(request.resource.data))
+          );
         allow delete: if isMember(workspaceId)
           && resource.data.endAt is timestamp
           && (isOwner(workspaceId) || resource.data.userId == request.auth.uid);

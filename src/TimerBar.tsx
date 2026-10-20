@@ -1,8 +1,5 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Checkbox from '@mui/material/Checkbox'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
@@ -10,18 +7,16 @@ import { type FormEvent, useEffect, useState } from 'react'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed } from './lib/dates'
 import { readableError } from './lib/errors'
-import { type TimeEntry, startTimer, stopTimer, subscribeToTimeEntries } from './lib/timeEntries'
-import { FormMessage, SelectField } from './ui'
+import { type TimeEntry, startTimer, stopTimer, subscribeToTimeEntries, updateRunningTimer } from './lib/timeEntries'
+import { type WorkDetails, workDetails } from './lib/workOptions'
+import { BillableChip, FormMessage } from './ui'
+import { WorkPicker } from './WorkPicker'
 
 // Always-visible timer at the top of every workspace page.
 export function TimerBar({ user, workspaceId, catalog }: { user: User; workspaceId: string; catalog: Catalog }) {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [description, setDescription] = useState('')
-  const [clientName, setClientName] = useState('')
-  const [projectName, setProjectName] = useState('')
-  const [taskName, setTaskName] = useState('')
-  const [billable, setBillable] = useState(false)
-  const [showDetails, setShowDetails] = useState(false)
+  const [work, setWork] = useState<WorkDetails>(() => workDetails(null))
   const [now, setNow] = useState(() => Date.now())
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -42,22 +37,21 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
     setPending(true)
     setError('')
     try {
-      await startTimer(user, workspaceId, {
-        description: description.trim(),
-        clientId: clientName || null,
-        projectId: projectName || null,
-        taskId: taskName || null,
-        clientName: catalog.clients.find((item) => item.id === clientName)?.name ?? null,
-        projectName: catalog.projects.find((item) => item.id === projectName)?.name ?? null,
-        taskName: catalog.tasks.find((item) => item.id === taskName)?.name ?? null,
-        billable,
-      })
+      await startTimer(user, workspaceId, { description: description.trim(), ...work })
       setDescription('')
-      setClientName('')
-      setProjectName('')
-      setTaskName('')
-      setBillable(false)
-      setShowDetails(false)
+      setWork(workDetails(null))
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleRunningWorkChange(entryId: string, details: WorkDetails) {
+    setPending(true)
+    setError('')
+    try {
+      await updateRunningTimer(workspaceId, entryId, details)
     } catch (requestError) {
       setError(readableError(requestError))
     } finally {
@@ -101,17 +95,36 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
     <Box component="section" aria-label="Timer" sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25 }}>
       {error && <FormMessage severity="error">{error}</FormMessage>}
       {runningEntry ? (
-        <Stack direction="row" spacing={2} sx={{ alignItems: 'center', minHeight: 48 }}>
-          <Box sx={{ display: 'grid', gap: 0.25, minWidth: 0, flex: 1 }}>
-            <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-              {runningEntry.description || 'Untitled entry'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {[runningEntry.clientName, runningEntry.projectName, runningEntry.taskName].filter(Boolean).join(' · ') ||
-                'No client, project, or task'}
-              {runningEntry.billable && ' · Billable'}
-            </Typography>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr) auto auto',
+              sm: 'minmax(0, 1fr) auto auto auto',
+              lg: 'minmax(0, 2fr) minmax(0, 1.5fr) auto auto auto',
+            },
+            alignItems: 'center',
+            gap: 1.25,
+            minHeight: 48,
+          }}
+        >
+          <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+            {runningEntry.description || 'Untitled entry'}
+          </Typography>
+          <Box sx={{ gridColumn: { xs: '1 / -1', lg: 'auto' }, gridRow: { xs: 2, lg: 'auto' }, minWidth: 0 }}>
+            <WorkPicker
+              size="small"
+              catalog={catalog}
+              value={{
+                clientId: runningEntry.clientId ?? null,
+                projectId: runningEntry.projectId ?? null,
+                taskId: runningEntry.taskId ?? null,
+              }}
+              onChange={(details) => void handleRunningWorkChange(runningEntry.id, details)}
+              disabled={pending}
+            />
           </Box>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{runningEntry.billable && <BillableChip />}</Box>
           {elapsedText}
           <Button
             variant="contained"
@@ -122,7 +135,7 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
           >
             {pending ? 'Saving…' : 'Stop'}
           </Button>
-        </Stack>
+        </Box>
       ) : (
         <Box
           component="form"
@@ -131,9 +144,9 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
           sx={{
             display: 'grid',
             gridTemplateColumns: {
-              xs: 'minmax(0, 1fr) auto auto',
+              xs: 'minmax(0, 1fr) auto',
               sm: 'minmax(0, 1fr) auto auto auto',
-              lg: 'minmax(0, 2fr) repeat(3, minmax(0, 1fr)) auto auto auto',
+              lg: 'minmax(0, 2fr) minmax(0, 1.5fr) auto auto auto',
             },
             alignItems: 'center',
             gap: 1.25,
@@ -147,101 +160,10 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
             required
             slotProps={{ htmlInput: { maxLength: 500, 'aria-label': 'What are you working on?' } }}
           />
-          <Box
-            sx={{
-              display: { xs: showDetails ? 'grid' : 'none', lg: 'contents' },
-              gridColumn: { xs: '1 / -1', lg: 'auto' },
-              gridRow: { xs: 2, lg: 'auto' },
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr)) auto' },
-              alignItems: 'center',
-              gap: 1.25,
-            }}
-          >
-            <SelectField
-              size="small"
-              label="Client"
-              value={clientName}
-              onChange={(event) => {
-                setClientName(event.target.value)
-                setProjectName('')
-                setTaskName('')
-              }}
-            >
-              <option value="">No client</option>
-              {catalog.clients
-                .filter((item) => !item.archived)
-                .map((item) => (
-                  <option value={item.id} key={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-            </SelectField>
-            <SelectField
-              size="small"
-              label="Project"
-              value={projectName}
-              onChange={(event) => {
-                setProjectName(event.target.value)
-                setTaskName('')
-              }}
-            >
-              <option value="">No project</option>
-              {catalog.projects
-                .filter(
-                  (item) =>
-                    !item.archived &&
-                    (!clientName || item.clientId === clientName) &&
-                    (!item.clientId ||
-                      catalog.clients.some((client) => client.id === item.clientId && !client.archived)),
-                )
-                .map((item) => (
-                  <option value={item.id} key={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-            </SelectField>
-            <SelectField
-              size="small"
-              label="Task"
-              value={taskName}
-              onChange={(event) => setTaskName(event.target.value)}
-            >
-              <option value="">No task</option>
-              {catalog.tasks
-                .filter(
-                  (item) =>
-                    !item.archived &&
-                    (!projectName || item.projectId === projectName) &&
-                    catalog.projects.some(
-                      (project) =>
-                        project.id === item.projectId &&
-                        !project.archived &&
-                        (!project.clientId ||
-                          catalog.clients.some((client) => client.id === project.clientId && !client.archived)),
-                    ),
-                )
-                .map((item) => (
-                  <option value={item.id} key={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-            </SelectField>
-            <FormControlLabel
-              control={
-                <Checkbox size="small" checked={billable} onChange={(event) => setBillable(event.target.checked)} />
-              }
-              label="Billable"
-              sx={{ mr: 0 }}
-            />
+          <Box sx={{ gridColumn: { xs: '1 / -1', lg: 'auto' }, gridRow: { xs: 2, lg: 'auto' }, minWidth: 0 }}>
+            <WorkPicker size="small" catalog={catalog} value={work} onChange={setWork} disabled={pending} />
           </Box>
-          <Button
-            size="small"
-            aria-expanded={showDetails}
-            onClick={() => setShowDetails((open) => !open)}
-            sx={{ display: { lg: 'none' }, minWidth: 0 }}
-          >
-            {showDetails ? 'Less' : 'Details'}
-          </Button>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{work.billable && <BillableChip />}</Box>
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{elapsedText}</Box>
           <Button variant="contained" type="submit" disabled={pending} sx={{ flexShrink: 0 }}>
             {pending ? 'Starting…' : 'Start'}
