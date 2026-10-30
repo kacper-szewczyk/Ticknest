@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.6.0...ticknest-v1.6.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* render proper Google logo on sign-in button ([#91](https://github.com/kacper-szewczyk/Ticknest/issues/91)) ([5e90bad](https://github.com/kacper-szewczyk/Ticknest/commit/5e90bad45ee7f728b708fc8f8307d72c7cd3d2cb))
+
 ## [1.6.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.5.2...ticknest-v1.6.0) (2026-10-20)
 
 
