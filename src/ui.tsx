@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack'
 import TextField, { type TextFieldProps } from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
+import { keyframes } from '@emotion/react'
 import type { ReactNode } from 'react'
 
 export function SectionCard({
@@ -108,5 +109,50 @@ export function EmptyText({ children }: { children: ReactNode }) {
     <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
       {children}
     </Typography>
+  )
+}
+
+const stopwatchSweep = keyframes`to { transform: rotate(360deg); }`
+
+// Ticknest's loading indicator: a stopwatch whose hand sweeps the dial (frozen by the global reduced-motion rule).
+export function StopwatchLoader({ size = 28 }: { size?: number }) {
+  return (
+    <Box
+      component="svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      sx={{
+        width: size,
+        height: size,
+        stroke: (theme) => theme.palette.primary.main,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        strokeWidth: 2,
+        '& .stopwatch-hand': {
+          transformBox: 'view-box',
+          transformOrigin: '12px 14px',
+          animation: `${stopwatchSweep} 1.2s linear infinite`,
+        },
+      }}
+    >
+      <path d="M10 2h4M12 2v3M18.5 6.5l1.5-1.5" />
+      <circle cx="12" cy="14" r="8" />
+      <path className="stopwatch-hand" d="M12 14V9" />
+      <circle cx="12" cy="14" r="0.5" />
+    </Box>
+  )
+}
+
+export function LoadingState({ label, sx }: { label: string; sx?: SxProps<Theme> }) {
+  return (
+    <Stack
+      role="status"
+      spacing={2}
+      sx={[{ alignItems: 'center', color: 'text.secondary' }, ...(Array.isArray(sx) ? sx : [sx])]}
+    >
+      <StopwatchLoader />
+      <Typography variant="body2">{label}</Typography>
+    </Stack>
   )
 }

@@ -1,5 +1,4 @@
-import CircularProgress from '@mui/material/CircularProgress'
-import Stack from '@mui/material/Stack'
+import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { type User, onAuthStateChanged } from 'firebase/auth'
 import { useEffect, useState } from 'react'
@@ -8,6 +7,7 @@ import { subscribeToPalettePreference } from './lib/userPreferences'
 import { AuthScreen } from './AuthScreen'
 import { WorkspaceScreen } from './WorkspaceScreen'
 import { usePalette } from './paletteContext'
+import { LoadingState } from './ui'
 
 function App() {
   const [user, setUser] = useState<User | null>(auth.currentUser)
@@ -32,15 +32,9 @@ function App() {
 
   if (!authReady)
     return (
-      <Stack
-        component="main"
-        role="status"
-        spacing={2}
-        sx={{ minHeight: '100vh', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}
-      >
-        <CircularProgress size={28} />
-        <Typography variant="body2">Loading your Ticknest account…</Typography>
-      </Stack>
+      <Box component="main" sx={{ display: 'grid', minHeight: '100vh', placeItems: 'center' }}>
+        <LoadingState label="Loading your Ticknest account…" />
+      </Box>
     )
   return (
     <>
