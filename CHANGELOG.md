@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.6.2...ticknest-v1.7.0) (2026-10-30)
+
+
+### Features
+
+* show a stopwatch as the loading indicator ([#95](https://github.com/kacper-szewczyk/Ticknest/issues/95)) ([b34e1d3](https://github.com/kacper-szewczyk/Ticknest/commit/b34e1d311475285a64d945e8d7d9365d420a4a0c)), closes [#93](https://github.com/kacper-szewczyk/Ticknest/issues/93)
+
+
+### Bug Fixes
+
+* use LoadingState for the workspace loading placeholder ([#99](https://github.com/kacper-szewczyk/Ticknest/issues/99)) ([7786795](https://github.com/kacper-szewczyk/Ticknest/commit/77867950f493613e5465bf9bd2cc1898e4fa338d))
+
 ## [1.6.2](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.6.1...ticknest-v1.6.2) (2026-10-30)
 
 
