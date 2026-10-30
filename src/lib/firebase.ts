@@ -6,6 +6,8 @@ import type { Functions, httpsCallable } from 'firebase/functions'
 
 const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || (useEmulators ? 'demo-ticknest' : undefined)
+// Must match FUNCTIONS_REGION in functions/.env.
+const functionsRegion = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'europe-west1'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (useEmulators ? 'demo-api-key' : undefined),
@@ -70,7 +72,7 @@ let callableClient: Promise<CallableClient> | undefined
 // firebase/functions is loaded on the first callable so it stays out of the initial bundle.
 function loadCallableClient(): Promise<CallableClient> {
   callableClient ??= import('firebase/functions').then(({ connectFunctionsEmulator, getFunctions, httpsCallable }) => {
-    const functions = getFunctions(app, 'europe-west1')
+    const functions = getFunctions(app, functionsRegion)
     if (useEmulators) connectFunctionsEmulator(functions, '127.0.0.1', 5001)
     return { functions, httpsCallable }
   })

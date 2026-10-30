@@ -18,7 +18,17 @@ Ticknest is software you deploy and operate in your own Firebase project. The re
    npm run deploy:firebase
    ```
 
-Hosting serves the `dist/` build, while deployment also publishes Firestore rules, indexes, and callable Functions. Functions run in `europe-west1`. Use HTTPS and review Firebase rules before exposing a project to users.
+Hosting serves the `dist/` build, while deployment also publishes Firestore rules, indexes, and callable Functions. Functions run in `europe-west1` by default (see [Functions region](#functions-region)). Use HTTPS and review Firebase rules before exposing a project to users.
+
+### Functions region
+
+Callable Functions deploy to `europe-west1` unless you choose another [Cloud Functions location](https://firebase.google.com/docs/functions/locations). The web app and the Functions must use the same region, or every callable request fails. To change it:
+
+1. Create or edit `functions/.env` with `FUNCTIONS_REGION=<region>`, for example `FUNCTIONS_REGION=us-central1`.
+2. Set `VITE_FIREBASE_FUNCTIONS_REGION` in `.env.local` to the same region.
+3. Rebuild and run `npm run deploy:firebase`. When you move an existing project, the Firebase CLI offers to delete the Functions left in the old region; clients built for the old region stop working once they are removed.
+
+The Emulator Suite serves Functions under the configured region, so keep both values aligned locally too. The emulator tests assume the default `europe-west1`.
 
 ### App Check (optional)
 
