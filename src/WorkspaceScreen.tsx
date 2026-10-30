@@ -50,7 +50,8 @@ function viewFromHash(): WorkspaceView | null {
 }
 
 export function WorkspaceScreen({ user }: { user: User }) {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  // undefined until the first membership read finishes, so an empty list really means "no workspace yet".
+  const [workspaces, setWorkspaces] = useState<Workspace[] | undefined>()
   const [activeId, setActiveId] = useState<string | null>(getSavedWorkspaceId(user.uid))
   const [workspaceName, setWorkspaceName] = useState('')
   const [inviteLink, setInviteLink] = useState(() => {
@@ -95,7 +96,10 @@ export function WorkspaceScreen({ user }: { user: User }) {
   }, [activeId, user.uid])
 
   useEffect(() => {
-    void refreshWorkspaces().catch((loadError: unknown) => setError(readableError(loadError)))
+    void refreshWorkspaces().catch((loadError: unknown) => {
+      setError(readableError(loadError))
+      setWorkspaces((current) => current ?? [])
+    })
     // Initial membership load for this authenticated account.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.uid])
@@ -171,7 +175,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
     }
   }
 
-  const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId)
+  const activeWorkspace = workspaces?.find((workspace) => workspace.id === activeId)
   const isOwner = activeWorkspace?.role === 'owner'
   const currentView: WorkspaceView = !isOwner && OWNER_VIEWS.includes(view) ? 'timesheet' : view
   const navItems: NavItem<WorkspaceView>[] = activeWorkspace
@@ -241,7 +245,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
   )
 
   const workspaceSwitcher =
-    workspaces.length > 0 ? (
+    workspaces && workspaces.length > 0 ? (
       <Box component="label" sx={{ display: 'grid', gap: 0.5, px: 1 }}>
         <Typography
           component="span"
@@ -410,7 +414,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
                     Signed in as {user.email}.
-                    {workspaces.length > 1 && ' Switch workspaces from the menu at the top of the sidebar.'}
+                    {(workspaces?.length ?? 0) > 1 && ' Switch workspaces from the menu at the top of the sidebar.'}
                   </Typography>
                   <Chip
                     variant="outlined"
@@ -457,6 +461,8 @@ export function WorkspaceScreen({ user }: { user: User }) {
               </>
             )}
           </>
+        ) : workspaces === undefined ? (
+          <PanelLoading />
         ) : (
           <Box component="section" sx={{ maxWidth: 860, mx: 'auto', mt: 3 }}>
             <Box sx={{ mb: 3.75 }}>
