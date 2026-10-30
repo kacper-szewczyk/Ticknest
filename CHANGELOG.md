@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.6.1...ticknest-v1.6.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* show loader instead of create-workspace UI while workspaces load ([#94](https://github.com/kacper-szewczyk/Ticknest/issues/94)) ([3463472](https://github.com/kacper-szewczyk/Ticknest/commit/3463472bd6f00d65e6be1ad03eb1d7bc5556416b))
+
 ## [1.6.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.6.0...ticknest-v1.6.1) (2026-10-30)
 
 
