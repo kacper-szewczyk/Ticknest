@@ -461,7 +461,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
             )}
           </>
         ) : workspaces === undefined ? (
-          <PanelLoading />
+          <LoadingState label="Loading your workspace…" sx={{ py: 8 }} />
         ) : (
           <Box component="section" sx={{ maxWidth: 860, mx: 'auto', mt: 3 }}>
             <Box sx={{ mb: 3.75 }}>
