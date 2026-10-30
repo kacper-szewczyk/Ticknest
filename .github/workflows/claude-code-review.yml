@@ -11,9 +11,12 @@ concurrency:
 jobs:
   claude-review:
     name: Claude review
-    # Skip drafts and PRs from forks, which cannot read repository secrets.
+    # Skip drafts, chore PRs (e.g. release-please), and PRs from forks, which
+    # cannot read repository secrets.
     if: >-
       !github.event.pull_request.draft &&
+      !startsWith(github.event.pull_request.title, 'chore:') &&
+      !startsWith(github.event.pull_request.title, 'chore(') &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
