@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
@@ -24,13 +23,11 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme, type Theme } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
 import type { Catalog } from './lib/catalog'
-import { dayDate, localDateTimeValue, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
-import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
-import { deleteTimeEntry, saveManualTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
+import { dayDate, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
+import { deleteTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
-import { type WorkDetails, workDetails } from './lib/workOptions'
+import { EntryEditor } from './EntryEditor'
 import { BillableChip, EmptyText, FormMessage, SelectField } from './ui'
-import { WorkPicker } from './WorkPicker'
 
 type Props = { user: User; workspaceId: string; isOwner: boolean; weekStartsOn: number; catalog: Catalog }
 type Person = { uid: string; name: string; email: string }
@@ -1225,142 +1222,5 @@ function EntryList({
         )
       })}
     </Box>
-  )
-}
-
-function EntryEditor({
-  workspaceId,
-  catalog,
-  entry,
-  day,
-  onClose,
-  onSaved,
-}: {
-  workspaceId: string
-  catalog: Catalog
-  entry?: TimeEntry
-  day: string
-  onClose: () => void
-  onSaved: (message: string) => void
-}) {
-  const [description, setDescription] = useState(entry?.description ?? '')
-  const [work, setWork] = useState<WorkDetails>(() =>
-    entry
-      ? {
-          clientId: entry.clientId ?? null,
-          clientName: entry.clientName,
-          projectId: entry.projectId ?? null,
-          projectName: entry.projectName,
-          taskId: entry.taskId ?? null,
-          taskName: entry.taskName,
-          billable: entry.billable,
-        }
-      : workDetails(null),
-  )
-  const [startAt, setStartAt] = useState(entry ? localDateTimeValue(entry.startAt.toDate()) : `${day}T09:00`)
-  const [endAt, setEndAt] = useState(entry?.endAt ? localDateTimeValue(entry.endAt.toDate()) : `${day}T10:00`)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState('')
-  const { fieldProps, showFieldError, clearFieldError, clearFieldErrors } = useManualEntryFieldErrors()
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setPending(true)
-    setError('')
-    clearFieldErrors()
-    try {
-      await saveManualTimeEntry(
-        workspaceId,
-        {
-          description,
-          clientId: work.clientId,
-          projectId: work.projectId,
-          taskId: work.taskId,
-          billable: work.billable,
-          startAt: new Date(startAt),
-          endAt: new Date(endAt),
-        },
-        entry?.id,
-      )
-      onSaved(entry ? 'Time entry updated.' : 'Time entry added.')
-    } catch (requestError) {
-      if (!showFieldError(requestError)) {
-        setError(requestError instanceof Error ? requestError.message : 'Could not save this entry.')
-      }
-      setPending(false)
-    }
-  }
-
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      aria-labelledby="entry-editor-title"
-      slotProps={{ paper: { sx: { borderRadius: '16px' } } }}
-    >
-      <Box component="form" onSubmit={handleSubmit} aria-busy={pending}>
-        <DialogTitle id="entry-editor-title" sx={{ fontWeight: 650 }}>
-          {entry ? 'Edit time entry' : 'Add time entry'}
-        </DialogTitle>
-        <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
-          {error && <FormMessage severity="error">{error}</FormMessage>}
-          <TextField
-            label="Description"
-            value={description}
-            onChange={(event) => {
-              setDescription(event.target.value)
-              clearFieldError('description')
-            }}
-            required
-            autoFocus
-            {...fieldProps('description')}
-            slotProps={{ htmlInput: { maxLength: 500 } }}
-          />
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-            <TextField
-              label="Start"
-              type="datetime-local"
-              value={startAt}
-              onChange={(event) => {
-                setStartAt(event.target.value)
-                clearFieldError('startAt')
-                clearFieldError('endAt')
-              }}
-              required
-              {...fieldProps('startAt')}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-            <TextField
-              label="End"
-              type="datetime-local"
-              value={endAt}
-              onChange={(event) => {
-                setEndAt(event.target.value)
-                clearFieldError('endAt')
-              }}
-              required
-              {...fieldProps('endAt')}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Box>
-          <WorkPicker catalog={catalog} value={work} onChange={setWork} />
-          {work.billable && (
-            <Box>
-              <BillableChip />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={onClose} disabled={pending}>
-            Cancel
-          </Button>
-          <Button variant="contained" type="submit" disabled={pending}>
-            {pending ? 'Saving…' : entry ? 'Save changes' : 'Add entry'}
-          </Button>
-        </DialogActions>
-      </Box>
-    </Dialog>
   )
 }
