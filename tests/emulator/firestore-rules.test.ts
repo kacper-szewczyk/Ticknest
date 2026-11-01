@@ -18,6 +18,8 @@ import {
 } from 'firebase/firestore'
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest'
 import {
+  budgetFixture,
+  budgetId,
   CLIENT_ID,
   createTestEnvironment,
   INVITATION_ID,
@@ -278,6 +280,31 @@ describe('Firestore rules matrix', () => {
     getDocs(collection(db, WS, 'timeEntries')),
   )
 
+  matrix('read own budgets (direct get and query on userId == auth.uid)', MEMBERS, async ({ db, uid }) => {
+    await getDoc(doc(db, WS, 'budgets', budgetId(uid)))
+    return getDocs(query(collection(db, WS, 'budgets'), where('userId', '==', uid)))
+  })
+
+  matrix("read another member's budget (direct get)", ENTRY_READERS, (subject) =>
+    getDoc(doc(subject.db, WS, 'budgets', budgetId(subject.role === 'owner' ? MEMBER.uid : OTHER_MEMBER.uid))),
+  )
+
+  matrix('query all budgets without a user constraint', ENTRY_READERS, ({ db }) =>
+    getDocs(collection(db, WS, 'budgets')),
+  )
+
+  matrix('create a budget from a web client', DENY_ALL, ({ db, uid }) =>
+    setDoc(doc(db, WS, 'budgets', 'budget-new'), { ...budgetFixture(uid), createdAt: serverTimestamp() }),
+  )
+
+  matrix('update a budget from a web client', DENY_ALL, ({ db }) =>
+    updateDoc(doc(db, WS, 'budgets', budgetId(MEMBER.uid)), { endDay: '2026-04-30', updatedAt: serverTimestamp() }),
+  )
+
+  matrix('delete a budget from a web client', DENY_ALL, ({ db }) =>
+    deleteDoc(doc(db, WS, 'budgets', budgetId(MEMBER.uid))),
+  )
+
   matrix('query own memberships (members group, uid == auth.uid)', SIGNED_IN, ({ db, uid }) =>
     getDocs(query(collectionGroup(db, 'members'), where('uid', '==', uid))),
   )
@@ -492,6 +519,7 @@ describe('removed members', () => {
     await assertFails(getDoc(doc(db, WS, 'members', OWNER.uid)))
     await assertFails(getDocs(query(collection(db, WS, 'timeEntries'), where('userId', '==', REMOVED_MEMBER.uid))))
     await assertFails(setDoc(doc(db, WS, 'timeEntries', 'after-removal'), newEntry(REMOVED_MEMBER.uid)))
+    await assertFails(getDoc(doc(db, WS, 'budgets', budgetId(REMOVED_MEMBER.uid))))
   })
 
   it('can still find their own membership record', async () => {

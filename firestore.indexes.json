@@ -24,6 +24,14 @@
         { "fieldPath": "endAt", "order": "ASCENDING" },
         { "fieldPath": "startAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "budgets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "endDay", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

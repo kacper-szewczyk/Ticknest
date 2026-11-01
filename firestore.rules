@@ -329,6 +329,14 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/timeEntries/$(resource.data.entryId)).data.endAt == request.time;
       }
 
+      // Budgets are written only by the saveBudget, setBudgetArchived, and deleteBudget callables, which
+      // validate calendar dates and exception lists that rules cannot iterate over.
+      match /budgets/{budgetId} {
+        allow get, list: if isMember(workspaceId)
+          && (canSeeAllEntries(workspaceId) || resource.data.userId == request.auth.uid);
+        allow create, update, delete: if false;
+      }
+
       match /{collection}/{documentId} {
         allow read, write: if false;
       }

@@ -571,3 +571,173 @@ describe('setWorkspaceMemberRole', () => {
     )
   })
 })
+
+describe('budget callables', () => {
+  const WEEKDAY_MINUTES = { mon: 480, tue: 240, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }
+
+  async function workspaceWithCatalog() {
+    const owner = await createUser('owner', 'owner@example.com')
+    const manager = await createUser('mira', 'mira@example.com')
+    const member = await createUser('alice', 'alice@example.com')
+    const workspaceId = await createWorkspaceAs(owner)
+    await inviteAndAccept(owner, workspaceId, manager)
+    await inviteAndAccept(owner, workspaceId, member)
+    await owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: manager.uid, role: 'manager' })
+    const workspacePath = `workspaces/${workspaceId}`
+    const catalogItem = { archived: false, createdAt: Timestamp.now(), updatedAt: Timestamp.now() }
+    await adminDb.doc(`${workspacePath}/clients/acme`).set({ ...catalogItem, name: 'Acme' })
+    await adminDb.doc(`${workspacePath}/clients/old-client`).set({ ...catalogItem, name: 'Old', archived: true })
+    await adminDb.doc(`${workspacePath}/projects/site`).set({
+      ...catalogItem,
+      name: 'Website',
+      clientId: 'acme',
+      description: '',
+      color: '#2e7d32',
+      estimateMinutes: null,
+    })
+    return { owner, manager, member, workspaceId, workspacePath }
+  }
+
+  function budgetPayload(workspaceId: string, userId: string, overrides: Record<string, unknown> = {}) {
+    return {
+      workspaceId,
+      budgetId: null,
+      userId,
+      target: { type: 'project', id: 'site' },
+      startDay: '2026-11-02',
+      endDay: '2026-12-21',
+      weekdayMinutes: WEEKDAY_MINUTES,
+      exceptions: [],
+      ...overrides,
+    }
+  }
+
+  it('lets owners and managers create, edit, archive, and delete any budget, including their own', async () => {
+    const { owner, manager, member, workspaceId, workspacePath } = await workspaceWithCatalog()
+
+    const { budgetId } = await manager.call<{ budgetId: string }>(
+      'saveBudget',
+      budgetPayload(workspaceId, member.uid, { exceptions: ['2026-12-07', '2026-11-09', '2026-12-07'] }),
+    )
+    const stored = (await adminDb.doc(`${workspacePath}/budgets/${budgetId}`).get()).data()
+    expect(stored).toMatchObject({
+      userId: member.uid,
+      userDisplayName: 'Alice',
+      target: { type: 'project', id: 'site', name: 'Website' },
+      startDay: '2026-11-02',
+      endDay: '2026-12-21',
+      weekdayMinutes: WEEKDAY_MINUTES,
+      exceptions: ['2026-11-09', '2026-12-07'],
+      archived: false,
+      createdBy: manager.uid,
+    })
+
+    await owner.call(
+      'saveBudget',
+      budgetPayload(workspaceId, member.uid, { budgetId, target: { type: 'client', id: 'acme' } }),
+    )
+    expect((await adminDb.doc(`${workspacePath}/budgets/${budgetId}`).get()).data()?.target).toEqual({
+      type: 'client',
+      id: 'acme',
+      name: 'Acme',
+    })
+
+    await manager.call('saveBudget', budgetPayload(workspaceId, manager.uid))
+    await manager.call('saveBudget', budgetPayload(workspaceId, owner.uid))
+    await owner.call('saveBudget', budgetPayload(workspaceId, owner.uid))
+
+    await expectCallError(manager.call('deleteBudget', { workspaceId, budgetId }), 'failed-precondition')
+    await manager.call('setBudgetArchived', { workspaceId, budgetId, archived: true })
+    await expectCallError(
+      owner.call('saveBudget', budgetPayload(workspaceId, member.uid, { budgetId })),
+      'failed-precondition',
+    )
+    await owner.call('setBudgetArchived', { workspaceId, budgetId, archived: false })
+    await owner.call('setBudgetArchived', { workspaceId, budgetId, archived: true })
+    await manager.call('deleteBudget', { workspaceId, budgetId })
+    expect((await adminDb.doc(`${workspacePath}/budgets/${budgetId}`).get()).exists).toBe(false)
+  })
+
+  it('denies budget writes from members and lets them read only their own budgets', async () => {
+    const { owner, member, workspaceId, workspacePath } = await workspaceWithCatalog()
+    const { budgetId } = await owner.call<{ budgetId: string }>('saveBudget', budgetPayload(workspaceId, member.uid))
+    const { budgetId: ownerBudgetId } = await owner.call<{ budgetId: string }>(
+      'saveBudget',
+      budgetPayload(workspaceId, owner.uid),
+    )
+
+    await expectCallError(member.call('saveBudget', budgetPayload(workspaceId, member.uid)), 'permission-denied')
+    await expectCallError(
+      member.call('saveBudget', budgetPayload(workspaceId, member.uid, { budgetId })),
+      'permission-denied',
+    )
+    await expectCallError(
+      member.call('setBudgetArchived', { workspaceId, budgetId, archived: true }),
+      'permission-denied',
+    )
+    await expectCallError(member.call('deleteBudget', { workspaceId, budgetId }), 'permission-denied')
+
+    const memberDb = rulesFirestore(member)
+    await assertSucceeds(
+      getDocs(query(collection(memberDb, workspacePath, 'budgets'), where('userId', '==', member.uid))),
+    )
+    await assertFails(getDoc(doc(memberDb, workspacePath, 'budgets', ownerBudgetId)))
+    await assertFails(getDocs(collection(memberDb, workspacePath, 'budgets')))
+  })
+
+  it('rejects invalid payloads', async () => {
+    const { owner, member, workspaceId } = await workspaceWithCatalog()
+    const outsider = await createUser('bob', 'bob@example.com')
+    const zeroMinutes = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }
+    const invalid: [Record<string, unknown>, string][] = [
+      [{ startDay: '2026-12-21', endDay: '2026-11-02' }, 'invalid-argument'],
+      [{ startDay: '2026-02-30' }, 'invalid-argument'],
+      [{ startDay: '2026-01-01', endDay: '2028-01-02' }, 'invalid-argument'],
+      [{ weekdayMinutes: zeroMinutes }, 'invalid-argument'],
+      [{ weekdayMinutes: { ...WEEKDAY_MINUTES, mon: 1441 } }, 'invalid-argument'],
+      [{ weekdayMinutes: { ...WEEKDAY_MINUTES, holiday: 60 } }, 'invalid-argument'],
+      [{ exceptions: ['2026-11-01'] }, 'invalid-argument'],
+      [{ target: { type: 'task', id: 'site' } }, 'invalid-argument'],
+      [{ target: { type: 'project', id: 'missing' } }, 'failed-precondition'],
+      [{ target: { type: 'client', id: 'site' } }, 'failed-precondition'],
+      [{ target: { type: 'client', id: 'old-client' } }, 'failed-precondition'],
+      [{ userId: outsider.uid }, 'failed-precondition'],
+    ]
+    for (const [overrides, code] of invalid) {
+      await expectCallError(owner.call('saveBudget', budgetPayload(workspaceId, member.uid, overrides)), code)
+    }
+    // The longest allowed range is 731 days, inclusive.
+    await owner.call(
+      'saveBudget',
+      budgetPayload(workspaceId, member.uid, { startDay: '2026-01-01', endDay: '2028-01-01' }),
+    )
+  })
+
+  it('keeps budgets of removed members and archived targets editable but not reassignable to them', async () => {
+    const { owner, manager, member, workspaceId, workspacePath } = await workspaceWithCatalog()
+    const { budgetId } = await owner.call<{ budgetId: string }>('saveBudget', budgetPayload(workspaceId, member.uid))
+    await owner.call('removeWorkspaceMember', { workspaceId, memberUid: member.uid })
+    await adminDb.doc(`${workspacePath}/projects/site`).update({ archived: true })
+
+    await manager.call('saveBudget', budgetPayload(workspaceId, member.uid, { budgetId, endDay: '2026-11-30' }))
+    const stored = (await adminDb.doc(`${workspacePath}/budgets/${budgetId}`).get()).data()
+    expect(stored).toMatchObject({ endDay: '2026-11-30', userDisplayName: 'Alice', target: { name: 'Website' } })
+
+    await expectCallError(owner.call('saveBudget', budgetPayload(workspaceId, member.uid)), 'failed-precondition')
+    await expectCallError(
+      owner.call('saveBudget', budgetPayload(workspaceId, manager.uid, { target: { type: 'project', id: 'site' } })),
+      'failed-precondition',
+    )
+    const { budgetId: otherId } = await owner.call<{ budgetId: string }>(
+      'saveBudget',
+      budgetPayload(workspaceId, manager.uid, { target: { type: 'client', id: 'acme' } }),
+    )
+    await expectCallError(
+      owner.call(
+        'saveBudget',
+        budgetPayload(workspaceId, member.uid, { budgetId: otherId, target: { type: 'client', id: 'acme' } }),
+      ),
+      'failed-precondition',
+    )
+  })
+})
