@@ -37,13 +37,16 @@ const MemberManagementPanel = lazy(() =>
   import('./MemberManagementPanel').then((module) => ({ default: module.MemberManagementPanel })),
 )
 const BudgetsPanel = lazy(() => import('./BudgetsPanel').then((module) => ({ default: module.BudgetsPanel })))
+const MyBudgetsPanel = lazy(() => import('./MyBudgetsPanel').then((module) => ({ default: module.MyBudgetsPanel })))
 
-type WorkspaceView = 'timesheet' | 'dashboard' | 'reports' | 'budgets' | 'catalog' | 'members' | 'settings'
+type WorkspaceView =
+  'timesheet' | 'dashboard' | 'reports' | 'my-budgets' | 'budgets' | 'catalog' | 'members' | 'settings'
 
 const WORKSPACE_VIEWS: WorkspaceView[] = [
   'timesheet',
   'dashboard',
   'reports',
+  'my-budgets',
   'budgets',
   'catalog',
   'members',
@@ -202,6 +205,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
           section: 'Analyze',
         },
         { value: 'reports', label: 'Reports', icon: navIcons.reports, section: 'Analyze' },
+        { value: 'my-budgets', label: 'My budgets', icon: navIcons.myBudgets, section: 'Analyze' },
         ...(seesAllEntries
           ? ([
               { value: 'budgets', label: 'Budgets', icon: navIcons.budgets, section: 'Manage' },
@@ -414,6 +418,17 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 />
               </Suspense>
             )}
+            {currentView === 'my-budgets' && (
+              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+                <MyBudgetsPanel
+                  key={activeWorkspace.id}
+                  workspaceId={activeWorkspace.id}
+                  userId={user.uid}
+                  memberTimeZone={activeWorkspace.timezone}
+                  weekStartsOn={activeWorkspace.weekStartsOn}
+                />
+              </Suspense>
+            )}
             {currentView === 'budgets' && (
               <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
                 <BudgetsPanel key={activeWorkspace.id} workspaceId={activeWorkspace.id} catalog={catalog} />
@@ -618,6 +633,12 @@ const navIcons = {
   reports: (
     <NavIcon>
       <path d="M5 20V11M12 20V5M19 20v-6M3 20h18" />
+    </NavIcon>
+  ),
+  myBudgets: (
+    <NavIcon>
+      <path d="M12 3.5a8.5 8.5 0 1 1-8.5 8.5" />
+      <path d="M8 12.5l2.5 2.5L16 9.5" />
     </NavIcon>
   ),
   budgets: (

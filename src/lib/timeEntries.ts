@@ -135,6 +135,36 @@ export function subscribeToEntriesForRange(
 
 const RANGE_BATCH_SIZE = 250
 
+// A user's completed entries that overlap `[start, end)`; running timers have a null `endAt` and drop out.
+function completedOverlapping(userId: string, start: Date, end: Date): QueryConstraint[] {
+  return [
+    where('userId', '==', userId),
+    where('endAt', '>', Timestamp.fromDate(start)),
+    where('startAt', '<', Timestamp.fromDate(end)),
+    orderBy('endAt'),
+    orderBy('startAt'),
+  ]
+}
+
+/**
+ * Subscribes to a user's completed entries that overlap `[start, end)`, including ones that start before `start`.
+ * A running timer appears once it stops. Budgets bound the range to 731 days.
+ */
+export function subscribeToCompletedEntriesOverlapping(
+  workspaceId: string,
+  userId: string,
+  start: Date,
+  end: Date,
+  onEntries: (entries: TimeEntry[]) => void,
+  onError: (error: Error) => void,
+): () => void {
+  return onSnapshot(
+    query(entriesPath(workspaceId), ...completedOverlapping(userId, start, end)),
+    (snapshot) => onEntries(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry)),
+    onError,
+  )
+}
+
 /**
  * Loads a user's completed entries that overlap `[start, end)`, including ones that start before `start`, in
  * batches. Running timers are left out because their `endAt` is null. Budgets bound the range to 731 days.
@@ -151,11 +181,7 @@ export async function loadCompletedEntriesOverlapping(
     const snapshot = await getDocs(
       query(
         entriesPath(workspaceId),
-        where('userId', '==', userId),
-        where('endAt', '>', Timestamp.fromDate(start)),
-        where('startAt', '<', Timestamp.fromDate(end)),
-        orderBy('endAt'),
-        orderBy('startAt'),
+        ...completedOverlapping(userId, start, end),
         ...(cursor ? [startAfter(cursor)] : []),
         limit(RANGE_BATCH_SIZE),
       ),
