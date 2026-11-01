@@ -6,7 +6,14 @@ import { DEMO_ACCOUNTS } from '../../functions/src/demo/accounts'
 import { DEMO_RESET_HOUR, DEMO_RESET_TIME_ZONE } from '../../functions/src/demo/schedule'
 import { AppShell } from '../../src/AppShell'
 import { DemoAccountsPanel, DemoResetBanner } from '../../src/DemoMode'
-import { DEMO_SOURCE_URL, formatDemoReset, nextDemoReset } from '../../src/lib/demo'
+import {
+  DEMO_CONTACT_EMAIL,
+  DEMO_CONTACT_LINKEDIN_URL,
+  DEMO_SOURCE_URL,
+  DEMO_SUPPORT_URL,
+  formatDemoReset,
+  nextDemoReset,
+} from '../../src/lib/demo'
 import { PALETTE_IDS, PALETTES } from '../../src/palettes'
 import { createAppTheme } from '../../src/theme'
 
@@ -103,6 +110,8 @@ describe('DemoResetBanner', () => {
     expect(html).toContain('target="_blank"')
     expect(html).toContain('rel="noopener noreferrer"')
     expect(html).toContain('View the source on GitHub')
+    expect(html).toContain(`href="${DEMO_SUPPORT_URL}"`)
+    expect(html).toContain('Buy me a coffee')
   })
 })
 
@@ -123,6 +132,15 @@ describe('DemoAccountsPanel', () => {
     expect(html).toContain('role="status"')
     for (const role of ['Owner', 'Manager', 'Member']) expect(html).toContain(role)
     expect(html).toContain(`href="${DEMO_SOURCE_URL}"`)
+  })
+
+  it('links to support and contact options', () => {
+    vi.stubEnv('VITE_DEMO_MODE', 'true')
+    const html = render(<DemoAccountsPanel onUse={() => {}} />)
+    expect(DEMO_SUPPORT_URL).toBe('https://buymeacoffee.com/kszewczyk')
+    expect(html).toContain(`href="${DEMO_SUPPORT_URL}"`)
+    expect(html).toContain(`href="mailto:${DEMO_CONTACT_EMAIL}"`)
+    expect(html).toContain(`href="${DEMO_CONTACT_LINKEDIN_URL}"`)
   })
 })
 

@@ -17,6 +17,10 @@ npm run emulators
 
 In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>. See [local setup and deployment](docs/operations.md) for configuring Firebase, authentication, billing, backups, and teardown.
 
+## Support and contact
+
+If you like Ticknest, you can [buy me a coffee](https://buymeacoffee.com/kszewczyk). Need help with setup or a custom feature? Email [kacper.szewczyk@wp.pl](mailto:kacper.szewczyk@wp.pl) or message me on [LinkedIn](https://www.linkedin.com/in/kacperszewczyk).
+
 ## Documentation
 
 - [Self-hosting, privacy, costs, backups, and teardown](docs/operations.md)
