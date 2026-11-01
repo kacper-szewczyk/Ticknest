@@ -154,6 +154,7 @@ describe('createWorkspace', () => {
       email: 'owner@example.com',
       role: 'owner',
       status: 'active',
+      timezone: 'Europe/Warsaw',
     })
     const profile = await adminDb.doc('users/owner').get()
     expect(profile.data()).toMatchObject({
@@ -270,6 +271,7 @@ describe('acceptWorkspaceInvitation', () => {
       email: 'alice@example.com',
       role: 'member',
       status: 'active',
+      timezone: 'UTC',
     })
     const stored = await adminDb.doc(`workspaces/${workspaceId}/invitations/${invitation.invitationId}`).get()
     expect(stored.data()).toMatchObject({ status: 'accepted', acceptedBy: 'alice' })

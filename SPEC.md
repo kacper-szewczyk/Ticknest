@@ -123,13 +123,13 @@ All workspace-owned documents are scoped under a workspace ID. Exact collection 
 
 - `users/{uid}`: display name, email (non-authoritative copy), timezone, color palette preference, created timestamp.
 - `workspaces/{workspaceId}`: name, owner UID, week start, created/updated timestamps.
-- `workspaces/{workspaceId}/members/{uid}`: role (`owner`, `manager`, or `member`), joined timestamp, display-name snapshot.
+- `workspaces/{workspaceId}/members/{uid}`: role (`owner`, `manager`, or `member`), joined timestamp, display-name snapshot, timezone snapshot taken when the member creates or joins the workspace.
 - `workspaces/{workspaceId}/invitations/{inviteId}`: email, role, token hash, expiry, creator, status.
 - `workspaces/{workspaceId}/clients/{clientId}`: name, archived flag, timestamps.
 - `workspaces/{workspaceId}/projects/{projectId}`: name, client ID, description, color, estimate, archived flag, timestamps.
 - `workspaces/{workspaceId}/tasks/{taskId}`: project ID, name, estimate, archived flag, timestamps.
 - `workspaces/{workspaceId}/timeEntries/{entryId}`: user UID, user-name snapshot, description, client/project/task IDs and display snapshots, `startAt`, nullable `endAt`, billable boolean, created/updated timestamps, optional deleted/archive marker if soft deletion is used.
-- `workspaces/{workspaceId}/budgets/{budgetId}`: tracked user UID and name snapshot, project or client target with a name snapshot, inclusive start and end calendar days (at most 731 days), target minutes per weekday, exception dates, archived flag, creator, created/updated timestamps.
+- `workspaces/{workspaceId}/budgets/{budgetId}`: tracked user UID and name snapshot, project or client target with a name snapshot, inclusive start and end calendar days (at most 731 days), target minutes per weekday, exception dates, archived flag, creator, created/updated timestamps. Progress is calculated in the browser from the tracked member's completed entries, with days in the member's snapshot timezone (falling back to the viewer's timezone when a member joined before the snapshot existed). Client budgets count entries by their client snapshot. Past days are under, met (an exact match in whole minutes), or over; the running balance covers past days plus the time logged today, and today's target is due only when the day ends.
 
 Use server timestamps for audit fields. Store instants as Firestore timestamps. Do not treat client-supplied role, owner, or membership fields as authoritative.
 

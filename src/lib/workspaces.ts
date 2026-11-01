@@ -28,6 +28,8 @@ export type WorkspaceMember = {
   displayName: string
   role: WorkspaceRole
   status?: 'active' | 'removed'
+  /** IANA timezone snapshot from joining, used for budget days; missing on members who joined before it existed. */
+  timezone?: string
   joinedAt: unknown
 }
 /** Owners and managers can read every workspace time entry and report on all users. */
