@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.16.0...ticknest-v1.17.0) (2026-11-01)
+
+
+### Features
+
+* show the demo reset banner and demo accounts on sign-in ([#131](https://github.com/kacper-szewczyk/Ticknest/issues/131)) ([bbff48a](https://github.com/kacper-szewczyk/Ticknest/commit/bbff48a801fbc7ab1e45053d56565b1a1c15d963)), closes [#112](https://github.com/kacper-szewczyk/Ticknest/issues/112)
+
 ## [1.16.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.15.0...ticknest-v1.16.0) (2026-11-01)
 
 
