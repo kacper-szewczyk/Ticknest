@@ -44,6 +44,21 @@ To run a local build against a project that enforces App Check, add a debug toke
 
 The Emulator Suite does not emulate App Check. With the default `demo-ticknest` setup, leave `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` empty and `ENFORCE_APP_CHECK` unset.
 
+### Security headers
+
+`firebase.json` sends these headers on every Hosting response:
+
+- `X-Frame-Options: DENY` stops other sites from framing the app, which protects against clickjacking. This header is enforced.
+- `Content-Security-Policy-Report-Only` lists where the app may load scripts, styles, frames, and network requests from: the Hosting origin, Firebase Auth (`apis.google.com` and the auth domain's `/__/auth/iframe`), Firestore, Auth, and App Check APIs (`*.googleapis.com`), callable Functions (`*.cloudfunctions.net`), and reCAPTCHA Enterprise. It also sets `frame-ancestors 'none'`. Browsers only report violations of this policy in the developer console; they block nothing yet. `frame-ancestors` has no effect in a report-only policy, which is why `X-Frame-Options` is also set.
+
+MUI injects its styles at runtime, so `style-src` allows `'unsafe-inline'`. Scripts are restricted to files and the listed hosts; no inline scripts or `eval` are allowed.
+
+**Custom auth domain.** The policy allows `*.firebaseapp.com`, `*.web.app`, and the Hosting origin as `VITE_FIREBASE_AUTH_DOMAIN`. If you set the auth domain to another custom domain, add `https://<your-auth-domain>` to `frame-src` in `firebase.json`, or the Google sign-in popup will fail once the policy is enforced.
+
+**Enforcing the policy.** Deploy to a [preview channel](https://firebase.google.com/docs/hosting/test-preview-deploy) with `npx firebase hosting:channel:deploy csp-test` and open the browser console. Test email sign-in, Google sign-in (popup), email verification, password reset, accepting an invitation, the callable Functions (such as creating a workspace or an invitation), and App Check if you enabled it. When no `Content-Security-Policy` violations are reported, rename the header key to `Content-Security-Policy` in `firebase.json` and redeploy Hosting. Re-test after you add a provider, an external resource, or a dependency that loads remote code.
+
+Builds that use the Emulator Suite connect to `http://127.0.0.1`, so they report violations under this policy. These reports are expected and do not apply to production builds.
+
 ### Local development
 
 Use Node.js 22.12+ or 24.x, npm, and Java JDK 11+. Copy `.env.example` to `.env.local` and keep `VITE_USE_FIREBASE_EMULATORS=true`. The configured `demo-ticknest` project ID routes Auth, Firestore, Functions, and Hosting to local emulators; verification and password reset links are printed by the Auth emulator.
