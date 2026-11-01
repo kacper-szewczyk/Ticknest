@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.9.0...ticknest-v1.10.0) (2026-11-01)
+
+
+### Features
+
+* add a manager role that can read all entries and reports ([#109](https://github.com/kacper-szewczyk/Ticknest/issues/109)) ([6fd37d8](https://github.com/kacper-szewczyk/Ticknest/commit/6fd37d8df9aeab31874726c27c063a29c4b30164)), closes [#82](https://github.com/kacper-szewczyk/Ticknest/issues/82)
+
 ## [1.9.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.8.0...ticknest-v1.9.0) (2026-11-01)
 
 
