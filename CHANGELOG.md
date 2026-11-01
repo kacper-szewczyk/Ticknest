@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.12.0...ticknest-v1.13.0) (2026-11-01)
+
+
+### Features
+
+* add the demo seed data generator ([#120](https://github.com/kacper-szewczyk/Ticknest/issues/120)) ([2d53fbb](https://github.com/kacper-szewczyk/Ticknest/commit/2d53fbbd6cc2ff7c312bf8ca00b2c3376d130631))
+
 ## [1.12.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.11.0...ticknest-v1.12.0) (2026-11-01)
 
 
