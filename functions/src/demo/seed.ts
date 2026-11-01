@@ -189,6 +189,7 @@ const PROJECTS: Record<ProjectKey, ProjectSeed> = {
 // Relative share of each account's day spent on each project.
 const PROJECT_WEIGHTS: Record<string, Partial<Record<ProjectKey, number>>> = {
   'owner@demo.ticknest.app': { website: 2, portal: 2, internal: 3 },
+  'manager@demo.ticknest.app': { fleet: 2, loyalty: 2, portal: 1, internal: 2 },
   'alice@demo.ticknest.app': { website: 5, loyalty: 3, internal: 1 },
   'ben@demo.ticknest.app': { fleet: 5, loyalty: 3, internal: 1 },
   'chloe@demo.ticknest.app': { portal: 5, website: 2, internal: 1 },
@@ -404,6 +405,7 @@ export function buildDemoData(now: Date): DemoData {
         displayName: user.displayName,
         role: DEMO_ACCOUNTS[index].role,
         status: 'active',
+        timezone: DEMO_ACCOUNTS[index].timezone,
         joinedAt: SERVER_TIMESTAMP,
       },
     })

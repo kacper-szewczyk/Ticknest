@@ -1,6 +1,6 @@
 // The public demo accounts. No Firebase imports, so the web app can import this list for the sign-in screen.
 
-export type DemoAccountRole = 'owner' | 'member'
+export type DemoAccountRole = 'owner' | 'manager' | 'member'
 
 export type DemoAccount = {
   email: string
@@ -21,6 +21,13 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
     displayName: 'Olivia Novak',
     timezone: 'Europe/Warsaw',
     role: 'owner',
+  },
+  {
+    email: 'manager@demo.ticknest.app',
+    password: DEMO_PASSWORD,
+    displayName: 'Maya Okafor',
+    timezone: 'Europe/Warsaw',
+    role: 'manager',
   },
   {
     email: 'alice@demo.ticknest.app',

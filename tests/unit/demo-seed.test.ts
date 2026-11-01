@@ -35,6 +35,12 @@ describe('buildDemoData', () => {
     expect(buildDemoData(new Date(NOW))).toEqual(data)
   })
 
+  it('includes an owner, a manager, and members', () => {
+    expect(DEMO_ACCOUNTS.filter((account) => account.role === 'owner')).toHaveLength(1)
+    expect(DEMO_ACCOUNTS.some((account) => account.role === 'manager')).toBe(true)
+    expect(DEMO_ACCOUNTS.filter((account) => account.role === 'member').length).toBeGreaterThanOrEqual(2)
+  })
+
   it('creates one verified Auth user per demo account', () => {
     expect(data.users.map((user) => user.email)).toEqual(DEMO_ACCOUNTS.map((account) => account.email))
     for (const user of data.users) {
@@ -74,6 +80,7 @@ describe('buildDemoData', () => {
         displayName: user.displayName,
         role: DEMO_ACCOUNTS[index].role,
         status: 'active',
+        timezone: DEMO_ACCOUNTS[index].timezone,
         joinedAt: SERVER_TIMESTAMP,
       })
     })

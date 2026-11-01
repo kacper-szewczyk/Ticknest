@@ -40,7 +40,7 @@ async function main(): Promise<void> {
 
   const entries = data.documents.filter((document) => document.path.includes('/timeEntries/')).length
   console.log(`Seeded ${data.users.length} accounts and ${entries} time entries in ${PROJECT_ID}.`)
-  for (const account of DEMO_ACCOUNTS) console.log(`  ${account.role.padEnd(6)} ${account.email} / ${account.password}`)
+  for (const account of DEMO_ACCOUNTS) console.log(`  ${account.role.padEnd(7)} ${account.email} / ${account.password}`)
 }
 
 main().catch((error: unknown) => {
