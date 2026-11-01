@@ -6,10 +6,18 @@
 // and not after hooks, whose arguments would stay reachable.
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import { useId, useState } from 'react'
-import { DEMO_ACCOUNTS, formatDemoReset, nextDemoReset, type DemoAccount, type DemoAccountRole } from './lib/demo'
+import {
+  DEMO_ACCOUNTS,
+  DEMO_SOURCE_URL,
+  formatDemoReset,
+  nextDemoReset,
+  type DemoAccount,
+  type DemoAccountRole,
+} from './lib/demo'
 
 const ROLE_LABELS: Record<DemoAccountRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
 
@@ -48,8 +56,23 @@ function ResetBanner() {
       <Box component="time" dateTime={reset.toISOString()} sx={{ fontWeight: 650, whiteSpace: 'nowrap' }}>
         {formatDemoReset(reset)}
       </Box>
-      .
+      . <SourceLink color="inherit" sx={{ fontWeight: 650 }} />
     </Box>
+  )
+}
+
+/** Opens the repository in a new tab, so leaving the demo does not lose the visitor's place. */
+function SourceLink({ color, sx }: { color?: 'inherit'; sx?: { fontWeight: number } }) {
+  return (
+    <Link
+      href={DEMO_SOURCE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      color={color}
+      sx={{ whiteSpace: 'nowrap', ...sx }}
+    >
+      View the source on GitHub
+    </Link>
   )
 }
 
@@ -72,7 +95,7 @@ function AccountsPanel({ onUse }: { onUse: (account: DemoAccount) => void }) {
         <Box component="code" sx={{ fontWeight: 650, color: 'text.primary' }}>
           {DEMO_ACCOUNTS[0]?.password}
         </Box>
-        . Data resets every 24 hours.
+        . Data resets every 24 hours. <SourceLink />
       </Typography>
       <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 1 }}>
         {DEMO_ACCOUNTS.map((account, index) => {

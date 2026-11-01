@@ -6,7 +6,7 @@ import { DEMO_ACCOUNTS } from '../../functions/src/demo/accounts'
 import { DEMO_RESET_HOUR, DEMO_RESET_TIME_ZONE } from '../../functions/src/demo/schedule'
 import { AppShell } from '../../src/AppShell'
 import { DemoAccountsPanel, DemoResetBanner } from '../../src/DemoMode'
-import { formatDemoReset, nextDemoReset } from '../../src/lib/demo'
+import { DEMO_SOURCE_URL, formatDemoReset, nextDemoReset } from '../../src/lib/demo'
 import { PALETTE_IDS, PALETTES } from '../../src/palettes'
 import { createAppTheme } from '../../src/theme'
 
@@ -94,6 +94,16 @@ describe('DemoResetBanner', () => {
     expect(html).toContain('dateTime="2026-11-05T02:00:00.000Z"')
     expect(html.indexOf('Demo notice')).toBeLessThan(html.indexOf('Page content'))
   })
+
+  it('links to the source on GitHub in a new tab', () => {
+    vi.stubEnv('VITE_DEMO_MODE', 'true')
+    const html = render(<DemoResetBanner />)
+    expect(DEMO_SOURCE_URL).toBe('https://github.com/kacper-szewczyk/Ticknest')
+    expect(html).toContain(`href="${DEMO_SOURCE_URL}"`)
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('View the source on GitHub')
+  })
 })
 
 describe('DemoAccountsPanel', () => {
@@ -112,6 +122,7 @@ describe('DemoAccountsPanel', () => {
     expect(html.match(/aria-describedby="[^"]+"/g)).toHaveLength(DEMO_ACCOUNTS.length)
     expect(html).toContain('role="status"')
     for (const role of ['Owner', 'Manager', 'Member']) expect(html).toContain(role)
+    expect(html).toContain(`href="${DEMO_SOURCE_URL}"`)
   })
 })
 
