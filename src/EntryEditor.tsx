@@ -44,8 +44,12 @@ export function EntryEditor({
         }
       : workDetails(null),
   )
-  const [startAt, setStartAt] = useState(entry ? localDateTimeValue(entry.startAt.toDate()) : `${day}T09:00`)
-  const [endAt, setEndAt] = useState(entry?.endAt ? localDateTimeValue(entry.endAt.toDate()) : `${day}T10:00`)
+  // An entry sits on one day: the start and end times share the date field.
+  const initialStart = entry ? localDateTimeValue(entry.startAt.toDate()) : `${day}T09:00`
+  const initialEnd = entry?.endAt ? localDateTimeValue(entry.endAt.toDate()) : `${day}T10:00`
+  const [date, setDate] = useState(initialStart.slice(0, 10))
+  const [startTime, setStartTime] = useState(initialStart.slice(11))
+  const [endTime, setEndTime] = useState(initialEnd.slice(11))
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const { fieldProps, showFieldError, clearFieldError, clearFieldErrors } = useManualEntryFieldErrors()
@@ -64,8 +68,8 @@ export function EntryEditor({
           projectId: work.projectId,
           taskId: work.taskId,
           billable: work.billable,
-          startAt: new Date(startAt),
-          endAt: new Date(endAt),
+          startAt: new Date(`${date}T${startTime}`),
+          endAt: new Date(`${date}T${endTime}`),
         },
         entry?.id,
       )
@@ -103,13 +107,25 @@ export function EntryEditor({
             {...fieldProps('description')}
             slotProps={{ htmlInput: { maxLength: 500 } }}
           />
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr' }, gap: 1.5 }}>
+            <TextField
+              label="Date"
+              type="date"
+              value={date}
+              onChange={(event) => {
+                setDate(event.target.value)
+                clearFieldError('startAt')
+                clearFieldError('endAt')
+              }}
+              required
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
             <TextField
               label="Start"
-              type="datetime-local"
-              value={startAt}
+              type="time"
+              value={startTime}
               onChange={(event) => {
-                setStartAt(event.target.value)
+                setStartTime(event.target.value)
                 clearFieldError('startAt')
                 clearFieldError('endAt')
               }}
@@ -119,10 +135,10 @@ export function EntryEditor({
             />
             <TextField
               label="End"
-              type="datetime-local"
-              value={endAt}
+              type="time"
+              value={endTime}
               onChange={(event) => {
-                setEndAt(event.target.value)
+                setEndTime(event.target.value)
                 clearFieldError('endAt')
               }}
               required
