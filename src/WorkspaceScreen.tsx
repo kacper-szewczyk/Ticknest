@@ -38,15 +38,19 @@ const MemberManagementPanel = lazy(() =>
 )
 const BudgetsPanel = lazy(() => import('./BudgetsPanel').then((module) => ({ default: module.BudgetsPanel })))
 const MyBudgetsPanel = lazy(() => import('./MyBudgetsPanel').then((module) => ({ default: module.MyBudgetsPanel })))
+const TeamBudgetsPanel = lazy(() =>
+  import('./TeamBudgetsPanel').then((module) => ({ default: module.TeamBudgetsPanel })),
+)
 
 type WorkspaceView =
-  'timesheet' | 'dashboard' | 'reports' | 'my-budgets' | 'budgets' | 'catalog' | 'members' | 'settings'
+  'timesheet' | 'dashboard' | 'reports' | 'my-budgets' | 'team-budgets' | 'budgets' | 'catalog' | 'members' | 'settings'
 
 const WORKSPACE_VIEWS: WorkspaceView[] = [
   'timesheet',
   'dashboard',
   'reports',
   'my-budgets',
+  'team-budgets',
   'budgets',
   'catalog',
   'members',
@@ -55,8 +59,8 @@ const WORKSPACE_VIEWS: WorkspaceView[] = [
 
 const OWNER_VIEWS: WorkspaceView[] = ['catalog', 'members']
 
-// Owners and managers manage budgets.
-const MANAGER_VIEWS: WorkspaceView[] = ['budgets']
+// Owners and managers manage budgets and follow everyone's progress on them.
+const MANAGER_VIEWS: WorkspaceView[] = ['team-budgets', 'budgets']
 
 // The current page lives in the URL hash so refreshes and the back button keep it.
 function viewFromHash(): WorkspaceView | null {
@@ -208,6 +212,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
         { value: 'my-budgets', label: 'My budgets', icon: navIcons.myBudgets, section: 'Analyze' },
         ...(seesAllEntries
           ? ([
+              { value: 'team-budgets', label: 'Budget progress', icon: navIcons.teamBudgets, section: 'Analyze' },
               { value: 'budgets', label: 'Budgets', icon: navIcons.budgets, section: 'Manage' },
             ] satisfies NavItem<WorkspaceView>[])
           : []),
@@ -377,7 +382,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
         component="main"
         sx={{
           width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'calc(100% - 64px)' },
-          maxWidth: activeWorkspace && currentView === 'dashboard' ? 1120 : 960,
+          maxWidth: activeWorkspace && (currentView === 'dashboard' || currentView === 'team-budgets') ? 1120 : 960,
           mx: 'auto',
           pt: { xs: 3, md: 5 },
           pb: 5,
@@ -425,6 +430,15 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   workspaceId={activeWorkspace.id}
                   userId={user.uid}
                   memberTimeZone={activeWorkspace.timezone}
+                  weekStartsOn={activeWorkspace.weekStartsOn}
+                />
+              </Suspense>
+            )}
+            {currentView === 'team-budgets' && (
+              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+                <TeamBudgetsPanel
+                  key={activeWorkspace.id}
+                  workspaceId={activeWorkspace.id}
                   weekStartsOn={activeWorkspace.weekStartsOn}
                 />
               </Suspense>
@@ -639,6 +653,12 @@ const navIcons = {
     <NavIcon>
       <path d="M12 3.5a8.5 8.5 0 1 1-8.5 8.5" />
       <path d="M8 12.5l2.5 2.5L16 9.5" />
+    </NavIcon>
+  ),
+  teamBudgets: (
+    <NavIcon>
+      <path d="M4 20V14M10 20V9M16 20v-4" />
+      <path d="M3 20h18M15 5.5l2.5 2.5L21 4.5" />
     </NavIcon>
   ),
   budgets: (
