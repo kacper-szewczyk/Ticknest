@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.13.0...ticknest-v1.14.0) (2026-11-01)
+
+
+### Features
+
+* add the budgets management screen for owners and managers ([#124](https://github.com/kacper-szewczyk/Ticknest/issues/124)) ([b2d73ac](https://github.com/kacper-szewczyk/Ticknest/commit/b2d73acd4031dea1d85ba3e878bb56a85b91d3a8)), closes [#85](https://github.com/kacper-szewczyk/Ticknest/issues/85)
+* pick one date and separate start and end times when adding an entry ([#125](https://github.com/kacper-szewczyk/Ticknest/issues/125)) ([90e63e2](https://github.com/kacper-szewczyk/Ticknest/commit/90e63e2a0175e5f80c21f321692ce29b101c60b1))
+
 ## [1.13.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.12.0...ticknest-v1.13.0) (2026-11-01)
 
 
