@@ -6,10 +6,21 @@
 // and not after hooks, whose arguments would stay reachable.
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
-import { useId, useState } from 'react'
-import { DEMO_ACCOUNTS, formatDemoReset, nextDemoReset, type DemoAccount, type DemoAccountRole } from './lib/demo'
+import { useId, useState, type ReactNode } from 'react'
+import {
+  DEMO_ACCOUNTS,
+  DEMO_CONTACT_EMAIL,
+  DEMO_CONTACT_LINKEDIN_URL,
+  DEMO_SOURCE_URL,
+  DEMO_SUPPORT_URL,
+  formatDemoReset,
+  nextDemoReset,
+  type DemoAccount,
+  type DemoAccountRole,
+} from './lib/demo'
 
 const ROLE_LABELS: Record<DemoAccountRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
 
@@ -48,8 +59,26 @@ function ResetBanner() {
       <Box component="time" dateTime={reset.toISOString()} sx={{ fontWeight: 650, whiteSpace: 'nowrap' }}>
         {formatDemoReset(reset)}
       </Box>
-      .
+      .{' '}
+      <ExternalLink href={DEMO_SOURCE_URL} color="inherit" sx={{ fontWeight: 650 }}>
+        View the source on GitHub
+      </ExternalLink>
+      {' · '}
+      <ExternalLink href={DEMO_SUPPORT_URL} color="inherit" sx={{ fontWeight: 650 }}>
+        Buy me a coffee
+      </ExternalLink>
     </Box>
+  )
+}
+
+type ExternalLinkProps = { href: string; children: ReactNode; color?: 'inherit'; sx?: { fontWeight: number } }
+
+/** Opens in a new tab, so leaving the demo does not lose the visitor's place. */
+function ExternalLink({ href, children, color, sx }: ExternalLinkProps) {
+  return (
+    <Link href={href} target="_blank" rel="noopener noreferrer" color={color} sx={{ whiteSpace: 'nowrap', ...sx }}>
+      {children}
+    </Link>
   )
 }
 
@@ -72,7 +101,7 @@ function AccountsPanel({ onUse }: { onUse: (account: DemoAccount) => void }) {
         <Box component="code" sx={{ fontWeight: 650, color: 'text.primary' }}>
           {DEMO_ACCOUNTS[0]?.password}
         </Box>
-        . Data resets every 24 hours.
+        . Data resets every 24 hours. <ExternalLink href={DEMO_SOURCE_URL}>View the source on GitHub</ExternalLink>
       </Typography>
       <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 1 }}>
         {DEMO_ACCOUNTS.map((account, index) => {
@@ -111,6 +140,11 @@ function AccountsPanel({ onUse }: { onUse: (account: DemoAccount) => void }) {
           )
         })}
       </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.5 }}>
+        Like Ticknest? <ExternalLink href={DEMO_SUPPORT_URL}>Buy me a coffee</ExternalLink>. Need help with setup or a
+        custom feature? Email <Link href={`mailto:${DEMO_CONTACT_EMAIL}`}>{DEMO_CONTACT_EMAIL}</Link> or message me on{' '}
+        <ExternalLink href={DEMO_CONTACT_LINKEDIN_URL}>LinkedIn</ExternalLink>.
+      </Typography>
       <Box role="status" sx={visuallyHiddenSx}>
         {announcement}
       </Box>

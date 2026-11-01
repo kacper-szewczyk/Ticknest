@@ -2,6 +2,14 @@
 // sign-in screen and the banner cannot drift from what the daily reset creates.
 import { DEMO_RESET_HOUR, DEMO_RESET_TIME_ZONE } from '../../functions/src/demo/schedule'
 
+/** The public repository, linked from the demo UI so visitors can find the source and self-host it. */
+export const DEMO_SOURCE_URL = 'https://github.com/kacper-szewczyk/Ticknest'
+/** Where visitors who like the project can support the author. */
+export const DEMO_SUPPORT_URL = 'https://buymeacoffee.com/kszewczyk'
+/** How visitors can reach the author for help with setup or custom features. */
+export const DEMO_CONTACT_EMAIL = 'kacper.szewczyk@wp.pl'
+export const DEMO_CONTACT_LINKEDIN_URL = 'https://www.linkedin.com/in/kacperszewczyk'
+
 export { DEMO_ACCOUNTS, type DemoAccount, type DemoAccountRole } from '../../functions/src/demo/accounts'
 
 function zonedParts(date: Date, timeZone: string) {

@@ -30,6 +30,52 @@ You can serve the web app from [Vercel](https://vercel.com) instead of Firebase 
 
 `firebase.json` and `vercel.json` each define the headers for their own host. When you change the headers or rewrites in one, change the other too.
 
+To run the deployment as a public demo that resets every day, see [Demo mode](#demo-mode-optional).
+
+### Demo mode (optional)
+
+Demo mode turns a deployment into a public, self-resetting demo, like the one at <https://ticknest-pi.vercel.app>. Every day the scheduled `resetDemo` Function wipes the project and seeds it with sample data: the demo accounts listed in `functions/src/demo/accounts.ts` (an owner, a manager, and three members in different timezones, all with the password `ticknest-demo`), clients, projects, tasks, a pending invitation, and about three months of weekday time entries ending on the reset day. The web app shows a banner with the next reset time, the demo accounts with one-click fill on the sign-in screen, and links to this repository, the author's Buy Me a Coffee page, and contact details. The links and contact details are in `src/lib/demo.ts`; change them if you run your own demo. Sign-up stays enabled; accounts that visitors create are removed at the next reset.
+
+Demo mode is off by default. With the flags unset or `false`, `resetDemo` still deploys but does nothing, and the web app shows no demo UI.
+
+> ⚠️ **Use a Firebase project dedicated to the demo.** Every reset deletes **all** Firebase Authentication users and **all** Cloud Firestore data in the project, not only the demo data. Never enable demo mode on a project with real users or data.
+
+To enable it:
+
+1. Create a separate Firebase project for the demo and configure it as described in [Configure your Firebase project](#configure-your-firebase-project).
+2. Set the Functions params for that project. Putting them in `functions/.env.<project-id>` instead of `functions/.env` means the Firebase CLI only loads them when you deploy to that project:
+
+   ```sh
+   DEMO_MODE=true
+   DEMO_PROJECT_ID=<project-id>
+   ```
+
+3. Deploy the Functions with `npx firebase deploy --only functions`. The first deploy of a scheduled Function enables the Cloud Scheduler API and creates the job.
+4. Set `VITE_DEMO_MODE=true` in the web app's environment (the Vercel environment variables, or `.env.local` for Firebase Hosting) and redeploy the web app. The flag is read at build time, so changing it needs a new build.
+5. Wait for the first scheduled reset, or [trigger one manually](#triggering-a-reset-manually), to seed the data.
+
+**How the guard works.** `resetDemo` only wipes the project when `DEMO_MODE` is `true` **and** `DEMO_PROJECT_ID` equals the project ID the Function is running in. Otherwise it logs why it skipped and returns. The second check exists because `DEMO_MODE=true` alone is easy to carry over to the wrong project, for example by copying `functions/.env` or running `firebase use` before a deploy. A project ID must be typed on purpose and only matches one project. The guard lives in `functions/src/demo/guard.ts`.
+
+**Schedule.** The reset runs daily at 03:00 Europe/Warsaw. To change it, edit `DEMO_RESET_HOUR` and `DEMO_RESET_TIME_ZONE` in `functions/src/demo/schedule.ts`, then redeploy both the Functions and the web app, since the banner reads the same values to show the next reset. The banner assumes one reset a day, so keep the schedule daily.
+
+<a id="triggering-a-reset-manually"></a>**Triggering a reset manually.** Open Cloud Scheduler in the Google Cloud console for the demo project and choose **Force run** on the `firebase-schedule-resetDemo-<region>` job, or run:
+
+```sh
+gcloud scheduler jobs run firebase-schedule-resetDemo-europe-west1 --location=europe-west1 --project=<project-id>
+```
+
+Replace `europe-west1` with your [Functions region](#functions-region). The run still goes through the guard. Check the `resetDemo` logs to confirm the reset and see how many users and documents were deleted and seeded.
+
+**Costs.** Cloud Scheduler gives each billing account a few free jobs per month and bills each additional job monthly; see [Cloud Scheduler pricing](https://cloud.google.com/scheduler/pricing). Each reset reads and deletes every document in the project, then writes the seed, about 1,700 documents. Anything visitors added that day is deleted too. That fits within the Firestore no-cost daily quota for a lightly used demo, but heavy traffic adds to it. The Function itself runs for a short time once a day. Set a budget alert on the demo project, as for any project (see [Costs](#costs)).
+
+**Preview deployments.** Vercel preview deployments use the same `VITE_*` values as Production when you set them for Preview, so they connect to the demo project, show demo data, and lose any changes at the next reset. Until previews get a separate project ([#106](https://github.com/kacper-szewczyk/Ticknest/issues/106)), do not use them to test anything that needs data to persist.
+
+**Turning demo mode off.**
+
+1. Set `DEMO_MODE=false` (or remove both params) and redeploy the Functions. `resetDemo` keeps running on schedule but skips the reset. To remove the job too, run `npx firebase functions:delete resetDemo --region <region>`.
+2. Set `VITE_DEMO_MODE=false` and redeploy the web app to remove the banner and the demo accounts from sign-in.
+3. The last seeded data and the demo accounts stay in the project. Delete them, or the whole project (see [Teardown](#teardown)), if you no longer need them.
+
 ### Functions region
 
 Callable Functions deploy to `europe-west1` unless you choose another [Cloud Functions location](https://firebase.google.com/docs/functions/locations). The web app and the Functions must use the same region, or every callable request fails. To change it:
