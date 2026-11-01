@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.15.0...ticknest-v1.16.0) (2026-11-01)
+
+
+### Features
+
+* show members progress on their own budgets ([#128](https://github.com/kacper-szewczyk/Ticknest/issues/128)) ([892bed2](https://github.com/kacper-szewczyk/Ticknest/commit/892bed2d8b879da3723e33f864c0c6da81053c0f)), closes [#86](https://github.com/kacper-szewczyk/Ticknest/issues/86)
+
 ## [1.15.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.14.0...ticknest-v1.15.0) (2026-11-01)
 
 
