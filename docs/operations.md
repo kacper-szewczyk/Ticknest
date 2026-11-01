@@ -20,6 +20,16 @@ Ticknest is software you deploy and operate in your own Firebase project. The re
 
 Hosting serves the `dist/` build, while deployment also publishes Firestore rules, indexes, and callable Functions. Functions run in `europe-west1` by default (see [Functions region](#functions-region)). Use HTTPS and review Firebase rules before exposing a project to users.
 
+### Hosting the web app on Vercel (optional)
+
+You can serve the web app from [Vercel](https://vercel.com) instead of Firebase Hosting. Firestore, Auth, and the callable Functions stay in your Firebase project, so still deploy them with `npx firebase deploy --only firestore:rules,firestore:indexes,functions`.
+
+1. Import the repository as a Vercel project. `vercel.json` sets the Vite build, the `dist/` output, the rewrite of every path to `index.html`, and the same response headers as `firebase.json`.
+2. Add the `VITE_*` values from step 3 above as Vercel environment variables for Production (and Preview, if previews should reach the same project). Set the Node.js version to 22.x or 24.x.
+3. Add the Vercel domain under Authentication → Settings → Authorized domains in the Firebase console, or Google sign-in fails with `auth/unauthorized-domain`.
+
+`firebase.json` and `vercel.json` each define the headers for their own host. When you change the headers or rewrites in one, change the other too.
+
 ### Functions region
 
 Callable Functions deploy to `europe-west1` unless you choose another [Cloud Functions location](https://firebase.google.com/docs/functions/locations). The web app and the Functions must use the same region, or every callable request fails. To change it:
