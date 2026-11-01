@@ -1,6 +1,7 @@
 import type { Budget } from './budgets'
+import { weekdaySummary } from './budgetForm'
 import { groupBudgets, type BudgetDayProgress } from './budgetProgress'
-import { shiftDayString, startOfWeekString } from './dates'
+import { dayDate, shiftDayString, startOfWeekString } from './dates'
 
 export type MemberBudgetGroups = {
   /** Target groups with at least one budget covering today. */
@@ -73,4 +74,21 @@ export function initialBudgetWeek(days: BudgetDayProgress[], today: string, week
 export function budgetDaysInWeek(days: BudgetDayProgress[], weekStart: string): BudgetDayProgress[] {
   const weekEnd = shiftDayString(weekStart, 6)
   return days.filter((day) => day.day >= weekStart && day.day <= weekEnd)
+}
+
+/** Formats a `YYYY-MM-DD` budget day as a short date with the year. */
+export function formatBudgetDay(day: string): string {
+  return dayDate(day).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** Returns the first and last day covered by a target group's budgets. */
+export function budgetGroupRange(group: Budget[]): [string, string] {
+  const startDay = group.reduce((day, budget) => (budget.startDay < day ? budget.startDay : day), group[0].startDay)
+  const endDay = group.reduce((day, budget) => (budget.endDay > day ? budget.endDay : day), group[0].endDay)
+  return [startDay, endDay]
+}
+
+/** Describes a target group's weekday targets, or how many budgets overlap on it. */
+export function budgetGroupSchedule(group: Budget[]): string {
+  return group.length === 1 ? weekdaySummary(group[0].weekdayMinutes) : `${group.length} overlapping budgets`
 }
