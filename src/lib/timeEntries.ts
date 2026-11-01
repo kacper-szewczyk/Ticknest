@@ -83,14 +83,14 @@ export function subscribeToTimeEntries(
 export function subscribeToEntriesForDay(
   workspaceId: string,
   userId: string,
-  isOwner: boolean,
+  canSeeAllEntries: boolean,
   day: string,
   onEntries: (entries: TimeEntry[]) => void,
   onError: (error: Error) => void,
 ): () => void {
   const [start, end] = localDayBounds(day)
   const filters: QueryConstraint[] = [
-    ...(isOwner ? [] : [where('userId', '==', userId)]),
+    ...(canSeeAllEntries ? [] : [where('userId', '==', userId)]),
     where('startAt', '>=', Timestamp.fromDate(start)),
     where('startAt', '<', Timestamp.fromDate(end)),
     orderBy('startAt', 'desc'),
@@ -107,7 +107,7 @@ export function subscribeToEntriesForDay(
 export function subscribeToEntriesForRange(
   workspaceId: string,
   userId: string,
-  isOwner: boolean,
+  canSeeAllEntries: boolean,
   startDay: string,
   dayCount: number,
   onEntries: (entries: TimeEntry[]) => void,
@@ -117,7 +117,7 @@ export function subscribeToEntriesForRange(
   const end = new Date(start)
   end.setDate(end.getDate() + dayCount)
   const filters: QueryConstraint[] = [
-    ...(isOwner ? [] : [where('userId', '==', userId)]),
+    ...(canSeeAllEntries ? [] : [where('userId', '==', userId)]),
     where('startAt', '>=', Timestamp.fromDate(start)),
     where('startAt', '<', Timestamp.fromDate(end)),
     orderBy('startAt', 'desc'),

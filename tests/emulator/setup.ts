@@ -29,6 +29,7 @@ export const OTHER_WORKSPACE_ID = 'ws-other'
 
 export const OWNER = { uid: 'owner', email: 'owner@example.com' }
 export const MEMBER = { uid: 'alice', email: 'alice@example.com' }
+export const MANAGER = { uid: 'mira', email: 'mira@example.com' }
 export const OTHER_MEMBER = { uid: 'dave', email: 'dave@example.com' }
 export const NON_MEMBER = { uid: 'bob', email: 'bob@example.com' }
 export const REMOVED_MEMBER = { uid: 'carol', email: 'carol@example.com' }
@@ -39,6 +40,7 @@ export const PROJECT_ID_IN_WORKSPACE = 'project-site'
 export const TASK_ID = 'task-build'
 export const MEMBER_ENTRY_ID = 'entry-alice'
 export const OWNER_ENTRY_ID = 'entry-owner'
+export const MANAGER_ENTRY_ID = 'entry-mira'
 export const OTHER_MEMBER_ENTRY_ID = 'entry-dave'
 export const INVITATION_ID = 'invite-1'
 
@@ -65,7 +67,7 @@ export function completedEntry(userId: string, displayName: string, hour: number
 
 function membership(
   user: { uid: string; email: string },
-  role: 'owner' | 'member',
+  role: 'owner' | 'manager' | 'member',
   status: 'active' | 'removed' = 'active',
 ) {
   return { uid: user.uid, email: user.email, displayName: user.uid, role, status, joinedAt: PAST }
@@ -90,10 +92,12 @@ export async function seedWorkspace(env: RulesTestEnvironment): Promise<void> {
     const writes: [string, object][] = [
       [`users/${OWNER.uid}`, profile(OWNER)],
       [`users/${MEMBER.uid}`, profile(MEMBER)],
+      [`users/${MANAGER.uid}`, profile(MANAGER)],
       [`users/${NON_MEMBER.uid}`, profile(NON_MEMBER)],
       [ws, { name: 'Main', ownerUid: OWNER.uid, weekStartsOn: 1, createdAt: PAST, updatedAt: PAST }],
       [`${ws}/members/${OWNER.uid}`, membership(OWNER, 'owner')],
       [`${ws}/members/${MEMBER.uid}`, membership(MEMBER, 'member')],
+      [`${ws}/members/${MANAGER.uid}`, membership(MANAGER, 'manager')],
       [`${ws}/members/${OTHER_MEMBER.uid}`, membership(OTHER_MEMBER, 'member')],
       [`${ws}/members/${REMOVED_MEMBER.uid}`, membership(REMOVED_MEMBER, 'member', 'removed')],
       [`${ws}/clients/${CLIENT_ID}`, { name: 'Acme', archived: false, createdAt: PAST, updatedAt: PAST }],
@@ -124,6 +128,7 @@ export async function seedWorkspace(env: RulesTestEnvironment): Promise<void> {
       [`${ws}/timeEntries/${MEMBER_ENTRY_ID}`, completedEntry(MEMBER.uid, 'alice', 8)],
       [`${ws}/timeEntries/${OTHER_MEMBER_ENTRY_ID}`, completedEntry(OTHER_MEMBER.uid, 'dave', 10)],
       [`${ws}/timeEntries/${OWNER_ENTRY_ID}`, completedEntry(OWNER.uid, 'owner', 12)],
+      [`${ws}/timeEntries/${MANAGER_ENTRY_ID}`, completedEntry(MANAGER.uid, 'mira', 14)],
       [
         `${ws}/invitations/${INVITATION_ID}`,
         {

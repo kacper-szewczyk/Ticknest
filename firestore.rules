@@ -21,6 +21,16 @@ service cloud.firestore {
         && get(memberPath(workspaceId, request.auth.uid)).data.role == 'owner';
     }
 
+    // Managers set budgets and read every workspace entry; otherwise they have member permissions.
+    function isManager(workspaceId) {
+      return isMember(workspaceId)
+        && get(memberPath(workspaceId, request.auth.uid)).data.role == 'manager';
+    }
+
+    function canSeeAllEntries(workspaceId) {
+      return isOwner(workspaceId) || isManager(workspaceId);
+    }
+
     function validWorkspace(data) {
       return data.keys().hasAll(['name', 'ownerUid', 'weekStartsOn', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['name', 'ownerUid', 'weekStartsOn', 'createdAt', 'updatedAt'])
@@ -268,7 +278,7 @@ service cloud.firestore {
         }
 
         allow get, list: if isMember(workspaceId)
-          && (isOwner(workspaceId) || resource.data.userId == request.auth.uid);
+          && (canSeeAllEntries(workspaceId) || resource.data.userId == request.auth.uid);
         allow create: if isMember(workspaceId)
           && request.resource.data.userId == request.auth.uid
           && validEntryCreate(request.resource.data)

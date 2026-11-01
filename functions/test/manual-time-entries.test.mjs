@@ -23,6 +23,7 @@ const BASE = Date.UTC(2026, 0, 5, 9)
 let workspaceId
 let owner
 let member
+let manager
 
 async function signUp() {
   const response = await fetch(`${AUTH_URL}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-api-key`, {
@@ -73,6 +74,7 @@ async function entriesFor(uid) {
 before(async () => {
   owner = await signUp()
   member = await signUp()
+  manager = await signUp()
   const workspaceRef = db.collection('workspaces').doc()
   workspaceId = workspaceRef.id
   const now = FieldValue.serverTimestamp()
@@ -96,6 +98,14 @@ before(async () => {
     email: 'member@example.test',
     displayName: 'Member',
     role: 'member',
+    status: 'active',
+    joinedAt: now,
+  })
+  await workspaceRef.collection('members').doc(manager.uid).set({
+    uid: manager.uid,
+    email: 'manager@example.test',
+    displayName: 'Manager',
+    role: 'manager',
     status: 'active',
     joinedAt: now,
   })
@@ -175,6 +185,15 @@ test('members cannot edit other users entries but owners can', async () => {
   const [stored] = (await entriesFor(member.uid)).filter((item) => item.id === memberEntry.entryId)
   assert.equal(stored.userId, member.uid)
   assert.equal(stored.endAt.toMillis(), BASE + 302 * HOUR)
+})
+
+test('managers cannot edit other users entries', async () => {
+  const memberEntry = await save(member, entry(500, 501))
+  assert.ok(memberEntry.ok, JSON.stringify(memberEntry))
+  const denied = await save(manager, { ...entry(500, 502), entryId: memberEntry.entryId })
+  assert.equal(denied.status, 'PERMISSION_DENIED')
+  const own = await save(manager, entry(500, 501))
+  assert.ok(own.ok, JSON.stringify(own))
 })
 
 test('invalid durations are rejected', async () => {

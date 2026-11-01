@@ -22,6 +22,8 @@ import {
   createTestEnvironment,
   INVITATION_ID,
   INVITEE,
+  MANAGER,
+  MANAGER_ENTRY_ID,
   MEMBER,
   MEMBER_ENTRY_ID,
   NON_MEMBER,
@@ -38,15 +40,16 @@ import {
   WORKSPACE_ID,
 } from './setup'
 
-type Role = 'unauthenticated' | 'non-member' | 'member' | 'owner'
+type Role = 'unauthenticated' | 'non-member' | 'member' | 'manager' | 'owner'
 type Outcome = 'allow' | 'deny'
 type Actor = { role: Role; uid: string; email: string; db: Firestore }
 
-const ROLES: Role[] = ['unauthenticated', 'non-member', 'member', 'owner']
+const ROLES: Role[] = ['unauthenticated', 'non-member', 'member', 'manager', 'owner']
 const USERS = {
   unauthenticated: { uid: 'anonymous', email: '' },
   'non-member': NON_MEMBER,
   member: MEMBER,
+  manager: MANAGER,
   owner: OWNER,
 }
 const WS = `workspaces/${WORKSPACE_ID}`
@@ -84,7 +87,8 @@ function otherUserOf(subject: Actor) {
 }
 
 function ownEntryId(subject: Actor): string {
-  return subject.role === 'owner' ? OWNER_ENTRY_ID : MEMBER_ENTRY_ID
+  if (subject.role === 'owner') return OWNER_ENTRY_ID
+  return subject.role === 'manager' ? MANAGER_ENTRY_ID : MEMBER_ENTRY_ID
 }
 
 function otherMembersEntryId(subject: Actor): string {
@@ -100,23 +104,40 @@ function matrix(title: string, outcomes: Record<Role, Outcome>, operation: (subj
   })
 }
 
-const DENY_ALL: Record<Role, Outcome> = { unauthenticated: 'deny', 'non-member': 'deny', member: 'deny', owner: 'deny' }
+const DENY_ALL: Record<Role, Outcome> = {
+  unauthenticated: 'deny',
+  'non-member': 'deny',
+  member: 'deny',
+  manager: 'deny',
+  owner: 'deny',
+}
 const SIGNED_IN: Record<Role, Outcome> = {
   unauthenticated: 'deny',
   'non-member': 'allow',
   member: 'allow',
+  manager: 'allow',
   owner: 'allow',
 }
 const MEMBERS: Record<Role, Outcome> = {
   unauthenticated: 'deny',
   'non-member': 'deny',
   member: 'allow',
+  manager: 'allow',
   owner: 'allow',
 }
 const OWNER_ONLY: Record<Role, Outcome> = {
   unauthenticated: 'deny',
   'non-member': 'deny',
   member: 'deny',
+  manager: 'deny',
+  owner: 'allow',
+}
+
+const ENTRY_READERS: Record<Role, Outcome> = {
+  unauthenticated: 'deny',
+  'non-member': 'deny',
+  member: 'deny',
+  manager: 'allow',
   owner: 'allow',
 }
 
@@ -245,15 +266,15 @@ describe('Firestore rules matrix', () => {
     await getDocs(query(collection(subject.db, WS, 'timeEntries'), where('userId', '==', subject.uid)))
   })
 
-  matrix("read another member's time entry (direct get)", OWNER_ONLY, (subject) =>
+  matrix("read another member's time entry (direct get)", ENTRY_READERS, (subject) =>
     getDoc(doc(subject.db, WS, 'timeEntries', otherMembersEntryId(subject))),
   )
 
-  matrix("query another member's time entries", OWNER_ONLY, (subject) =>
+  matrix("query another member's time entries", ENTRY_READERS, (subject) =>
     getDocs(query(collection(subject.db, WS, 'timeEntries'), where('userId', '==', otherUserOf(subject).uid))),
   )
 
-  matrix('query all time entries without a user constraint', OWNER_ONLY, ({ db }) =>
+  matrix('query all time entries without a user constraint', ENTRY_READERS, ({ db }) =>
     getDocs(collection(db, WS, 'timeEntries')),
   )
 
@@ -282,6 +303,14 @@ describe('Firestore rules matrix', () => {
 
   matrix('change a membership role from a web client', DENY_ALL, ({ db }) =>
     updateDoc(doc(db, WS, 'members', MEMBER.uid), { role: 'owner' }),
+  )
+
+  matrix('promote a member to manager from a web client', DENY_ALL, ({ db }) =>
+    updateDoc(doc(db, WS, 'members', OTHER_MEMBER.uid), { role: 'manager' }),
+  )
+
+  matrix('change own membership role from a web client', DENY_ALL, ({ db, uid }) =>
+    updateDoc(doc(db, WS, 'members', uid), { role: 'owner' }),
   )
 
   matrix('reactivate a removed membership from a web client', DENY_ALL, ({ db }) =>
@@ -729,6 +758,10 @@ describe('boundary validation', () => {
 
     it('denies the same change from a member', async () => {
       await assertFails(updateDoc(doc(memberDb(), WS), { name: 'Renamed', updatedAt: serverTimestamp() }))
+    })
+
+    it('denies the same change from a manager', async () => {
+      await assertFails(updateDoc(doc(firestoreFor(MANAGER), WS), { name: 'Renamed', updatedAt: serverTimestamp() }))
     })
 
     it.each<[string, Record<string, unknown>]>([

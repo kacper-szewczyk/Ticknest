@@ -15,6 +15,7 @@ import { readableError } from './lib/errors'
 import {
   type Workspace,
   acceptWorkspaceInvitation,
+  canSeeAllEntries,
   createWorkspace,
   getSavedWorkspaceId,
   loadWorkspaces,
@@ -176,13 +177,14 @@ export function WorkspaceScreen({ user }: { user: User }) {
 
   const activeWorkspace = workspaces?.find((workspace) => workspace.id === activeId)
   const isOwner = activeWorkspace?.role === 'owner'
+  const seesAllEntries = canSeeAllEntries(activeWorkspace?.role)
   const currentView: WorkspaceView = !isOwner && OWNER_VIEWS.includes(view) ? 'timesheet' : view
   const navItems: NavItem<WorkspaceView>[] = activeWorkspace
     ? [
         { value: 'timesheet', label: 'Timesheet', icon: navIcons.timesheet, section: 'Track' },
         {
           value: 'dashboard',
-          label: isOwner ? 'Team dashboard' : 'Dashboard',
+          label: seesAllEntries ? 'Team dashboard' : 'Dashboard',
           icon: navIcons.dashboard,
           section: 'Analyze',
         },
@@ -378,6 +380,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 key={activeWorkspace.id}
                 user={user}
                 workspaceId={activeWorkspace.id}
+                canSeeAllEntries={seesAllEntries}
                 isOwner={isOwner}
                 weekStartsOn={activeWorkspace.weekStartsOn}
                 catalog={catalog}
@@ -385,7 +388,12 @@ export function WorkspaceScreen({ user }: { user: User }) {
             )}
             {currentView === 'reports' && (
               <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
-                <ReportsPanel user={user} workspaceId={activeWorkspace.id} isOwner={isOwner} catalog={catalog} />
+                <ReportsPanel
+                  user={user}
+                  workspaceId={activeWorkspace.id}
+                  canSeeAllEntries={seesAllEntries}
+                  catalog={catalog}
+                />
               </Suspense>
             )}
             {currentView === 'catalog' && <CatalogPanel workspaceId={activeWorkspace.id} />}
@@ -430,7 +438,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                         }}
                       />
                     }
-                    label={isOwner ? 'Workspace owner' : 'Workspace member'}
+                    label={`Workspace ${activeWorkspace.role}`}
                     sx={{ mt: 2, pl: 0.75 }}
                   />
                 </Paper>

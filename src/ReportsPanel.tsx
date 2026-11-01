@@ -72,12 +72,12 @@ function filterKey(filters: ReportFilters) {
 export function ReportsPanel({
   user,
   workspaceId,
-  isOwner,
+  canSeeAllEntries,
   catalog,
 }: {
   user: User
   workspaceId: string
-  isOwner: boolean
+  canSeeAllEntries: boolean
   catalog: Catalog
 }) {
   const [filters, setFilters] = useState<ReportFilters>(initialFilters)
@@ -109,11 +109,11 @@ export function ReportsPanel({
       : ''
 
   useEffect(() => {
-    if (!isOwner) return
+    if (!canSeeAllEntries) return
     return subscribeToWorkspaceMembers(workspaceId, setMembers, (loadError) =>
       setErrorState({ key, message: loadError.message }),
     )
-  }, [workspaceId, isOwner, key])
+  }, [workspaceId, canSeeAllEntries, key])
 
   useEffect(() => {
     let cancelled = false
@@ -122,11 +122,11 @@ export function ReportsPanel({
         cancelled = true
       }
     void Promise.all([
-      loadReportSummary(workspaceId, isOwner, user.uid, filters, (batch) => {
+      loadReportSummary(workspaceId, canSeeAllEntries, user.uid, filters, (batch) => {
         if (!cancelled)
           setSummaryState((current) => ({ key, entries: [...(current.key === key ? current.entries : []), ...batch] }))
       }),
-      loadReportPage(workspaceId, isOwner, user.uid, filters).then((page) => {
+      loadReportPage(workspaceId, canSeeAllEntries, user.uid, filters).then((page) => {
         if (!cancelled) {
           setPageState({ key, entries: page.entries, cursor: page.cursor })
         }
@@ -147,7 +147,7 @@ export function ReportsPanel({
     return () => {
       cancelled = true
     }
-  }, [workspaceId, user.uid, isOwner, filters, key, invalidRange])
+  }, [workspaceId, user.uid, canSeeAllEntries, filters, key, invalidRange])
 
   const totals = new Map<string, { seconds: number; count: number }>()
   summaryEntries.forEach((entry) => {
@@ -169,7 +169,7 @@ export function ReportsPanel({
     if (!cursor || pageLoading) return
     setLoadingMore(true)
     try {
-      const page = await loadReportPage(workspaceId, isOwner, user.uid, filters, cursor)
+      const page = await loadReportPage(workspaceId, canSeeAllEntries, user.uid, filters, cursor)
       setPageState((current) => ({
         key,
         entries: [...(current.key === key ? current.entries : []), ...page.entries],
@@ -203,7 +203,7 @@ export function ReportsPanel({
 
       const exportedRows = await streamReportCsv(
         workspaceId,
-        isOwner,
+        canSeeAllEntries,
         user.uid,
         filters,
         timezone,
@@ -286,7 +286,7 @@ export function ReportsPanel({
           onChange={(event) => updateFilter('endDay', event.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
         />
-        {isOwner && (
+        {canSeeAllEntries && (
           <SelectField
             label="Member"
             value={filters.userId}

@@ -20,7 +20,7 @@ export const IN_MEMORY_EXPORT_ROW_LIMIT = 20_000
 
 function constraints(
   workspaceId: string,
-  isOwner: boolean,
+  canSeeAllEntries: boolean,
   currentUserId: string,
   filters: ReportFilters,
   batchSize: number,
@@ -32,7 +32,7 @@ function constraints(
     where('startAt', '<', Timestamp.fromDate(end)),
     orderBy('startAt', 'desc'),
   ]
-  const selectedUserId = isOwner ? filters.userId : currentUserId
+  const selectedUserId = canSeeAllEntries ? filters.userId : currentUserId
   if (selectedUserId) queryParts.push(where('userId', '==', selectedUserId))
   if (cursor) queryParts.push(startAfter(cursor))
   queryParts.push(limit(batchSize))
@@ -45,7 +45,7 @@ function toEntry(snapshot: QueryDocumentSnapshot): TimeEntry {
 
 export async function streamReportCsv(
   workspaceId: string,
-  isOwner: boolean,
+  canSeeAllEntries: boolean,
   currentUserId: string,
   filters: ReportFilters,
   timeZone: string,
@@ -59,7 +59,7 @@ export async function streamReportCsv(
   let totalRows = 0
   do {
     const snapshot = await getDocs(
-      constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor),
+      constraints(workspaceId, canSeeAllEntries, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor),
     )
     const lines: string[] = []
     for (const document of snapshot.docs) {
@@ -79,7 +79,7 @@ export async function streamReportCsv(
 
 export async function loadReportPage(
   workspaceId: string,
-  isOwner: boolean,
+  canSeeAllEntries: boolean,
   currentUserId: string,
   filters: ReportFilters,
   cursor?: QueryDocumentSnapshot,
@@ -89,7 +89,7 @@ export async function loadReportPage(
   const entries: TimeEntry[] = []
   while (entries.length < PAGE_SIZE && !exhausted) {
     const snapshot = await getDocs(
-      constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, nextCursor),
+      constraints(workspaceId, canSeeAllEntries, currentUserId, filters, SUMMARY_BATCH_SIZE, nextCursor),
     )
     const docs = snapshot.docs
     let reachedPageSize = false
@@ -114,7 +114,7 @@ export async function loadReportPage(
 
 export async function loadReportSummary(
   workspaceId: string,
-  isOwner: boolean,
+  canSeeAllEntries: boolean,
   currentUserId: string,
   filters: ReportFilters,
   onProgress: (entries: TimeEntry[]) => void,
@@ -122,7 +122,7 @@ export async function loadReportSummary(
   let cursor: QueryDocumentSnapshot | undefined
   do {
     const snapshot = await getDocs(
-      constraints(workspaceId, isOwner, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor),
+      constraints(workspaceId, canSeeAllEntries, currentUserId, filters, SUMMARY_BATCH_SIZE, cursor),
     )
     onProgress(snapshot.docs.map(toEntry).filter((entry) => entry.endAt !== null && matchesFilters(entry, filters)))
     cursor = snapshot.docs.length === SUMMARY_BATCH_SIZE ? snapshot.docs[snapshot.docs.length - 1] : undefined

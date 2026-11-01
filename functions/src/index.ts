@@ -21,6 +21,10 @@ const FUNCTION_OPTIONS = { region: REGION, maxInstances: 3, enforceAppCheck: ENF
 
 type CallableData = Record<string, unknown>
 
+// Managers can read every workspace entry and manage budgets; otherwise they have member permissions.
+type WorkspaceRole = 'owner' | 'manager' | 'member'
+const ASSIGNABLE_ROLES: WorkspaceRole[] = ['manager', 'member']
+
 function getData(value: unknown): CallableData {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new HttpsError('invalid-argument', 'The request body must be an object.')
@@ -291,7 +295,7 @@ export const removeWorkspaceMember = onCall(FUNCTION_OPTIONS, async (request) =>
     if (!owner.exists || owner.data()?.role !== 'owner' || owner.data()?.status === 'removed') {
       throw new HttpsError('permission-denied', 'Only the workspace owner can manage members.')
     }
-    if (!member.exists || member.data()?.role !== 'member') {
+    if (!member.exists || !ASSIGNABLE_ROLES.includes(member.data()?.role)) {
       throw new HttpsError('not-found', 'This workspace member no longer exists.')
     }
     if (timer.exists && typeof timer.data()?.entryId === 'string') {
@@ -305,6 +309,34 @@ export const removeWorkspaceMember = onCall(FUNCTION_OPTIONS, async (request) =>
     if (timer.exists) transaction.delete(timerRef)
   })
   return { memberUid }
+})
+
+export const setWorkspaceMemberRole = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const memberUid = getDocumentId(data, 'memberUid')
+  const role = data.role
+  if (typeof role !== 'string' || !(ASSIGNABLE_ROLES as string[]).includes(role)) {
+    throw new HttpsError('invalid-argument', 'Choose manager or member.')
+  }
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const ownerRef = workspaceRef.collection('members').doc(user.uid)
+  const memberRef = workspaceRef.collection('members').doc(memberUid)
+  await db.runTransaction(async (transaction) => {
+    const [owner, member] = await Promise.all([transaction.get(ownerRef), transaction.get(memberRef)])
+    if (!owner.exists || owner.data()?.role !== 'owner' || owner.data()?.status === 'removed') {
+      throw new HttpsError('permission-denied', 'Only the workspace owner can manage members.')
+    }
+    if (memberUid === user.uid) {
+      throw new HttpsError('failed-precondition', 'The workspace owner cannot change their own role.')
+    }
+    if (!member.exists || member.data()?.status === 'removed' || !ASSIGNABLE_ROLES.includes(member.data()?.role)) {
+      throw new HttpsError('not-found', 'This workspace member no longer exists.')
+    }
+    transaction.update(memberRef, { role: role as WorkspaceRole })
+  })
+  return { memberUid, role }
 })
 
 type CatalogRef = { id: string | null; name: string | null }
