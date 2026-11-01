@@ -10,6 +10,7 @@ import { type FormEvent, useState } from 'react'
 import { registerWithEmail, sendPasswordReset, signInWithEmail, signInWithGoogle } from './lib/auth'
 import { readableError } from './lib/errors'
 import { Brand } from './Brand'
+import { DemoAccountsPanel } from './DemoMode'
 import { FormMessage } from './ui'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
@@ -132,6 +133,15 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
           </Typography>
           {mode !== 'reset' && (
             <>
+              <DemoAccountsPanel
+                onUse={(account) => {
+                  setError('')
+                  setNotice('')
+                  setMode('sign-in')
+                  setEmail(account.email)
+                  setPassword(account.password)
+                }}
+              />
               <Button
                 variant="outlined"
                 color="inherit"
