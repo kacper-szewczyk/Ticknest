@@ -115,6 +115,7 @@ export const createWorkspace = onCall(FUNCTION_OPTIONS, async (request) => {
       displayName,
       role: 'owner',
       status: 'active',
+      timezone,
       joinedAt: now,
     })
     transaction.set(
@@ -190,6 +191,7 @@ export const acceptWorkspaceInvitation = onCall(FUNCTION_OPTIONS, async (request
       displayName,
       role: 'member',
       status: 'active',
+      timezone,
       joinedAt: now,
     })
     transaction.update(invitationRef, { status: 'accepted', acceptedBy: user.uid, acceptedAt: now })

@@ -10,10 +10,12 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   Timestamp,
   updateDoc,
   where,
   type QueryConstraint,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import type { User } from 'firebase/auth'
 import { callFunction, db } from './firebase'
@@ -129,6 +131,39 @@ export function subscribeToEntriesForRange(
     },
     onError,
   )
+}
+
+const RANGE_BATCH_SIZE = 250
+
+/**
+ * Loads a user's completed entries that overlap `[start, end)`, including ones that start before `start`, in
+ * batches. Running timers are left out because their `endAt` is null. Budgets bound the range to 731 days.
+ */
+export async function loadCompletedEntriesOverlapping(
+  workspaceId: string,
+  userId: string,
+  start: Date,
+  end: Date,
+): Promise<TimeEntry[]> {
+  const entries: TimeEntry[] = []
+  let cursor: QueryDocumentSnapshot | undefined
+  do {
+    const snapshot = await getDocs(
+      query(
+        entriesPath(workspaceId),
+        where('userId', '==', userId),
+        where('endAt', '>', Timestamp.fromDate(start)),
+        where('startAt', '<', Timestamp.fromDate(end)),
+        orderBy('endAt'),
+        orderBy('startAt'),
+        ...(cursor ? [startAfter(cursor)] : []),
+        limit(RANGE_BATCH_SIZE),
+      ),
+    )
+    entries.push(...snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as TimeEntry))
+    cursor = snapshot.docs.length === RANGE_BATCH_SIZE ? snapshot.docs[snapshot.docs.length - 1] : undefined
+  } while (cursor)
+  return entries
 }
 
 // Browser-side guard for starting a timer; the rules also block entries that overlap a running timer.
