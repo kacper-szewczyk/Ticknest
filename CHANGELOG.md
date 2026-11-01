@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.17.0...ticknest-v1.18.0) (2026-11-01)
+
+
+### Features
+
+* add a team budget progress overview for owners and managers ([#135](https://github.com/kacper-szewczyk/Ticknest/issues/135)) ([e2a66e6](https://github.com/kacper-szewczyk/Ticknest/commit/e2a66e6c8f716cb38e0d22f3ebb6eeb60e9093c4)), closes [#87](https://github.com/kacper-szewczyk/Ticknest/issues/87)
+
 ## [1.17.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.16.0...ticknest-v1.17.0) (2026-11-01)
 
 
