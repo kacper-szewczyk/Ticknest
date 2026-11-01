@@ -1,8 +1,14 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
+import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, getFirestore, Timestamp, type DocumentReference, type Transaction } from 'firebase-admin/firestore'
 import { defineBoolean, defineString } from 'firebase-functions/params'
+import { logger } from 'firebase-functions'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
+import { getDemoGuardResult } from './demo/config'
+import { resetDemoProject } from './demo/reset'
+import { DEMO_RESET_SCHEDULE, DEMO_RESET_TIME_ZONE } from './demo/schedule'
 
 initializeApp()
 
@@ -679,6 +685,29 @@ export const deleteBudget = onCall(FUNCTION_OPTIONS, async (request) => {
   })
   return { budgetId }
 })
+
+// The public demo's daily reset. Deploys everywhere but does nothing unless the demo guard allows it.
+export const resetDemo = onSchedule(
+  {
+    schedule: DEMO_RESET_SCHEDULE,
+    timeZone: DEMO_RESET_TIME_ZONE,
+    region: REGION,
+    // One reset at a time; a retry wipes and reseeds again, so it is safe.
+    maxInstances: 1,
+    retryCount: 2,
+    timeoutSeconds: 540,
+    memory: '512MiB',
+  },
+  async () => {
+    const guard = getDemoGuardResult()
+    if (!guard.allowed) {
+      logger.info(`Skipping the demo reset: ${guard.reason}`)
+      return
+    }
+    const result = await resetDemoProject(getAuth(), db, new Date())
+    logger.info('Reset the demo project.', result)
+  },
+)
 
 function matchesTokenHash(token: string, expectedHash: string): boolean {
   if (!/^[a-f0-9]{64}$/i.test(expectedHash)) return false
