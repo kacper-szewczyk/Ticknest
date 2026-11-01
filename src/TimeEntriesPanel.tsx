@@ -2,34 +2,21 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Paper from '@mui/material/Paper'
+import SpeedDial from '@mui/material/SpeedDial'
+import SpeedDialAction from '@mui/material/SpeedDialAction'
+import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
-import { type FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Catalog } from './lib/catalog'
-import {
-  dateTimeForDay,
-  dayDate,
-  formatElapsed,
-  formatWeekLabel,
-  localDateTimeValue,
-  localDayString,
-  shiftDayString,
-  startOfWeekString,
-} from './lib/dates'
+import { NavIcon } from './AppShell'
+import { EntryEditor } from './EntryEditor'
+import { dayDate, formatElapsed, formatWeekLabel, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
 import { readableError } from './lib/errors'
-import {
-  type TimeEntry,
-  continueTimer,
-  deleteTimeEntry,
-  saveManualTimeEntry,
-  subscribeToEntriesForRange,
-} from './lib/timeEntries'
-import { type WorkDetails, workDetails } from './lib/workOptions'
+import { type TimeEntry, continueTimer, deleteTimeEntry, subscribeToEntriesForRange } from './lib/timeEntries'
 import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
-import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
-import { WorkPicker } from './WorkPicker'
 
 export function TimeEntriesPanel({
   user,
@@ -52,17 +39,11 @@ export function TimeEntriesPanel({
     entries: [],
   })
   const entries = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart ? entryState.entries : []
-  const [editId, setEditId] = useState<string | null>(null)
-  const [description, setDescription] = useState('')
-  const [work, setWork] = useState<WorkDetails>(() => workDetails(null))
-  const [editorDay, setEditorDay] = useState(today)
-  const [startAt, setStartAt] = useState(() => dateTimeForDay(today, 9))
-  const [endAt, setEndAt] = useState(() => dateTimeForDay(today, 10))
+  const [editor, setEditor] = useState<{ entry?: TimeEntry; day: string } | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [now, setNow] = useState(() => Date.now())
-  const { fieldProps, showFieldError, clearFieldError, clearFieldErrors } = useManualEntryFieldErrors()
 
   useEffect(() => {
     return subscribeToEntriesForRange(
@@ -80,63 +61,10 @@ export function TimeEntriesPanel({
     return () => window.clearInterval(interval)
   }, [])
 
-  function clearForm(forDay = weekStart) {
-    setEditId(null)
-    setDescription('')
-    setWork(workDetails(null))
-    setEditorDay(forDay)
-    setStartAt(dateTimeForDay(forDay, 9))
-    setEndAt(dateTimeForDay(forDay, 10))
-    clearFieldErrors()
-  }
-
-  function beginEdit(entry: TimeEntry) {
-    if (entry.endAt === null) return
-    setEditId(entry.id)
-    setDescription(entry.description)
-    setWork({
-      clientId: entry.clientId ?? null,
-      clientName: entry.clientName,
-      projectId: entry.projectId ?? null,
-      projectName: entry.projectName,
-      taskId: entry.taskId ?? null,
-      taskName: entry.taskName,
-      billable: entry.billable,
-    })
-    setStartAt(localDateTimeValue(entry.startAt.toDate()))
-    setEndAt(localDateTimeValue(entry.endAt.toDate()))
+  function openEditor(day: string, entry?: TimeEntry) {
+    setEditor({ entry, day })
     setError('')
     setNotice('')
-    clearFieldErrors()
-  }
-
-  async function handleSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setPending(true)
-    setError('')
-    setNotice('')
-    clearFieldErrors()
-    try {
-      await saveManualTimeEntry(
-        workspaceId,
-        {
-          description,
-          clientId: work.clientId,
-          projectId: work.projectId,
-          taskId: work.taskId,
-          billable: work.billable,
-          startAt: new Date(startAt),
-          endAt: new Date(endAt),
-        },
-        editId ?? undefined,
-      )
-      clearForm()
-      setNotice(editId ? 'Time entry updated.' : 'Time entry added.')
-    } catch (requestError) {
-      if (!showFieldError(requestError)) setError(readableError(requestError))
-    } finally {
-      setPending(false)
-    }
   }
 
   async function handleDelete(entry: TimeEntry) {
@@ -146,7 +74,6 @@ export function TimeEntriesPanel({
     setNotice('')
     try {
       await deleteTimeEntry(workspaceId, entry)
-      if (editId === entry.id) clearForm()
       setNotice('Time entry deleted.')
     } catch (requestError) {
       setError(readableError(requestError))
@@ -174,7 +101,6 @@ export function TimeEntriesPanel({
     setWeekStart(nextWeekStart)
     setError('')
     setNotice('')
-    clearForm(nextWeekStart)
   }
 
   const weekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
@@ -185,7 +111,7 @@ export function TimeEntriesPanel({
   const weekTotal = entries.reduce((total, entry) => total + secondsFor(entry), 0)
 
   return (
-    <SectionCard labelledBy="entries-heading">
+    <SectionCard labelledBy="entries-heading" sx={{ mb: { xs: 10, sm: 12 } }}>
       <SectionHeading
         id="entries-heading"
         kicker="YOUR TIME"
@@ -238,73 +164,6 @@ export function TimeEntriesPanel({
       />
       {error && <FormMessage severity="error">{error}</FormMessage>}
       {notice && <FormMessage severity="success">{notice}</FormMessage>}
-      <Paper
-        component="form"
-        variant="outlined"
-        onSubmit={handleSave}
-        aria-busy={pending}
-        sx={{ display: 'grid', gap: 2, mt: 3, p: 2.25, borderRadius: '12px', bgcolor: 'app.surface' }}
-      >
-        <Typography variant="h3">
-          {editId
-            ? 'Edit entry'
-            : `Add time · ${dayDate(editorDay).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`}
-        </Typography>
-        <TextField
-          label="Description"
-          value={description}
-          onChange={(event) => {
-            setDescription(event.target.value)
-            clearFieldError('description')
-          }}
-          required
-          {...fieldProps('description')}
-          slotProps={{ htmlInput: { maxLength: 500 } }}
-        />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-          <TextField
-            label="Start"
-            type="datetime-local"
-            value={startAt}
-            onChange={(event) => {
-              setStartAt(event.target.value)
-              clearFieldError('startAt')
-              clearFieldError('endAt')
-            }}
-            required
-            {...fieldProps('startAt')}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            label="End"
-            type="datetime-local"
-            value={endAt}
-            onChange={(event) => {
-              setEndAt(event.target.value)
-              clearFieldError('endAt')
-            }}
-            required
-            {...fieldProps('endAt')}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-        </Box>
-        <WorkPicker catalog={catalog} value={work} onChange={setWork} />
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          {work.billable && (
-            <Box sx={{ mr: 'auto' }}>
-              <BillableChip />
-            </Box>
-          )}
-          {editId && (
-            <Button variant="outlined" onClick={() => clearForm()} disabled={pending}>
-              Cancel
-            </Button>
-          )}
-          <Button variant="contained" type="submit" disabled={pending}>
-            {pending ? 'Saving…' : editId ? 'Save changes' : 'Add entry'}
-          </Button>
-        </Stack>
-      </Paper>
       <Paper
         variant="outlined"
         aria-live="polite"
@@ -362,14 +221,7 @@ export function TimeEntriesPanel({
                   <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
                     {formatElapsed(dayTotal)}
                   </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      clearForm(weekDay)
-                      setError('')
-                      setNotice('')
-                    }}
-                  >
+                  <Button size="small" onClick={() => openEditor(weekDay)}>
                     Add entry
                   </Button>
                 </Stack>
@@ -432,7 +284,11 @@ export function TimeEntriesPanel({
                           Continue
                         </Button>
                       )}
-                      <Button size="small" onClick={() => beginEdit(entry)} disabled={pending || entry.endAt === null}>
+                      <Button
+                        size="small"
+                        onClick={() => openEditor(weekDay, entry)}
+                        disabled={pending || entry.endAt === null}
+                      >
                         Edit
                       </Button>
                       <Button
@@ -451,6 +307,34 @@ export function TimeEntriesPanel({
           )
         })}
       </Box>
+      <SpeedDial
+        ariaLabel="Add time"
+        icon={<SpeedDialIcon />}
+        sx={{ position: 'fixed', right: { xs: 16, sm: 32 }, bottom: { xs: 16, sm: 32 } }}
+      >
+        <SpeedDialAction
+          icon={
+            <NavIcon>
+              <path d="M4 7h16M4 12h10M4 17h7M17 14v6M14 17h6" />
+            </NavIcon>
+          }
+          slotProps={{ tooltip: { title: 'Add manual entry', open: true } }}
+          onClick={() => openEditor(weekDays.includes(today) ? today : weekStart)}
+        />
+      </SpeedDial>
+      {editor && (
+        <EntryEditor
+          workspaceId={workspaceId}
+          catalog={catalog}
+          entry={editor.entry}
+          day={editor.day}
+          onClose={() => setEditor(null)}
+          onSaved={(message) => {
+            setEditor(null)
+            setNotice(message)
+          }}
+        />
+      )}
     </SectionCard>
   )
 }
