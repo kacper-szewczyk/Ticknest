@@ -5,6 +5,7 @@ import Drawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import { alpha, type Theme } from '@mui/material/styles'
+import { DemoResetBanner } from './DemoMode'
 
 const SIDEBAR_WIDTH = 264
 
@@ -123,6 +124,7 @@ export function AppShell<V extends string>({
           minHeight: { xs: 'calc(100vh - 60px)', md: '100vh' },
         }}
       >
+        <DemoResetBanner />
         {topBar && (
           <Box
             sx={{
