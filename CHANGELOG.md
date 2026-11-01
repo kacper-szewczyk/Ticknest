@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.14.0...ticknest-v1.15.0) (2026-11-01)
+
+
+### Features
+
+* add the daily demo reset scheduled function ([#127](https://github.com/kacper-szewczyk/Ticknest/issues/127)) ([4f50245](https://github.com/kacper-szewczyk/Ticknest/commit/4f5024568c8d0f205e924b6d7cc9f97b22e59c20)), closes [#111](https://github.com/kacper-szewczyk/Ticknest/issues/111)
+
 ## [1.14.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.13.0...ticknest-v1.14.0) (2026-11-01)
 
 
