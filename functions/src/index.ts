@@ -1,13 +1,17 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
-import { defineBoolean } from 'firebase-functions/params'
+import { defineBoolean, defineString } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 
 initializeApp()
 
 const db = getFirestore()
-const REGION = 'europe-west1'
+// Must match VITE_FIREBASE_FUNCTIONS_REGION in the web app; set FUNCTIONS_REGION in functions/.env to change it.
+const REGION = defineString('FUNCTIONS_REGION', {
+  default: 'europe-west1',
+  description: 'Cloud Functions region. Must match VITE_FIREBASE_FUNCTIONS_REGION in the web app.',
+})
 // Optional so self-hosters without App Check keep working; set ENFORCE_APP_CHECK=true in functions/.env to enforce.
 const ENFORCE_APP_CHECK = defineBoolean('ENFORCE_APP_CHECK', {
   default: false,
