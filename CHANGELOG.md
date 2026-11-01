@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.7.0...ticknest-v1.8.0) (2026-11-01)
+
+
+### Features
+
+* edit time entries in a shared dialog with a speed-dial add action ([#101](https://github.com/kacper-szewczyk/Ticknest/issues/101)) ([12ded10](https://github.com/kacper-szewczyk/Ticknest/commit/12ded10bb2935245b05041ddfd7c776c905aaa15))
+
 ## [1.7.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.6.2...ticknest-v1.7.0) (2026-10-30)
 
 
