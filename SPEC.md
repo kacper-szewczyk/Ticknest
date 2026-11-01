@@ -103,6 +103,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 5. **Clients and projects** — searchable list and detail/edit forms; owner actions.
 6. **Team and workspace settings** — members, invitations, and basic preferences.
 7. **Budgets** — owners and managers list budgets filtered by member, target, and status (active, upcoming, past, archived), and create, edit, archive, restore, or delete them. Hours per weekday accept decimal hours (`7.5`) or `H:MM` (`7:30`) and are shown as `H:MM`. Hidden from members.
+8. **My budgets** — every user sees their own active budgets, grouped per project or client: today's logged time against today's target, the running balance (e.g. `−2h 30m behind`), time logged to date, and a week-by-week breakdown with each day's status in words (under, met, over, to go, no target). It updates live as entries are saved, edited, deleted, or a timer stops. Upcoming budgets are listed with their start date; ended budgets are not shown.
 
 The interface must be responsive and usable on desktop and mobile web. Keyboard focus, labels, validation announcements, and sufficient contrast are required for core forms and timer actions.
 

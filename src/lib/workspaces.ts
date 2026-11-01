@@ -20,6 +20,8 @@ export type Workspace = {
   ownerUid: string
   role: WorkspaceRole
   weekStartsOn: number
+  /** The current user's IANA timezone snapshot in this workspace; see `WorkspaceMember.timezone`. */
+  timezone?: string
 }
 
 export type WorkspaceMember = {
@@ -68,7 +70,7 @@ export async function loadWorkspaces(user: User): Promise<Workspace[]> {
   const workspaces = await Promise.all(
     memberships.docs
       .filter((membership) => membership.data().status !== 'removed')
-      .map(async (membership) => {
+      .map(async (membership): Promise<Workspace | null> => {
         const workspaceRef = doc(db, 'workspaces', membership.ref.parent.parent!.id)
         const workspaceSnapshot = await getDoc(workspaceRef)
         if (!workspaceSnapshot.exists()) return null
@@ -79,6 +81,7 @@ export async function loadWorkspaces(user: User): Promise<Workspace[]> {
           ownerUid: workspace.ownerUid as string,
           role: membership.data().role as Workspace['role'],
           weekStartsOn: typeof workspace.weekStartsOn === 'number' ? workspace.weekStartsOn : 1,
+          timezone: typeof membership.data().timezone === 'string' ? (membership.data().timezone as string) : undefined,
         }
       }),
   )
