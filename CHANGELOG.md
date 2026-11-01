@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.11.0...ticknest-v1.12.0) (2026-11-01)
+
+
+### Features
+
+* add budget progress calculation and member timezone snapshots ([#121](https://github.com/kacper-szewczyk/Ticknest/issues/121)) ([40ce151](https://github.com/kacper-szewczyk/Ticknest/commit/40ce151facbf7f19ae7a368f2fb700f2b2a8fb9f)), closes [#84](https://github.com/kacper-szewczyk/Ticknest/issues/84)
+
 ## [1.11.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.10.0...ticknest-v1.11.0) (2026-11-01)
 
 
