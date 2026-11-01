@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.8.0...ticknest-v1.9.0) (2026-11-01)
+
+
+### Features
+
+* add a report-only Content-Security-Policy and frame protection to Hosting ([#103](https://github.com/kacper-szewczyk/Ticknest/issues/103)) ([35260e4](https://github.com/kacper-szewczyk/Ticknest/commit/35260e461b03d2ca0562a325dad050e86ac0f450))
+* add vercel.json with Hosting headers and SPA rewrite ([#107](https://github.com/kacper-szewczyk/Ticknest/issues/107)) ([76f840f](https://github.com/kacper-szewczyk/Ticknest/commit/76f840f1f6a46e2d02bd544827e150640cae6721))
+
 ## [1.8.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.7.0...ticknest-v1.8.0) (2026-11-01)
 
 
