@@ -81,6 +81,8 @@ npm run emulators
 
 In a second terminal run `npm run dev`. The app is at <http://127.0.0.1:5173>, Emulator Suite UI at <http://127.0.0.1:4000>, and Hosting emulator at <http://127.0.0.1:5000>.
 
+To try the app with sample data, run `npm run demo:seed` while the emulators are running. It clears the local Auth and Firestore emulators, then seeds the demo workspace: an owner and three members (all with the password `ticknest-demo`, listed in `functions/src/demo/accounts.ts`), clients, projects, tasks, a pending invitation, and about three months of weekday time entries ending now. It only connects to emulators on `127.0.0.1` or `localhost` under the `demo-ticknest` project.
+
 Run `npm run test:emulators` to build the functions, start the Auth, Firestore, and Functions emulators, and run the emulator tests in `functions/test`. Stop `npm run emulators` first, since both use the same ports.
 
 ## Data and privacy
