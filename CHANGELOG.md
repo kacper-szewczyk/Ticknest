@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.10.0...ticknest-v1.11.0) (2026-11-01)
+
+
+### Features
+
+* add demo mode flags and safety guard ([#117](https://github.com/kacper-szewczyk/Ticknest/issues/117)) ([4787738](https://github.com/kacper-szewczyk/Ticknest/commit/4787738520881c371e0ab6ea727cd64ab8906d77)), closes [#116](https://github.com/kacper-szewczyk/Ticknest/issues/116)
+
 ## [1.10.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.9.0...ticknest-v1.10.0) (2026-11-01)
 
 
