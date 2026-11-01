@@ -31,17 +31,29 @@ import { TimerBar } from './TimerBar'
 import { TimesheetDashboard } from './TimesheetDashboard'
 import { FormMessage, LoadingState } from './ui'
 
-// Reports and member management are visited less often, so they load on demand to keep the initial bundle small.
+// Reports, budgets, and member management are visited less often, so they load on demand to keep the initial bundle small.
 const ReportsPanel = lazy(() => import('./ReportsPanel').then((module) => ({ default: module.ReportsPanel })))
 const MemberManagementPanel = lazy(() =>
   import('./MemberManagementPanel').then((module) => ({ default: module.MemberManagementPanel })),
 )
+const BudgetsPanel = lazy(() => import('./BudgetsPanel').then((module) => ({ default: module.BudgetsPanel })))
 
-type WorkspaceView = 'timesheet' | 'dashboard' | 'reports' | 'catalog' | 'members' | 'settings'
+type WorkspaceView = 'timesheet' | 'dashboard' | 'reports' | 'budgets' | 'catalog' | 'members' | 'settings'
 
-const WORKSPACE_VIEWS: WorkspaceView[] = ['timesheet', 'dashboard', 'reports', 'catalog', 'members', 'settings']
+const WORKSPACE_VIEWS: WorkspaceView[] = [
+  'timesheet',
+  'dashboard',
+  'reports',
+  'budgets',
+  'catalog',
+  'members',
+  'settings',
+]
 
 const OWNER_VIEWS: WorkspaceView[] = ['catalog', 'members']
+
+// Owners and managers manage budgets.
+const MANAGER_VIEWS: WorkspaceView[] = ['budgets']
 
 // The current page lives in the URL hash so refreshes and the back button keep it.
 function viewFromHash(): WorkspaceView | null {
@@ -178,7 +190,8 @@ export function WorkspaceScreen({ user }: { user: User }) {
   const activeWorkspace = workspaces?.find((workspace) => workspace.id === activeId)
   const isOwner = activeWorkspace?.role === 'owner'
   const seesAllEntries = canSeeAllEntries(activeWorkspace?.role)
-  const currentView: WorkspaceView = !isOwner && OWNER_VIEWS.includes(view) ? 'timesheet' : view
+  const currentView: WorkspaceView =
+    (!isOwner && OWNER_VIEWS.includes(view)) || (!seesAllEntries && MANAGER_VIEWS.includes(view)) ? 'timesheet' : view
   const navItems: NavItem<WorkspaceView>[] = activeWorkspace
     ? [
         { value: 'timesheet', label: 'Timesheet', icon: navIcons.timesheet, section: 'Track' },
@@ -189,6 +202,11 @@ export function WorkspaceScreen({ user }: { user: User }) {
           section: 'Analyze',
         },
         { value: 'reports', label: 'Reports', icon: navIcons.reports, section: 'Analyze' },
+        ...(seesAllEntries
+          ? ([
+              { value: 'budgets', label: 'Budgets', icon: navIcons.budgets, section: 'Manage' },
+            ] satisfies NavItem<WorkspaceView>[])
+          : []),
         ...(isOwner
           ? ([
               { value: 'catalog', label: 'Clients & projects', icon: navIcons.catalog, section: 'Manage' },
@@ -396,6 +414,11 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 />
               </Suspense>
             )}
+            {currentView === 'budgets' && (
+              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+                <BudgetsPanel key={activeWorkspace.id} workspaceId={activeWorkspace.id} catalog={catalog} />
+              </Suspense>
+            )}
             {currentView === 'catalog' && <CatalogPanel workspaceId={activeWorkspace.id} />}
             {currentView === 'members' && (
               <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
@@ -595,6 +618,13 @@ const navIcons = {
   reports: (
     <NavIcon>
       <path d="M5 20V11M12 20V5M19 20v-6M3 20h18" />
+    </NavIcon>
+  ),
+  budgets: (
+    <NavIcon>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="0.5" />
     </NavIcon>
   ),
   catalog: (
