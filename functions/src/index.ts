@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
-import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore, Timestamp, type DocumentReference, type Transaction } from 'firebase-admin/firestore'
 import { defineBoolean, defineString } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 
@@ -493,6 +493,189 @@ export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
   }
 
   return { entryId: entryRef.id }
+})
+
+const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+const DAY_MS = 24 * 60 * 60 * 1000
+// Bounds progress calculation to about two years of entries per budget.
+const MAX_BUDGET_DAYS = 731
+type BudgetTargetType = 'project' | 'client'
+
+// Parses a `YYYY-MM-DD` calendar date to its UTC midnight, rejecting dates such as 2026-02-30.
+function getCalendarDay(value: unknown, field: string): { day: string; millis: number } {
+  const match = typeof value === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null
+  if (!match) throw new HttpsError('invalid-argument', `Enter a valid ${field}.`)
+  const [year, month, date] = match.slice(1).map(Number)
+  const millis = Date.UTC(year, month - 1, date)
+  const parsed = new Date(millis)
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== date) {
+    throw new HttpsError('invalid-argument', `Enter a valid ${field}.`)
+  }
+  return { day: value as string, millis }
+}
+
+function getWeekdayMinutes(data: CallableData): Record<(typeof WEEKDAYS)[number], number> {
+  const value = data.weekdayMinutes
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new HttpsError('invalid-argument', 'Enter target minutes for each weekday.')
+  }
+  const input = value as Record<string, unknown>
+  if (Object.keys(input).some((key) => !(WEEKDAYS as readonly string[]).includes(key))) {
+    throw new HttpsError('invalid-argument', 'Enter target minutes for each weekday.')
+  }
+  const minutes = Object.fromEntries(
+    WEEKDAYS.map((weekday) => {
+      const dayMinutes = input[weekday]
+      if (typeof dayMinutes !== 'number' || !Number.isInteger(dayMinutes) || dayMinutes < 0 || dayMinutes > 1440) {
+        throw new HttpsError('invalid-argument', 'Weekday targets must be whole minutes between 0 and 1440.')
+      }
+      return [weekday, dayMinutes]
+    }),
+  ) as Record<(typeof WEEKDAYS)[number], number>
+  if (WEEKDAYS.every((weekday) => minutes[weekday] === 0)) {
+    throw new HttpsError('invalid-argument', 'Set a target above zero for at least one weekday.')
+  }
+  return minutes
+}
+
+function getBudgetTarget(data: CallableData): { type: BudgetTargetType; id: string } {
+  const target = getData(data.target)
+  if (target.type !== 'project' && target.type !== 'client') {
+    throw new HttpsError('invalid-argument', 'Choose a project or a client.')
+  }
+  return { type: target.type, id: getDocumentId(target, 'id') }
+}
+
+// Validates the budget's dates and returns its exceptions sorted and without duplicates.
+function getBudgetDays(data: CallableData) {
+  const start = getCalendarDay(data.startDay, 'start date')
+  const end = getCalendarDay(data.endDay, 'end date')
+  if (end.millis < start.millis) {
+    throw new HttpsError('invalid-argument', 'The end date must be on or after the start date.')
+  }
+  if ((end.millis - start.millis) / DAY_MS + 1 > MAX_BUDGET_DAYS) {
+    throw new HttpsError('invalid-argument', `A budget can span at most ${MAX_BUDGET_DAYS} days.`)
+  }
+  if (!Array.isArray(data.exceptions) || data.exceptions.length > MAX_BUDGET_DAYS) {
+    throw new HttpsError('invalid-argument', 'Enter valid exception dates.')
+  }
+  const exceptions = data.exceptions.map((value: unknown) => {
+    const exception = getCalendarDay(value, 'exception date')
+    if (exception.millis < start.millis || exception.millis > end.millis) {
+      throw new HttpsError('invalid-argument', 'Exception dates must fall between the start and end dates.')
+    }
+    return exception.day
+  })
+  return { startDay: start.day, endDay: end.day, exceptions: [...new Set(exceptions)].sort() }
+}
+
+async function requireBudgetManager(transaction: Transaction, callerRef: DocumentReference) {
+  const caller = (await transaction.get(callerRef)).data()
+  if (!caller || caller.status === 'removed' || (caller.role !== 'owner' && caller.role !== 'manager')) {
+    throw new HttpsError('permission-denied', 'Only the workspace owner and managers can manage budgets.')
+  }
+}
+
+// Creates or edits a budget. A new user or target must be active; an unchanged one keeps its stored
+// display snapshot even if the member was removed or the project/client archived later.
+export const saveBudget = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const budgetId = getOptionalDocumentId(data, 'budgetId')
+  const userId = getDocumentId(data, 'userId')
+  const target = getBudgetTarget(data)
+  const { startDay, endDay, exceptions } = getBudgetDays(data)
+  const weekdayMinutes = getWeekdayMinutes(data)
+
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const budgetsRef = workspaceRef.collection('budgets')
+  const budgetRef = budgetId ? budgetsRef.doc(budgetId) : budgetsRef.doc()
+
+  await db.runTransaction(async (transaction) => {
+    await requireBudgetManager(transaction, workspaceRef.collection('members').doc(user.uid))
+    const existing = budgetId ? (await transaction.get(budgetRef)).data() : undefined
+    if (budgetId && !existing) throw new HttpsError('not-found', 'This budget no longer exists.')
+    if (existing?.archived === true)
+      throw new HttpsError('failed-precondition', 'Restore this budget before editing it.')
+
+    let userDisplayName = existing?.userDisplayName as string | undefined
+    if (!existing || existing.userId !== userId) {
+      const member = (await transaction.get(workspaceRef.collection('members').doc(userId))).data()
+      if (!member || member.status === 'removed') {
+        throw new HttpsError('failed-precondition', 'Choose an active workspace member.')
+      }
+      const name =
+        typeof member.displayName === 'string' && member.displayName.trim() ? member.displayName : member.email
+      userDisplayName = String(name ?? userId)
+        .trim()
+        .slice(0, 80)
+    }
+
+    let targetName = existing?.target?.name as string | undefined
+    if (!existing || existing.target?.type !== target.type || existing.target?.id !== target.id) {
+      const collectionName = target.type === 'project' ? 'projects' : 'clients'
+      const item = (await transaction.get(workspaceRef.collection(collectionName).doc(target.id))).data()
+      if (!item || item.archived !== false || typeof item.name !== 'string') {
+        throw new HttpsError('failed-precondition', 'Choose an active project or client.')
+      }
+      targetName = item.name.slice(0, 120)
+    }
+
+    const now = FieldValue.serverTimestamp()
+    const values = {
+      userId,
+      userDisplayName,
+      target: { ...target, name: targetName },
+      startDay,
+      endDay,
+      weekdayMinutes,
+      exceptions,
+      updatedAt: now,
+    }
+    if (existing) transaction.update(budgetRef, values)
+    else transaction.create(budgetRef, { ...values, archived: false, createdBy: user.uid, createdAt: now })
+  })
+
+  return { budgetId: budgetRef.id }
+})
+
+// Archived budgets drop out of progress views; restoring brings them back unchanged.
+export const setBudgetArchived = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const budgetId = getDocumentId(data, 'budgetId')
+  if (typeof data.archived !== 'boolean') throw new HttpsError('invalid-argument', 'Enter a valid archived value.')
+  const archived = data.archived
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const budgetRef = workspaceRef.collection('budgets').doc(budgetId)
+
+  await db.runTransaction(async (transaction) => {
+    await requireBudgetManager(transaction, workspaceRef.collection('members').doc(user.uid))
+    if (!(await transaction.get(budgetRef)).exists) throw new HttpsError('not-found', 'This budget no longer exists.')
+    transaction.update(budgetRef, { archived, updatedAt: FieldValue.serverTimestamp() })
+  })
+  return { budgetId, archived }
+})
+
+// Only archived budgets can be deleted, so a delete is always a deliberate second step.
+export const deleteBudget = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const budgetId = getDocumentId(data, 'budgetId')
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const budgetRef = workspaceRef.collection('budgets').doc(budgetId)
+
+  await db.runTransaction(async (transaction) => {
+    await requireBudgetManager(transaction, workspaceRef.collection('members').doc(user.uid))
+    const budget = (await transaction.get(budgetRef)).data()
+    if (!budget) throw new HttpsError('not-found', 'This budget no longer exists.')
+    if (budget.archived !== true) throw new HttpsError('failed-precondition', 'Archive this budget before deleting it.')
+    transaction.delete(budgetRef)
+  })
+  return { budgetId }
 })
 
 function matchesTokenHash(token: string, expectedHash: string): boolean {

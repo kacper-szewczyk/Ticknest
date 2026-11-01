@@ -129,6 +129,7 @@ All workspace-owned documents are scoped under a workspace ID. Exact collection 
 - `workspaces/{workspaceId}/projects/{projectId}`: name, client ID, description, color, estimate, archived flag, timestamps.
 - `workspaces/{workspaceId}/tasks/{taskId}`: project ID, name, estimate, archived flag, timestamps.
 - `workspaces/{workspaceId}/timeEntries/{entryId}`: user UID, user-name snapshot, description, client/project/task IDs and display snapshots, `startAt`, nullable `endAt`, billable boolean, created/updated timestamps, optional deleted/archive marker if soft deletion is used.
+- `workspaces/{workspaceId}/budgets/{budgetId}`: tracked user UID and name snapshot, project or client target with a name snapshot, inclusive start and end calendar days (at most 731 days), target minutes per weekday, exception dates, archived flag, creator, created/updated timestamps.
 
 Use server timestamps for audit fields. Store instants as Firestore timestamps. Do not treat client-supplied role, owner, or membership fields as authoritative.
 

@@ -65,6 +65,26 @@ export function completedEntry(userId: string, displayName: string, hour: number
   }
 }
 
+export function budgetId(userId: string): string {
+  return `budget-${userId}`
+}
+
+export function budgetFixture(userId: string) {
+  return {
+    userId,
+    userDisplayName: userId,
+    target: { type: 'project', id: PROJECT_ID_IN_WORKSPACE, name: 'Website' },
+    startDay: '2026-01-05',
+    endDay: '2026-03-27',
+    weekdayMinutes: { mon: 480, tue: 240, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 },
+    exceptions: ['2026-02-16'],
+    archived: false,
+    createdBy: OWNER.uid,
+    createdAt: PAST,
+    updatedAt: PAST,
+  }
+}
+
 function membership(
   user: { uid: string; email: string },
   role: 'owner' | 'manager' | 'member',
@@ -129,6 +149,10 @@ export async function seedWorkspace(env: RulesTestEnvironment): Promise<void> {
       [`${ws}/timeEntries/${OTHER_MEMBER_ENTRY_ID}`, completedEntry(OTHER_MEMBER.uid, 'dave', 10)],
       [`${ws}/timeEntries/${OWNER_ENTRY_ID}`, completedEntry(OWNER.uid, 'owner', 12)],
       [`${ws}/timeEntries/${MANAGER_ENTRY_ID}`, completedEntry(MANAGER.uid, 'mira', 14)],
+      ...[OWNER, MEMBER, MANAGER, OTHER_MEMBER, REMOVED_MEMBER].map((user): [string, object] => [
+        `${ws}/budgets/${budgetId(user.uid)}`,
+        budgetFixture(user.uid),
+      ]),
       [
         `${ws}/invitations/${INVITATION_ID}`,
         {
