@@ -8,4 +8,6 @@ interface ImportMetaEnv {
   readonly VITE_RECAPTCHA_ENTERPRISE_SITE_KEY?: string
   /** App Check debug token registered in the Firebase console, or `true` to generate one in the console log. */
   readonly VITE_APP_CHECK_DEBUG_TOKEN?: string
+  /** `true` shows the demo reset banner and demo accounts. Anything else (or unset) disables demo mode. */
+  readonly VITE_DEMO_MODE?: string
 }
