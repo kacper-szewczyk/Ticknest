@@ -111,7 +111,7 @@ export function MyBudgetsPanel({
   const loading = budgets === undefined || (hasActive && entries === undefined)
 
   return (
-    <SectionCard labelledBy="my-budgets-heading">
+    <SectionCard labelledBy="my-budgets-heading" sx={{ maxWidth: 960 }}>
       <SectionHeading id="my-budgets-heading" kicker="YOUR HOUR TARGETS" title="My budgets" />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
         Hours you’re asked to log on a project or client. Only completed entries count, and days are counted in{' '}
@@ -313,7 +313,12 @@ function BudgetProgressCard({
           }}
         >
           {weekDays.map((day) => (
-            <BudgetDayCell key={day.day} day={day} isToday={day.day === today} />
+            <BudgetDayCell
+              key={day.day}
+              day={day}
+              isToday={day.day === today}
+              isDayOff={day.expectedMinutes === 0 && group.some((budget) => budget.exceptions.includes(day.day))}
+            />
           ))}
         </Box>
       </Box>
@@ -321,7 +326,7 @@ function BudgetProgressCard({
   )
 }
 
-function BudgetDayCell({ day, isToday }: { day: BudgetDayProgress; isToday: boolean }) {
+function BudgetDayCell({ day, isToday, isDayOff }: { day: BudgetDayProgress; isToday: boolean; isDayOff: boolean }) {
   const date = dayDate(day.day)
   const weekday = WEEKDAY_LABELS[WEEKDAYS[(date.getDay() + 6) % 7]]
   const style = STATUS_STYLES[day.status]
@@ -339,19 +344,22 @@ function BudgetDayCell({ day, isToday }: { day: BudgetDayProgress; isToday: bool
         minWidth: 0,
       }}
     >
-      <Typography variant="caption" color="text.secondary" noWrap>
+      <Typography variant="caption" color="text.secondary">
         <abbr title={weekday.long} style={{ textDecoration: 'none' }}>
           {weekday.short}
         </abbr>{' '}
         {date.getDate()}
-        {isToday && ' · Today'}
+        {(isToday || isDayOff) && (
+          <Box component="span" sx={{ display: 'block', fontWeight: 600, color: isToday ? 'primary.main' : undefined }}>
+            {[isToday && 'Today', isDayOff && 'Day off'].filter(Boolean).join(' · ')}
+          </Box>
+        )}
       </Typography>
       <Typography variant="body2" sx={{ fontWeight: 650 }}>
         {formatBudgetMinutes(day.actualMinutes)}
-        <Typography component="span" variant="caption" color="text.secondary">
-          {' '}
-          / {formatBudgetMinutes(day.expectedMinutes)}
-        </Typography>
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        of {formatBudgetMinutes(day.expectedMinutes)}
       </Typography>
       <Typography variant="caption" sx={{ color: style.color, fontWeight: 600 }}>
         <span aria-hidden="true">{style.symbol}</span> {budgetDayLabel(day)}
