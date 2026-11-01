@@ -102,6 +102,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 4. **Reports** — filters, summary breakdown, detailed table, CSV export.
 5. **Clients and projects** — searchable list and detail/edit forms; owner actions.
 6. **Team and workspace settings** — members, invitations, and basic preferences.
+7. **Budgets** — owners and managers list budgets filtered by member, target, and status (active, upcoming, past, archived), and create, edit, archive, restore, or delete them. Hours per weekday accept decimal hours (`7.5`) or `H:MM` (`7:30`) and are shown as `H:MM`. Hidden from members.
 
 The interface must be responsive and usable on desktop and mobile web. Keyboard focus, labels, validation announcements, and sufficient contrast are required for core forms and timer actions.
 
