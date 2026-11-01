@@ -12,11 +12,13 @@ import {
 import type { User } from 'firebase/auth'
 import { callFunction, db } from './firebase'
 
+export type WorkspaceRole = 'owner' | 'manager' | 'member'
+
 export type Workspace = {
   id: string
   name: string
   ownerUid: string
-  role: 'owner' | 'member'
+  role: WorkspaceRole
   weekStartsOn: number
 }
 
@@ -24,10 +26,15 @@ export type WorkspaceMember = {
   uid: string
   email: string
   displayName: string
-  role: 'owner' | 'member'
+  role: WorkspaceRole
   status?: 'active' | 'removed'
   joinedAt: unknown
 }
+/** Owners and managers can read every workspace time entry and report on all users. */
+export function canSeeAllEntries(role: WorkspaceRole | undefined): boolean {
+  return role === 'owner' || role === 'manager'
+}
+
 export type WorkspaceInvitation = {
   id: string
   email: string
@@ -154,4 +161,15 @@ export async function removeWorkspaceMember(workspaceId: string, memberUid: stri
     workspaceId,
     memberUid,
   })
+}
+
+export async function setWorkspaceMemberRole(
+  workspaceId: string,
+  memberUid: string,
+  role: Exclude<WorkspaceRole, 'owner'>,
+): Promise<void> {
+  await callFunction<
+    { workspaceId: string; memberUid: string; role: Exclude<WorkspaceRole, 'owner'> },
+    { memberUid: string; role: string }
+  >('setWorkspaceMemberRole', { workspaceId, memberUid, role })
 }

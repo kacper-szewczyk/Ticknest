@@ -29,7 +29,14 @@ import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspa
 import { EntryEditor } from './EntryEditor'
 import { BillableChip, EmptyText, FormMessage, SelectField } from './ui'
 
-type Props = { user: User; workspaceId: string; isOwner: boolean; weekStartsOn: number; catalog: Catalog }
+type Props = {
+  user: User
+  workspaceId: string
+  canSeeAllEntries: boolean
+  isOwner: boolean
+  weekStartsOn: number
+  catalog: Catalog
+}
 type Person = { uid: string; name: string; email: string }
 type Status = 'running' | 'long-day' | 'overtime' | 'no-time' | 'on-track'
 type PersonStats = {
@@ -150,7 +157,7 @@ function buildStats(person: Person, entries: TimeEntry[], weekStart: string, now
   }
 }
 
-export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, catalog }: Props) {
+export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwner, weekStartsOn, catalog }: Props) {
   const [today] = useState(() => localDayString(new Date()))
   const [weekStart, setWeekStart] = useState(() => startOfWeekString(today, weekStartsOn))
   const previousWeekStart = shiftDayString(weekStart, -7)
@@ -170,18 +177,18 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
       subscribeToEntriesForRange(
         workspaceId,
         user.uid,
-        isOwner,
+        canSeeAllEntries,
         previousWeekStart,
         14,
         (entries) => setEntryState({ key: rangeKey, entries }),
         (loadError) => setError(loadError.message),
       ),
-    [workspaceId, user.uid, isOwner, previousWeekStart, rangeKey],
+    [workspaceId, user.uid, canSeeAllEntries, previousWeekStart, rangeKey],
   )
   useEffect(() => {
-    if (!isOwner) return
+    if (!canSeeAllEntries) return
     return subscribeToWorkspaceMembers(workspaceId, setMembers, (loadError) => setError(loadError.message))
-  }, [workspaceId, isOwner])
+  }, [workspaceId, canSeeAllEntries])
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(interval)
@@ -193,7 +200,7 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
       name: user.displayName?.trim() || user.email || 'You',
       email: user.email ?? '',
     }
-    if (!isOwner) return [self]
+    if (!canSeeAllEntries) return [self]
     const found = new Map<string, Person>()
     for (const member of members) {
       if (member.status === 'removed') continue
@@ -210,7 +217,7 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
     }
     if (!found.has(user.uid)) found.set(user.uid, self)
     return [...found.values()].sort((a, b) => a.name.localeCompare(b.name))
-  }, [members, allEntries, isOwner, user])
+  }, [members, allEntries, canSeeAllEntries, user])
 
   const stats = useMemo(
     () =>
@@ -261,13 +268,13 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
       >
         <div>
           <Typography variant="overline" component="p">
-            {isOwner ? 'TEAM TIMESHEET' : 'YOUR TIMESHEET'}
+            {canSeeAllEntries ? 'TEAM TIMESHEET' : 'YOUR TIMESHEET'}
           </Typography>
           <Typography variant="h2" id="dashboard-heading" sx={{ fontSize: 32 }}>
             Timesheet dashboard
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {isOwner
+            {canSeeAllEntries
               ? 'Review, correct, and add time for everyone in this workspace.'
               : 'Review and correct your tracked time.'}
           </Typography>
@@ -296,20 +303,22 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
         />
         <StatTile label="Entries" value={String(entryCount)} change={percentChange(entryCount, previousEntryCount)} />
         <StatTile
-          label={isOwner ? 'Active members' : 'Days tracked'}
-          value={isOwner ? `${activeCount} / ${stats.length}` : String(stats[0]?.byDay.filter(Boolean).length ?? 0)}
-          caption={isOwner ? 'Tracked time this week' : 'Out of 7 days'}
+          label={canSeeAllEntries ? 'Active members' : 'Days tracked'}
+          value={
+            canSeeAllEntries ? `${activeCount} / ${stats.length}` : String(stats[0]?.byDay.filter(Boolean).length ?? 0)
+          }
+          caption={canSeeAllEntries ? 'Tracked time this week' : 'Out of 7 days'}
         />
         <StatTile
-          label={isOwner ? 'Avg per member' : 'Avg per day'}
+          label={canSeeAllEntries ? 'Avg per member' : 'Avg per day'}
           value={formatHours(
-            isOwner
+            canSeeAllEntries
               ? activeCount
                 ? total / activeCount
                 : 0
               : total / Math.max(1, stats[0]?.byDay.filter(Boolean).length ?? 1),
           )}
-          caption={isOwner ? 'Among active members' : 'On days with time'}
+          caption={canSeeAllEntries ? 'Among active members' : 'On days with time'}
         />
         <StatTile
           label="Long days"
@@ -327,7 +336,7 @@ export function TimesheetDashboard({ user, workspaceId, isOwner, weekStartsOn, c
         >
           <TextField
             type="search"
-            placeholder={isOwner ? 'Search members…' : 'Search…'}
+            placeholder={canSeeAllEntries ? 'Search members…' : 'Search…'}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             slotProps={{ htmlInput: { 'aria-label': 'Search members' } }}

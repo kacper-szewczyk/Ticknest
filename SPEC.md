@@ -27,9 +27,10 @@ This is an independent product. It must not use Clockify branding, proprietary a
 ## 4. Users and roles
 
 - **Workspace owner:** creates the workspace, manages members and workspace settings, and can edit all workspace time entries and projects.
+- **Manager:** a member who can also read every workspace time entry, run reports on all users, and create, edit, and delete budgets for any member. Managers track and edit only their own time and cannot manage clients, projects, tasks, invitations, members, or workspace settings. The owner promotes members to manager and demotes them back; invitations always join as members.
 - **Member:** tracks and edits their own time; views shared clients, projects, and tasks.
 - A user may belong to multiple workspaces. The active workspace is selected in the application.
-- Initial release has no manager role or configurable permission matrix.
+- There is no configurable permission matrix beyond these three roles.
 
 ## 5. Functional requirements
 
@@ -73,7 +74,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 ### 5.5 Workspace and membership
 
-- Owner can rename the workspace, invite members, revoke invitations, and remove members.
+- Owner can rename the workspace, invite members, revoke invitations, remove members, and promote a member to manager or demote a manager back to member. The owner's own role cannot be changed.
 - A member cannot remove the owner or change owner permissions.
 - Removing a member revokes access but preserves their historical time entries, attributed to the user ID and display name snapshot.
 - Show a basic team directory with name, email, and role.
@@ -82,7 +83,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 - Provide a date-range summary of total duration, with grouping by day, user, client, project, or task.
 - Provide a detailed entry list with filters for date, user, client, project, task, and billable status.
-- Members can report on their own entries; owners can report on all workspace entries.
+- Members can report on their own entries; owners and managers can report on all workspace entries.
 - Export filtered detailed entries as CSV. Escape commas, quotes, and newlines correctly. No PDF or spreadsheet formatting requirement in v1.
 
 ### 5.7 Settings and privacy
@@ -122,7 +123,7 @@ All workspace-owned documents are scoped under a workspace ID. Exact collection 
 
 - `users/{uid}`: display name, email (non-authoritative copy), timezone, color palette preference, created timestamp.
 - `workspaces/{workspaceId}`: name, owner UID, week start, created/updated timestamps.
-- `workspaces/{workspaceId}/members/{uid}`: role (`owner` or `member`), joined timestamp, display-name snapshot.
+- `workspaces/{workspaceId}/members/{uid}`: role (`owner`, `manager`, or `member`), joined timestamp, display-name snapshot.
 - `workspaces/{workspaceId}/invitations/{inviteId}`: email, role, token hash, expiry, creator, status.
 - `workspaces/{workspaceId}/clients/{clientId}`: name, archived flag, timestamps.
 - `workspaces/{workspaceId}/projects/{projectId}`: name, client ID, description, color, estimate, archived flag, timestamps.
@@ -135,9 +136,9 @@ Use server timestamps for audit fields. Store instants as Firestore timestamps. 
 
 - Deny by default in Firestore Security Rules.
 - A user may read workspace data only if they have an active membership record for that workspace.
-- Members may create and change only their own time entries; owners may manage all workspace entries. Validate allowed fields, types, timestamps, and workspace scope in rules and trusted functions.
-- Members cannot write membership, invitation, or workspace-owner fields directly.
-- Only the owner can manage clients, projects, tasks, invites, and workspace settings in v1.
+- Members and managers may create and change only their own time entries; owners may manage all workspace entries. Owners and managers may read all workspace entries. Validate allowed fields, types, timestamps, and workspace scope in rules and trusted functions.
+- Members and managers cannot write membership, invitation, or workspace-owner fields directly. Only the owner can change a member's role, through a trusted callable.
+- Only the owner can manage clients, projects, tasks, invites, members, and workspace settings. Managers can additionally manage budgets.
 - Invitation tokens must be high entropy, stored as hashes, expire, and be single-use. Do not expose open invitation enumeration.
 - Restrict Firebase API keys by app/domain where supported; document that Firebase client API keys are identifiers, not secrets.
 - Include a security rules test matrix and emulator-based verification before release.

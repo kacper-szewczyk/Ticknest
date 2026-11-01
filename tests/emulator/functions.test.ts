@@ -478,3 +478,96 @@ describe('removeWorkspaceMember', () => {
     await assertSucceeds(getDoc(doc(memberDb, workspacePath)))
   })
 })
+
+describe('setWorkspaceMemberRole', () => {
+  async function workspaceWithManager() {
+    const owner = await createUser('owner', 'owner@example.com')
+    const manager = await createUser('mira', 'mira@example.com')
+    const member = await createUser('alice', 'alice@example.com')
+    const workspaceId = await createWorkspaceAs(owner)
+    await inviteAndAccept(owner, workspaceId, manager)
+    await inviteAndAccept(owner, workspaceId, member)
+    await owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: manager.uid, role: 'manager' })
+    return { owner, manager, member, workspaceId }
+  }
+
+  it('lets the owner promote a member to manager and demote them back', async () => {
+    const { owner, manager, workspaceId } = await workspaceWithManager()
+    const memberPath = `workspaces/${workspaceId}/members/${manager.uid}`
+    expect((await adminDb.doc(memberPath).get()).data()?.role).toBe('manager')
+
+    await owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: manager.uid, role: 'member' })
+    expect((await adminDb.doc(memberPath).get()).data()?.role).toBe('member')
+  })
+
+  it('gives managers every workspace entry while members keep only their own', async () => {
+    const { manager, member, workspaceId } = await workspaceWithManager()
+    const entriesPath = `workspaces/${workspaceId}/timeEntries`
+    await member.call('saveManualTimeEntry', {
+      workspaceId,
+      entryId: null,
+      description: 'Member work',
+      clientId: null,
+      projectId: null,
+      taskId: null,
+      billable: false,
+      startAt: Date.now() - 2 * 60 * 60 * 1000,
+      endAt: Date.now() - 60 * 60 * 1000,
+    })
+
+    const all = await assertSucceeds(getDocs(collection(rulesFirestore(manager), entriesPath)))
+    expect(all.docs.map((entry) => entry.data().userId)).toContain(member.uid)
+    await assertFails(getDocs(collection(rulesFirestore(member), entriesPath)))
+  })
+
+  it('denies role changes from members and managers', async () => {
+    const { owner, manager, member, workspaceId } = await workspaceWithManager()
+
+    await expectCallError(
+      member.call('setWorkspaceMemberRole', { workspaceId, memberUid: member.uid, role: 'manager' }),
+      'permission-denied',
+    )
+    await expectCallError(
+      manager.call('setWorkspaceMemberRole', { workspaceId, memberUid: member.uid, role: 'manager' }),
+      'permission-denied',
+    )
+    await expectCallError(
+      manager.call('setWorkspaceMemberRole', { workspaceId, memberUid: owner.uid, role: 'member' }),
+      'permission-denied',
+    )
+    expect((await adminDb.doc(`workspaces/${workspaceId}/members/${member.uid}`).get()).data()?.role).toBe('member')
+  })
+
+  it('keeps managers out of invitations and member removal', async () => {
+    const { manager, member, workspaceId } = await workspaceWithManager()
+
+    await expectCallError(
+      manager.call('createWorkspaceInvitation', { workspaceId, email: 'new@example.com' }),
+      'permission-denied',
+    )
+    await expectCallError(
+      manager.call('removeWorkspaceMember', { workspaceId, memberUid: member.uid }),
+      'permission-denied',
+    )
+  })
+
+  it("denies changing the owner's role, assigning owner, and changing a removed member", async () => {
+    const { owner, manager, member, workspaceId } = await workspaceWithManager()
+
+    await expectCallError(
+      owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: owner.uid, role: 'member' }),
+      'failed-precondition',
+    )
+    await expectCallError(
+      owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: member.uid, role: 'owner' }),
+      'invalid-argument',
+    )
+
+    await owner.call('removeWorkspaceMember', { workspaceId, memberUid: manager.uid })
+    expect((await adminDb.doc(`workspaces/${workspaceId}/members/${manager.uid}`).get()).data()?.status).toBe('removed')
+    await expectCallError(
+      owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: manager.uid, role: 'manager' }),
+      'not-found',
+    )
+  })
+})

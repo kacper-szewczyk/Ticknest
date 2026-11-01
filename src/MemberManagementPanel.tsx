@@ -11,12 +11,16 @@ import {
   createWorkspaceInvitation,
   removeWorkspaceMember,
   revokeWorkspaceInvitation,
+  setWorkspaceMemberRole,
   subscribeToWorkspaceInvitations,
   subscribeToWorkspaceMembers,
   type WorkspaceInvitation,
   type WorkspaceMember,
+  type WorkspaceRole,
 } from './lib/workspaces'
 import { EmptyText, FormMessage, ListRow, SectionCard, SectionHeading } from './ui'
+
+const ROLE_LABELS: Record<WorkspaceRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
 
 export function MemberManagementPanel({ workspaceId, currentUserId }: { workspaceId: string; currentUserId: string }) {
   const [members, setMembers] = useState<WorkspaceMember[]>([])
@@ -90,6 +94,22 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
       setNotice(`${member.displayName || member.email} was removed. Historical entries were retained.`)
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : 'Could not remove this member.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function changeRole(member: WorkspaceMember) {
+    const role = member.role === 'manager' ? 'member' : 'manager'
+    const name = member.displayName || member.email
+    setPending(true)
+    setError('')
+    setNotice('')
+    try {
+      await setWorkspaceMemberRole(workspaceId, member.uid, role)
+      setNotice(role === 'manager' ? `${name} is now a manager.` : `${name} is now a member.`)
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : 'Could not change this member’s role.')
     } finally {
       setPending(false)
     }
@@ -207,14 +227,19 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                   {member.displayName || member.email}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                  {member.email} · {member.role === 'owner' ? 'Owner' : 'Member'}
+                  {member.email} · {ROLE_LABELS[member.role] ?? 'Member'}
                 </Typography>
               </Box>
             </Stack>
-            {member.role === 'member' && member.uid !== currentUserId && (
-              <Button size="small" color="error" onClick={() => void remove(member)} disabled={pending}>
-                Remove
-              </Button>
+            {member.role !== 'owner' && member.uid !== currentUserId && (
+              <Stack direction="row" spacing={1} sx={{ flex: '0 0 auto' }}>
+                <Button size="small" onClick={() => void changeRole(member)} disabled={pending}>
+                  {member.role === 'manager' ? 'Make member' : 'Make manager'}
+                </Button>
+                <Button size="small" color="error" onClick={() => void remove(member)} disabled={pending}>
+                  Remove
+                </Button>
+              </Stack>
             )}
           </ListRow>
         ))}
