@@ -20,6 +20,90 @@ Ticknest is software you deploy and operate in your own Firebase project. The re
 
 Hosting serves the `dist/` build, while deployment also publishes Firestore rules, indexes, and callable Functions. Functions run in `europe-west1` by default (see [Functions region](#functions-region)). Use HTTPS and review Firebase rules before exposing a project to users.
 
+To deploy automatically on every merge instead, see [Deploy from GitHub Actions](#deploy-from-github-actions-optional).
+
+### Deploy from GitHub Actions (optional)
+
+The repository includes two workflows that deploy to your Firebase project from GitHub Actions. Both authenticate with [Workload Identity Federation](https://github.com/google-github-actions/auth#workload-identity-federation-through-a-service-account), so no service-account key is stored in GitHub. They do nothing until you set the `FIREBASE_PROJECT_ID` repository variable, so a fork or a repository that deploys by hand is unaffected.
+
+- **`deploy.yml`** deploys `main` once the quality checks for a push pass, and the release commit after the release workflow merges it. It runs `firebase deploy` for Hosting, Firestore rules and indexes, and Functions, in the `production` GitHub environment. You can also run it by hand from the Actions tab.
+- **`preview.yml`** builds each pull request and deploys it to a Firebase Hosting [preview channel](https://firebase.google.com/docs/hosting/test-preview-deploy) named `pr-<number>`, then comments the URL on the pull request. The channel expires 7 days after the last push and is deleted when the pull request closes. It runs in the `preview` GitHub environment. Pull requests from forks and Dependabot get no preview, because GitHub does not give them the OIDC token that Workload Identity Federation needs.
+
+> ⚠️ **A preview channel only deploys Hosting.** The preview connects to the Firestore data, rules, and Functions of the project it is built for. If that is your production project, anyone who opens a preview can sign in and change real data, and a pull request that changes the rules or Functions is previewed against the deployed ones. Point previews at a separate project, as described below, unless that is acceptable.
+
+#### Set up Google Cloud
+
+Run these commands with the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install), signed in as an owner of the project. Replace the values in the first two lines.
+
+```sh
+PROJECT_ID=your-firebase-project-id
+REPO=your-github-user/your-repository
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+
+gcloud services enable iamcredentials.googleapis.com sts.googleapis.com --project="$PROJECT_ID"
+
+# A pool and provider that trust GitHub's OIDC tokens from this repository only.
+gcloud iam workload-identity-pools create github --project="$PROJECT_ID" --location=global
+gcloud iam workload-identity-pools providers create-oidc ticknest --project="$PROJECT_ID" \
+  --location=global --workload-identity-pool=github \
+  --issuer-uri=https://token.actions.githubusercontent.com \
+  --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository \
+  --attribute-condition="assertion.repository == '$REPO'"
+
+# The service account that production deploys run as.
+gcloud iam service-accounts create ticknest-deploy --project="$PROJECT_ID"
+DEPLOY_SA="ticknest-deploy@$PROJECT_ID.iam.gserviceaccount.com"
+for role in roles/firebase.admin roles/iam.serviceAccountUser; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$DEPLOY_SA" --role="$role"
+done
+
+# Only jobs in the production environment may act as it.
+gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" --project="$PROJECT_ID" \
+  --role=roles/iam.workloadIdentityUser \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:$REPO:environment:production"
+```
+
+`roles/firebase.admin` covers Hosting, Firestore rules and indexes, and Functions. `roles/iam.serviceAccountUser` lets the deploy attach the runtime service account to the Functions. If a deploy fails with a permission error, the Firebase CLI names the missing permission; grant a role that includes it.
+
+For previews, create a second service account with only what a preview channel needs. Firebase Authentication Admin lets the CLI add each channel's domain to the authorized domains, so Google sign-in works on the preview. If previews use a separate project, run the pool, provider, and service-account commands in that project instead.
+
+```sh
+gcloud iam service-accounts create ticknest-preview --project="$PROJECT_ID"
+PREVIEW_SA="ticknest-preview@$PROJECT_ID.iam.gserviceaccount.com"
+for role in roles/firebasehosting.admin roles/firebaseauth.admin; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$PREVIEW_SA" --role="$role"
+done
+gcloud iam service-accounts add-iam-policy-binding "$PREVIEW_SA" --project="$PROJECT_ID" \
+  --role=roles/iam.workloadIdentityUser \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:$REPO:environment:preview"
+```
+
+The project must be on the Blaze plan, as for a manual deploy.
+
+#### Configure GitHub
+
+1. Under **Settings → Environments**, create the `production` and `preview` environments. To approve each production deploy before it runs, add required reviewers to `production`. Restrict `production` to the `main` branch under **Deployment branches and tags**.
+2. Under **Settings → Secrets and variables → Actions → Variables**, add the variables below. None of them are secret. Set `FIREBASE_PROJECT_ID`, `FIREBASE_DEPLOY_ONLY`, and `FIREBASE_PREVIEW_CHANNELS` as repository variables, because GitHub reads them before it loads an environment. Set the others on the repository, or on an environment to give production and previews different values.
+
+| Variable                                         | Value                                                                                                                                                                                                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `FIREBASE_PROJECT_ID`                            | The Firebase project ID, also used as `VITE_FIREBASE_PROJECT_ID`. Setting it turns the workflows on. Also set it on the `preview` environment to build previews for a separate project.                                                          |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER`                 | `projects/<project-number>/locations/global/workloadIdentityPools/github/providers/ticknest`                                                                                                                                                     |
+| `GCP_SERVICE_ACCOUNT`                            | The deploy service account on `production`, and the preview service account on `preview`.                                                                                                                                                        |
+| `VITE_FIREBASE_API_KEY`                          | The Web app values, as in step 3 of [Configure your Firebase project](#configure-your-firebase-project).                                                                                                                                         |
+| `VITE_FIREBASE_AUTH_DOMAIN`                      |                                                                                                                                                                                                                                                  |
+| `VITE_FIREBASE_APP_ID`                           |                                                                                                                                                                                                                                                  |
+| `FUNCTIONS_REGION`                               | Optional. The [Functions region](#functions-region), used for both the Functions and the web app.                                                                                                                                                |
+| `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`             | Optional. See [App Check](#app-check-optional).                                                                                                                                                                                                  |
+| `ENFORCE_APP_CHECK`                              | Optional. `true` to enforce App Check on the callable Functions.                                                                                                                                                                                 |
+| `VITE_DEMO_MODE`, `DEMO_MODE`, `DEMO_PROJECT_ID` | Optional. See [Demo mode](#demo-mode-optional).                                                                                                                                                                                                  |
+| `FIREBASE_DEPLOY_ONLY`                           | Optional. What `deploy.yml` deploys; defaults to `hosting,firestore:rules,firestore:indexes,functions`. Set it to `firestore:rules,firestore:indexes,functions` when the web app is [hosted on Vercel](#hosting-the-web-app-on-vercel-optional). |
+| `FIREBASE_PREVIEW_CHANNELS`                      | Optional. `false` turns off preview channels, for example when Vercel already builds a preview for each pull request.                                                                                                                            |
+
+`functions/.env` is ignored by Git, so the deploy workflow writes it from `FUNCTIONS_REGION`, `ENFORCE_APP_CHECK`, `DEMO_MODE`, and `DEMO_PROJECT_ID`. Params you leave unset keep their defaults.
+
+The deploy runs `firebase deploy --force`, so the CLI deletes Functions that are no longer in the source without asking, including the ones left behind when you change `FUNCTIONS_REGION`.
+
 ### Hosting the web app on Vercel (optional)
 
 You can serve the web app from [Vercel](https://vercel.com) instead of Firebase Hosting. Firestore, Auth, and the callable Functions stay in your Firebase project, so still deploy them with `npx firebase deploy --only firestore:rules,firestore:indexes,functions`.
@@ -183,5 +267,6 @@ Follow the official [Firestore export/import guide](https://firebase.google.com/
 1. Stop using the project and create/verify any backup you need.
 2. Remove the Firebase project through the Firebase console, following the current deletion guidance. This removes or disables all project services and affects all apps using that project.
 3. Separately review Cloud Storage backup buckets, scheduled jobs, custom domains/DNS, and any resources created outside the Firebase project. Keep or delete backups according to your retention needs.
-4. Remove local `.env.local` and `.firebaserc` files when you no longer need the checkout. They are ignored by Git; do not publish their values.
-5. Review the Cloud Billing account and detach the deleted project if appropriate. Do not close a billing account shared by other projects.
+4. If you deploy from GitHub Actions, delete the `FIREBASE_PROJECT_ID` repository variable so the workflows stop running.
+5. Remove local `.env.local` and `.firebaserc` files when you no longer need the checkout. They are ignored by Git; do not publish their values.
+6. Review the Cloud Billing account and detach the deleted project if appropriate. Do not close a billing account shared by other projects.

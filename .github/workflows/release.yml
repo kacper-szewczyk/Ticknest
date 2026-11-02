@@ -41,12 +41,17 @@ jobs:
     name: Merge release PR
     needs: [release-please, check-release-pr]
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.merge.outputs.sha }}
     steps:
       - name: Squash-merge the release PR
+        id: merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ fromJSON(needs.release-please.outputs.pr).number }}
-        run: gh pr merge "$PR" --squash --repo "$GITHUB_REPOSITORY"
+        run: |
+          gh pr merge "$PR" --squash --repo "$GITHUB_REPOSITORY"
+          echo "sha=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq .mergeCommit.oid)" >> "$GITHUB_OUTPUT"
 
   # A merge made with GITHUB_TOKEN does not trigger a new push run, so tag and publish the
   # release from this run.
@@ -59,3 +64,15 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  # The merge above does not trigger the push run that deploy.yml follows, so deploy the release
+  # commit from here. The deploy job skips itself unless deploys are configured.
+  deploy:
+    name: Deploy release
+    needs: [merge-release-pr, publish-release]
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ needs.merge-release-pr.outputs.sha }}
