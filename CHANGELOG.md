@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.18.0...ticknest-v1.19.0) (2026-11-02)
+
+
+### Features
+
+* allow hiding Google sign-in with VITE_GOOGLE_SIGN_IN_ENABLED ([#137](https://github.com/kacper-szewczyk/Ticknest/issues/137)) ([ffbb9d6](https://github.com/kacper-szewczyk/Ticknest/commit/ffbb9d6e762713a379ecde9390b6446b316aa836)), closes [#106](https://github.com/kacper-szewczyk/Ticknest/issues/106)
+
 ## [1.18.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.17.0...ticknest-v1.18.0) (2026-11-01)
 
 
