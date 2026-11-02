@@ -112,6 +112,12 @@ You can serve the web app from [Vercel](https://vercel.com) instead of Firebase 
 2. Add the `VITE_*` values from step 3 above as Vercel environment variables for Production (and Preview, if previews should reach the same project). Set the Node.js version to 22.x or 24.x.
 3. Add the Vercel domain under Authentication → Settings → Authorized domains in the Firebase console, or Google sign-in fails with `auth/unauthorized-domain`.
 
+**Preview deployments.** Firebase authorized domains do not accept wildcards, and every Vercel preview gets its own hostname, so Google sign-in cannot work on previews. Set `VITE_GOOGLE_SIGN_IN_ENABLED=false` for the Preview environment only. Preview builds then hide the Google button, and reviewers sign in with email and password (or the demo accounts in [Demo mode](#demo-mode-optional)). Leave the variable unset for Production, where Google sign-in stays on. The flag is read at build time, so redeploy after you change it.
+
+Previews run the pull request's web app against the rules, indexes, and Functions already deployed to the Firebase project. They do not deploy those, so test changes to them with the emulators (see [Contributing](../CONTRIBUTING.md#run-the-tests)).
+
+To let reviewers without a Vercel account open previews, turn off Vercel Authentication under Settings → Deployment Protection. The bundle only holds the public Firebase web config. Keep Git fork protection on (Settings → Git), so pull requests from forks build only after a team member approves them; otherwise a fork could run its own build code with access to the Preview environment variables.
+
 `firebase.json` and `vercel.json` each define the headers for their own host. When you change the headers or rewrites in one, change the other too.
 
 To run the deployment as a public demo that resets every day, see [Demo mode](#demo-mode-optional).
@@ -152,7 +158,7 @@ Replace `europe-west1` with your [Functions region](#functions-region). The run 
 
 **Costs.** Cloud Scheduler gives each billing account a few free jobs per month and bills each additional job monthly; see [Cloud Scheduler pricing](https://cloud.google.com/scheduler/pricing). Each reset reads and deletes every document in the project, then writes the seed, about 1,700 documents. Anything visitors added that day is deleted too. That fits within the Firestore no-cost daily quota for a lightly used demo, but heavy traffic adds to it. The Function itself runs for a short time once a day. Set a budget alert on the demo project, as for any project (see [Costs](#costs)).
 
-**Preview deployments.** Vercel preview deployments use the same `VITE_*` values as Production when you set them for Preview, so they connect to the demo project, show demo data, and lose any changes at the next reset. Until previews get a separate project ([#106](https://github.com/kacper-szewczyk/Ticknest/issues/106)), do not use them to test anything that needs data to persist.
+**Preview deployments.** Vercel preview deployments use the same `VITE_*` values as Production when you set them for Preview, so they connect to the demo project, show demo data, and lose any changes at the next reset. There is no separate staging project ([#106](https://github.com/kacper-szewczyk/Ticknest/issues/106)): the daily reset clears anything a preview writes, so do not use previews to test anything that needs data to persist. Previews hide Google sign-in (see [Hosting the web app on Vercel](#hosting-the-web-app-on-vercel-optional)); use the demo accounts instead.
 
 **Turning demo mode off.**
 

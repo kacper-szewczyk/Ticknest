@@ -10,4 +10,6 @@ interface ImportMetaEnv {
   readonly VITE_APP_CHECK_DEBUG_TOKEN?: string
   /** `true` shows the demo reset banner and demo accounts. Anything else (or unset) disables demo mode. */
   readonly VITE_DEMO_MODE?: string
+  /** `false` hides Google sign-in, for hosts that are not Firebase authorized domains. Anything else (or unset) keeps it. */
+  readonly VITE_GOOGLE_SIGN_IN_ENABLED?: string
 }
