@@ -1,0 +1,99 @@
+name: Deploy
+
+# Deploys main to the Firebase project in the FIREBASE_PROJECT_ID variable, authenticating with
+# Workload Identity Federation. Without that variable the job is skipped, so forks and
+# repositories that deploy by hand are unaffected. See docs/operations.md#deploy-from-github-actions.
+on:
+  # Deploy each push to main once its quality checks pass.
+  workflow_run:
+    workflows: [Quality checks]
+    types: [completed]
+    branches: [main]
+  # Called by release.yml for the release commit, which GitHub does not run a push workflow for
+  # because release-please merges it with GITHUB_TOKEN.
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to deploy.
+        type: string
+        required: true
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Firebase
+    if: >-
+      vars.FIREBASE_PROJECT_ID != '' &&
+      (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    # Add required reviewers to this environment to approve each production deploy.
+    environment: production
+    # One deploy at a time; a newer pending deploy replaces an older pending one.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DEPLOY_ONLY: ${{ vars.FIREBASE_DEPLOY_ONLY || 'hosting,firestore:rules,firestore:indexes,functions' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.event.workflow_run.head_sha || github.sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Functions dependencies
+        if: contains(env.DEPLOY_ONLY, 'functions')
+        run: npm ci --prefix functions
+      - name: Build app
+        if: contains(env.DEPLOY_ONLY, 'hosting')
+        run: npm run build
+        env:
+          VITE_USE_FIREBASE_EMULATORS: 'false'
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
+          VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY }}
+          VITE_DEMO_MODE: ${{ vars.VITE_DEMO_MODE }}
+      # functions/.env is ignored by Git, so write the Functions params from repository variables.
+      # Unset variables are left out and the params keep their defaults.
+      - name: Write Functions params
+        if: contains(env.DEPLOY_ONLY, 'functions')
+        env:
+          FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
+          ENFORCE_APP_CHECK: ${{ vars.ENFORCE_APP_CHECK }}
+          DEMO_MODE: ${{ vars.DEMO_MODE }}
+          DEMO_PROJECT_ID: ${{ vars.DEMO_PROJECT_ID }}
+        run: |
+          for name in FUNCTIONS_REGION ENFORCE_APP_CHECK DEMO_MODE DEMO_PROJECT_ID; do
+            if [ -n "${!name}" ]; then echo "$name=${!name}" >> functions/.env; fi
+          done
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      # --force lets the CLI delete Functions that were removed from the source (or moved to
+      # another region) and set the container image cleanup policy without prompting.
+      - name: Deploy
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: npx firebase deploy --only "$DEPLOY_ONLY" --project "$FIREBASE_PROJECT_ID" --non-interactive --force

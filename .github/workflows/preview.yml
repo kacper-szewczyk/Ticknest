@@ -1,0 +1,136 @@
+name: Preview
+
+# Deploys each pull request's web app to a Firebase Hosting preview channel and comments its URL.
+# Only Hosting is deployed: the preview uses the rules, indexes, Functions, and data of the
+# Firebase project it points at. Skipped unless FIREBASE_PROJECT_ID is set, for pull requests
+# from forks and Dependabot (which get no OIDC token), and when FIREBASE_PREVIEW_CHANNELS is
+# 'false'. See docs/operations.md#deploy-from-github-actions.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Sets -o pipefail, so a failed deploy is not hidden by the pipe into jq.
+    shell: bash
+
+env:
+  CHANNEL_ID: pr-${{ github.event.pull_request.number }}
+
+jobs:
+  deploy:
+    name: Deploy preview channel
+    if: >-
+      github.event.action != 'closed' &&
+      vars.FIREBASE_PROJECT_ID != '' && vars.FIREBASE_PREVIEW_CHANNELS != 'false' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    # Variables set on this environment override the repository ones, so previews can use a
+    # separate Firebase project. Environment variables only reach steps, not the job's `if`.
+    environment: preview
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build app
+        run: npm run build
+        env:
+          VITE_USE_FIREBASE_EMULATORS: 'false'
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
+          VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY }}
+          VITE_DEMO_MODE: ${{ vars.VITE_DEMO_MODE }}
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      # The CLI also adds the channel's domain to the project's authorized Auth domains.
+      - name: Deploy preview channel
+        id: channel
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          url=$(npx firebase hosting:channel:deploy "$CHANNEL_ID" --expires 7d --project "$FIREBASE_PROJECT_ID" --json \
+            | jq -er '.result | to_entries[0].value.url')
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      # Keep one comment per pull request and update it on each push.
+      - name: Comment preview URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          PR: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.channel.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          marker='<!-- firebase-hosting-preview -->'
+          body=$(printf '%s\nPreview of %s: %s\n\nThe channel expires 7 days after the last push and uses the data in `%s`.' \
+            "$marker" "$SHA" "$URL" "$FIREBASE_PROJECT_ID")
+          comment_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n 1)
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -f body="$body" > /dev/null
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
+
+  delete:
+    name: Delete preview channel
+    if: >-
+      github.event.action == 'closed' &&
+      vars.FIREBASE_PROJECT_ID != '' && vars.FIREBASE_PREVIEW_CHANNELS != 'false' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    environment: preview
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The pull request's merge ref is gone once it closes, so use the base branch's lockfile.
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      # The channel may already have expired, so a failed delete is not an error.
+      - name: Delete preview channel
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          npx firebase hosting:channel:delete "$CHANNEL_ID" --force --project "$FIREBASE_PROJECT_ID" \
+            || echo "No channel $CHANNEL_ID to delete."
