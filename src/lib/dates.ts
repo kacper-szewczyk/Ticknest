@@ -63,3 +63,26 @@ export function formatElapsed(seconds: number): string {
   const remainder = (seconds % 60).toString().padStart(2, '0')
   return `${hours}:${minutes}:${remainder}`
 }
+
+/** The week starts a workspace can be created with: Sunday (0) or Monday (1), as in `Date.getDay()`. */
+export type WeekStart = 0 | 1
+
+type LocaleWithWeekInfo = Intl.Locale & {
+  getWeekInfo?: () => { firstDay: number }
+  weekInfo?: { firstDay: number }
+}
+
+/**
+ * The week start the locale uses, as a default for new workspaces. Intl reports the first day as 1–7
+ * (Monday–Sunday); locales starting on another day, and browsers without week info, get Monday.
+ */
+export function localeWeekStart(locale: string): WeekStart {
+  try {
+    const info = new Intl.Locale(locale) as LocaleWithWeekInfo
+    // Newer engines expose getWeekInfo(); older Chrome and Safari expose the weekInfo getter.
+    const firstDay = (info.getWeekInfo?.() ?? info.weekInfo)?.firstDay
+    return firstDay === 7 ? 0 : 1
+  } catch {
+    return 1
+  }
+}

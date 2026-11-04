@@ -73,6 +73,16 @@ function getDisplayName(data: CallableData): string {
   return displayName.trim()
 }
 
+// Older clients omit the week start, so a missing value keeps the Monday default.
+function getWeekStartsOn(data: CallableData): 0 | 1 {
+  const weekStartsOn = data.weekStartsOn
+  if (weekStartsOn === undefined) return 1
+  if (weekStartsOn !== 0 && weekStartsOn !== 1) {
+    throw new HttpsError('invalid-argument', 'Choose Monday or Sunday as the week start.')
+  }
+  return weekStartsOn
+}
+
 function getDocumentId(data: CallableData, field: string): string {
   const value = getRequiredText(data, field, 128)
   if (!/^[A-Za-z0-9_-]+$/.test(value)) {
@@ -99,6 +109,7 @@ export const createWorkspace = onCall(FUNCTION_OPTIONS, async (request) => {
   const name = getRequiredText(data, 'name', 80)
   const timezone = getTimeZone(data)
   const displayName = getDisplayName(data)
+  const weekStartsOn = getWeekStartsOn(data)
 
   const workspaceRef = db.collection('workspaces').doc()
   const memberRef = workspaceRef.collection('members').doc(user.uid)
@@ -111,7 +122,7 @@ export const createWorkspace = onCall(FUNCTION_OPTIONS, async (request) => {
     transaction.create(workspaceRef, {
       name,
       ownerUid: user.uid,
-      weekStartsOn: 1,
+      weekStartsOn,
       createdAt: now,
       updatedAt: now,
     })

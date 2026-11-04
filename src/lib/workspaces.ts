@@ -10,6 +10,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import type { User } from 'firebase/auth'
+import type { WeekStart } from './dates'
 import { callFunction, db } from './firebase'
 
 export type WorkspaceRole = 'owner' | 'manager' | 'member'
@@ -88,12 +89,12 @@ export async function loadWorkspaces(user: User): Promise<Workspace[]> {
   return workspaces.filter((workspace): workspace is Workspace => workspace !== null)
 }
 
-export async function createWorkspace(user: User, name: string): Promise<string> {
+export async function createWorkspace(user: User, name: string, weekStartsOn: WeekStart): Promise<string> {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   const { workspaceId } = await callFunction<
-    { name: string; displayName: string; timezone: string },
+    { name: string; displayName: string; timezone: string; weekStartsOn: WeekStart },
     { workspaceId: string }
-  >('createWorkspace', { name, displayName: user.displayName ?? '', timezone })
+  >('createWorkspace', { name, displayName: user.displayName ?? '', timezone, weekStartsOn })
   saveActiveWorkspaceId(user.uid, workspaceId)
   return workspaceId
 }
