@@ -23,8 +23,13 @@ concurrency:
 
 jobs:
   app:
-    name: App lint, typecheck, and build
+    name: App lint, typecheck, and build (Node.js ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Keep in sync with engines.node in package.json.
+      matrix:
+        node-version: ['22', '24', '26']
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -33,7 +38,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
