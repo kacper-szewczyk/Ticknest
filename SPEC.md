@@ -76,7 +76,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 ### 5.5 Workspace and membership
 
-- Owner can rename the workspace, invite members, revoke invitations, remove members, and promote a member to manager or demote a manager back to member. The owner's own role cannot be changed.
+- Owner can rename the workspace, invite members, revoke invitations, remove members, and promote a member to manager or demote a manager back to member from a role selector that shows the current role and asks for confirmation, saying what the new role allows or removes. The owner's own role cannot be changed.
 - A member cannot remove the owner or change owner permissions.
 - Removing a member revokes access but preserves their historical time entries, attributed to the user ID and display name snapshot.
 - Show a basic team directory with name, email, and role.
@@ -104,7 +104,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 4. **Reports** — filters, summary breakdown, detailed table, CSV export.
 5. **Clients and projects** — searchable list and detail/edit forms; owner actions.
 6. **Team and workspace settings** — members, invitations, and basic preferences.
-7. **Budgets** — owners and managers list budgets filtered by member, target, and status (active, upcoming, past, archived), and create, edit, archive, restore, or delete them. Hours per weekday accept decimal hours (`7.5`) or `H:MM` (`7:30`) and are shown as `H:MM`. Hidden from members.
+7. **Budgets** — owners and managers list budgets grouped per member (collapsible, with the weekly hours of active budgets), searched by member, project, or client name and filtered by status (active, upcoming, past, archived). Creating a budget, or selecting one, opens it in a side drawer while the list stays in place; archive, restore, and delete are in each row's menu. Hours are set as one daily value for Monday to Friday or every day, or per weekday, and the drawer shows the resulting weekly and total hours. Hours accept decimal hours (`7.5`) or `H:MM` (`7:30`) and are shown as `H:MM`. Hidden from members.
 8. **My budgets** — every user sees their own active budgets, grouped per project or client: today's logged time against today's target, the running balance (e.g. `−2h 30m behind`), time logged to date, and a week-by-week breakdown with each day's status in words (under, met, over, to go, no target). It updates live as entries are saved, edited, deleted, or a timer stops. Upcoming budgets are listed with their start date; ended budgets are not shown.
 9. **Budget progress** — owners and managers see a table of every member's budgets, grouped per member and project or client: target, range, expected to date, logged to date, running balance, and status in words (behind, on track, over). Filters by member, target, and an active-day window (today by default). Each row opens the same week-by-week breakdown the member sees, with the same numbers. Entries are read once per member, bounded by the shown budgets' days, and refreshed on demand. No CSV export yet. Hidden from members.
 

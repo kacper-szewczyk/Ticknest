@@ -3,6 +3,14 @@ import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Collapse from '@mui/material/Collapse'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
+import ListItemText from '@mui/material/ListItemText'
+import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
@@ -23,6 +31,53 @@ import { EmptyText, FormMessage, ListRow, SectionCard, SectionHeading } from './
 
 const ROLE_LABELS: Record<WorkspaceRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
 
+// Summaries of SPEC §2, shown under each role option and in the "About roles" hint.
+const ROLE_DESCRIPTIONS: Record<WorkspaceRole, string> = {
+  owner: 'Manages the workspace, its members, clients, projects and settings.',
+  manager: 'Can see everyone’s time, run reports on all users, and manage budgets for any member.',
+  member: 'Tracks and reports on their own time only.',
+}
+
+const ASSIGNABLE_ROLES = ['member', 'manager'] as const
+type AssignableRole = (typeof ASSIGNABLE_ROLES)[number]
+
+type RoleChange = { member: WorkspaceMember; role: AssignableRole }
+
+function memberName(member: WorkspaceMember): string {
+  return member.displayName || member.email
+}
+
+function isAssignableRole(role: string): role is AssignableRole {
+  return (ASSIGNABLE_ROLES as readonly string[]).includes(role)
+}
+
+function roleChangeConfirmation({ member, role }: RoleChange): { title: string; body: string; action: string } {
+  const name = memberName(member)
+  if (role === 'manager')
+    return {
+      title: `Make ${name} a manager?`,
+      body: 'They’ll be able to see all workspace time entries, run reports on everyone and manage budgets for any member.',
+      action: 'Make manager',
+    }
+  return {
+    title: `Make ${name} a member?`,
+    body: 'They’ll no longer be able to see other people’s time entries, run reports on everyone or manage budgets. They’ll track and report on their own time only.',
+    action: 'Make member',
+  }
+}
+
+function RoleChip({ role }: { role: WorkspaceRole }) {
+  return (
+    <Chip
+      size="small"
+      label={ROLE_LABELS[role] ?? ROLE_LABELS.member}
+      color={role === 'owner' ? 'primary' : role === 'manager' ? 'secondary' : 'default'}
+      variant={role === 'member' ? 'outlined' : 'filled'}
+      sx={{ flex: '0 0 auto', fontWeight: 600 }}
+    />
+  )
+}
+
 export function MemberManagementPanel({ workspaceId, currentUserId }: { workspaceId: string; currentUserId: string }) {
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([])
@@ -31,6 +86,10 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+  // Member rows lock one at a time, so changing one person never disables the whole list.
+  const [busyMemberUid, setBusyMemberUid] = useState('')
+  const [roleChange, setRoleChange] = useState<RoleChange | null>(null)
+  const [showRoleHelp, setShowRoleHelp] = useState(false)
 
   // The parent keys this panel by workspace, so switching workspaces starts with fresh state.
   useEffect(() => {
@@ -79,27 +138,34 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
   async function remove(member: WorkspaceMember) {
     if (
       !window.confirm(
-        `Remove ${member.displayName || member.email} from this workspace? Their historical time entries will be retained.`,
+        `Remove ${memberName(member)} from this workspace? Their historical time entries will be retained.`,
       )
     )
       return
-    setPending(true)
+    setBusyMemberUid(member.uid)
     setError('')
     setNotice('')
     try {
       await removeWorkspaceMember(workspaceId, member.uid)
-      setNotice(`${member.displayName || member.email} was removed. Historical entries were retained.`)
+      setNotice(`${memberName(member)} was removed. Historical entries were retained.`)
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : 'Could not remove this member.')
     } finally {
-      setPending(false)
+      setBusyMemberUid('')
     }
   }
 
-  async function changeRole(member: WorkspaceMember) {
-    const role = member.role === 'manager' ? 'member' : 'manager'
-    const name = member.displayName || member.email
-    setPending(true)
+  function requestRoleChange(member: WorkspaceMember, role: string) {
+    if (role === member.role || !isAssignableRole(role)) return
+    setRoleChange({ member, role })
+  }
+
+  async function confirmRoleChange() {
+    if (!roleChange) return
+    const { member, role } = roleChange
+    const name = memberName(member)
+    setRoleChange(null)
+    setBusyMemberUid(member.uid)
     setError('')
     setNotice('')
     try {
@@ -108,7 +174,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : 'Could not change this member’s role.')
     } finally {
-      setPending(false)
+      setBusyMemberUid('')
     }
   }
 
@@ -202,44 +268,112 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
         </Box>
       )}
       <Box sx={{ mt: 2.75 }}>
-        <Typography variant="h3">People with access</Typography>
-        {activeMembers.map((member) => (
-          <ListRow key={member.uid}>
-            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <Avatar
-                aria-hidden="true"
-                sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: 'app.accentSoft',
-                  color: 'app.accentSoftText',
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                {(member.displayName || member.email || '?').slice(0, 1).toUpperCase()}
-              </Avatar>
-              <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
-                <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                  {member.displayName || member.email}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {member.email} · {ROLE_LABELS[member.role] ?? 'Member'}
-                </Typography>
-              </Box>
-            </Stack>
-            {member.role !== 'owner' && member.uid !== currentUserId && (
-              <Stack direction="row" spacing={1} sx={{ flex: '0 0 auto' }}>
-                <Button size="small" onClick={() => void changeRole(member)} disabled={pending}>
-                  {member.role === 'manager' ? 'Make member' : 'Make manager'}
-                </Button>
-                <Button size="small" color="error" onClick={() => void remove(member)} disabled={pending}>
-                  Remove
-                </Button>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h3">People with access</Typography>
+          <Button
+            size="small"
+            onClick={() => setShowRoleHelp((shown) => !shown)}
+            aria-expanded={showRoleHelp}
+            aria-controls="about-roles"
+          >
+            About roles
+          </Button>
+        </Stack>
+        <Collapse in={showRoleHelp}>
+          <Paper id="about-roles" variant="outlined" sx={{ mt: 1, p: 1.5, bgcolor: 'app.tint' }}>
+            <Box component="dl" sx={{ m: 0, display: 'grid', gap: 1 }}>
+              {(['owner', 'manager', 'member'] as const).map((role) => (
+                <Box key={role}>
+                  <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>
+                    {ROLE_LABELS[role]}
+                  </Typography>
+                  <Typography component="dd" variant="body2" color="text.secondary" sx={{ m: 0 }}>
+                    {ROLE_DESCRIPTIONS[role]}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        </Collapse>
+        {activeMembers.map((member) => {
+          const name = memberName(member)
+          const isBusy = busyMemberUid === member.uid
+          const canManage = member.role !== 'owner' && member.uid !== currentUserId
+          return (
+            <ListRow key={member.uid} sx={{ flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
+                <Avatar
+                  aria-hidden="true"
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    bgcolor: 'app.accentSoft',
+                    color: 'app.accentSoftText',
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                >
+                  {(member.displayName || member.email || '?').slice(0, 1).toUpperCase()}
+                </Avatar>
+                <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+                    <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                      {name}
+                    </Typography>
+                    <RoleChip role={member.role} />
+                    {member.uid === currentUserId && (
+                      <Typography variant="caption" color="text.secondary">
+                        (you)
+                      </Typography>
+                    )}
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {member.email}
+                  </Typography>
+                </Box>
               </Stack>
-            )}
-          </ListRow>
-        ))}
+              {canManage && (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  aria-busy={isBusy}
+                  sx={{ flex: '0 0 auto', alignItems: 'center', ml: 'auto' }}
+                >
+                  <TextField
+                    select
+                    size="small"
+                    label="Role"
+                    value={member.role === 'manager' ? 'manager' : 'member'}
+                    onChange={(event) => requestRoleChange(member, event.target.value)}
+                    disabled={isBusy}
+                    sx={{ width: 140 }}
+                    slotProps={{
+                      select: {
+                        // Name the person, not just "Role", so each row's control is distinct to screen readers.
+                        SelectDisplayProps: { 'aria-label': `Role for ${name}`, 'aria-labelledby': undefined },
+                        renderValue: (value) => ROLE_LABELS[value as AssignableRole],
+                        MenuProps: { slotProps: { paper: { sx: { maxWidth: 320 } } } },
+                      },
+                    }}
+                  >
+                    {ASSIGNABLE_ROLES.map((role) => (
+                      <MenuItem key={role} value={role} sx={{ whiteSpace: 'normal' }}>
+                        <ListItemText
+                          primary={ROLE_LABELS[role]}
+                          secondary={ROLE_DESCRIPTIONS[role]}
+                          slotProps={{ primary: { sx: { fontWeight: 600 } } }}
+                        />
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <Button size="small" color="error" onClick={() => void remove(member)} disabled={isBusy}>
+                    Remove
+                  </Button>
+                </Stack>
+              )}
+            </ListRow>
+          )
+        })}
         {activeMembers.length === 0 && <EmptyText>Loading members…</EmptyText>}
       </Box>
       {pastMembers.length > 0 && (
@@ -259,6 +393,54 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
           ))}
         </Box>
       )}
+      <RoleChangeDialog
+        change={roleChange}
+        onCancel={() => setRoleChange(null)}
+        onConfirm={() => void confirmRoleChange()}
+      />
     </SectionCard>
+  )
+}
+
+function RoleChangeDialog({
+  change,
+  onCancel,
+  onConfirm,
+}: {
+  change: RoleChange | null
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  // Keep the last change on screen while the dialog fades out.
+  const [shownChange, setShownChange] = useState(change)
+  if (change && change !== shownChange) setShownChange(change)
+  const copy = shownChange ? roleChangeConfirmation(shownChange) : null
+  return (
+    <Dialog
+      open={change !== null}
+      onClose={onCancel}
+      maxWidth="xs"
+      fullWidth
+      aria-labelledby="role-change-title"
+      aria-describedby="role-change-body"
+      slotProps={{ paper: { sx: { borderRadius: '16px' } } }}
+    >
+      {copy && (
+        <>
+          <DialogTitle id="role-change-title" sx={{ fontWeight: 650 }}>
+            {copy.title}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="role-change-body">{copy.body}</DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={onCancel}>Cancel</Button>
+            <Button variant="contained" onClick={onConfirm} autoFocus>
+              {copy.action}
+            </Button>
+          </DialogActions>
+        </>
+      )}
+    </Dialog>
   )
 }
