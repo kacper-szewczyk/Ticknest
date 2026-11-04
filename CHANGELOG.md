@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.22.0...ticknest-v1.23.0) (2026-11-04)
+
+
+### Features
+
+* smoother and safer invitation-link onboarding ([#152](https://github.com/kacper-szewczyk/Ticknest/issues/152)) ([9c5aef0](https://github.com/kacper-szewczyk/Ticknest/commit/9c5aef0d3f0841b8829010153c00744e09eff657)), closes [#144](https://github.com/kacper-szewczyk/Ticknest/issues/144)
+
 ## [1.22.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.21.0...ticknest-v1.22.0) (2026-11-04)
 
 
