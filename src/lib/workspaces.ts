@@ -6,12 +6,15 @@ import {
   getDocs,
   onSnapshot,
   query,
+  serverTimestamp,
+  updateDoc,
   where,
   type Unsubscribe,
 } from 'firebase/firestore'
 import type { User } from 'firebase/auth'
 import type { WeekStart } from './dates'
 import { callFunction, db } from './firebase'
+import type { WorkspaceSettings } from './workspaceSettings'
 
 export type WorkspaceRole = 'owner' | 'manager' | 'member'
 
@@ -87,6 +90,15 @@ export async function loadWorkspaces(user: User): Promise<Workspace[]> {
       }),
   )
   return workspaces.filter((workspace): workspace is Workspace => workspace !== null)
+}
+
+/** Owner-only: the rules allow just the name, week start and update time to change. */
+export async function updateWorkspaceSettings(workspaceId: string, settings: WorkspaceSettings): Promise<void> {
+  await updateDoc(doc(db, 'workspaces', workspaceId), {
+    name: settings.name,
+    weekStartsOn: settings.weekStartsOn,
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export async function createWorkspace(user: User, name: string, weekStartsOn: WeekStart): Promise<string> {

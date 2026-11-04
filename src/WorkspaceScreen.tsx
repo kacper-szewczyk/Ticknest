@@ -35,6 +35,7 @@ import type { SetupSummary } from './SetupWizard'
 import { TimeEntriesPanel } from './TimeEntriesPanel'
 import { TimerBar } from './TimerBar'
 import { TimesheetDashboard } from './TimesheetDashboard'
+import { WorkspaceSettingsPanel } from './WorkspaceSettingsPanel'
 import { FormMessage, LoadingState } from './ui'
 import { useEmailVerified } from './useEmailVerified'
 
@@ -652,6 +653,11 @@ export function WorkspaceScreen({ user }: { user: User }) {
                     sx={{ mt: 2, pl: 0.75 }}
                   />
                 </Paper>
+                <WorkspaceSettingsPanel
+                  key={activeWorkspace.id}
+                  workspace={activeWorkspace}
+                  onSaved={refreshWorkspaces}
+                />
                 <AppearancePanel user={user} />
                 {joinWorkspaceForm}
                 <Stack

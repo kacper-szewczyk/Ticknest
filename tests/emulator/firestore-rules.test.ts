@@ -784,6 +784,10 @@ describe('boundary validation', () => {
       )
     })
 
+    it('accepts an 80-character name', async () => {
+      await assertSucceeds(updateDoc(doc(ownerDb(), WS), { name: 'a'.repeat(80), updatedAt: serverTimestamp() }))
+    })
+
     it('denies the same change from a member', async () => {
       await assertFails(updateDoc(doc(memberDb(), WS), { name: 'Renamed', updatedAt: serverTimestamp() }))
     })
@@ -793,11 +797,16 @@ describe('boundary validation', () => {
     })
 
     it.each<[string, Record<string, unknown>]>([
+      ['a week start other than Sunday or Monday', { weekStartsOn: 3 }],
       ['a week start above 6', { weekStartsOn: 7 }],
       ['a negative week start', { weekStartsOn: -1 }],
       ['a week start that is not an integer', { weekStartsOn: '1' }],
       ['an empty name', { name: '' }],
-      ['an oversized name', { name: 'a'.repeat(121) }],
+      ['an oversized name', { name: 'a'.repeat(81) }],
+      ['a non-string name', { name: 42 }],
+      ['a changed owner', { ownerUid: 'someone-else' }],
+      ['a changed createdAt', { createdAt: Timestamp.fromDate(new Date('2025-06-01T00:00:00Z')) }],
+      ['an extra field', { plan: 'enterprise' }],
       ['a client-chosen updatedAt', { updatedAt: PAST }],
     ])('denies %s', async (_, changes) => {
       await assertFails(updateDoc(doc(ownerDb(), WS), { updatedAt: serverTimestamp(), ...changes }))
