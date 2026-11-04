@@ -9,12 +9,13 @@ import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { type Theme, alpha } from '@mui/material/styles'
-import { type User, sendEmailVerification } from 'firebase/auth'
+import type { User } from 'firebase/auth'
 import { type ChangeEvent, type FormEvent, lazy, Suspense, useEffect, useState } from 'react'
-import { deleteCurrentAccount, getReauthMethod, signOutUser } from './lib/auth'
+import { deleteCurrentAccount, getReauthMethod, sendVerificationEmail, signOutUser } from './lib/auth'
 import { type Catalog, subscribeToCatalog } from './lib/catalog'
 import { localeWeekStart, type WeekStart } from './lib/dates'
 import { readableError } from './lib/errors'
+import { clearInviteParamsFromAddressBar, hasInviteParams } from './lib/inviteLink'
 import { dismissSetupReminder, hasSetupLeft, isSetupReminderDismissed } from './lib/onboarding'
 import {
   type Workspace,
@@ -35,6 +36,7 @@ import { TimeEntriesPanel } from './TimeEntriesPanel'
 import { TimerBar } from './TimerBar'
 import { TimesheetDashboard } from './TimesheetDashboard'
 import { FormMessage, LoadingState } from './ui'
+import { useEmailVerified } from './useEmailVerified'
 
 // Reports, budgets, and member management are visited less often, so they load on demand to keep the initial bundle small.
 const ReportsPanel = lazy(() => import('./ReportsPanel').then((module) => ({ default: module.ReportsPanel })))
@@ -81,10 +83,11 @@ export function WorkspaceScreen({ user }: { user: User }) {
   const [activeId, setActiveId] = useState<string | null>(getSavedWorkspaceId(user.uid))
   const [workspaceName, setWorkspaceName] = useState('')
   const [weekStartsOn, setWeekStartsOn] = useState<WeekStart>(() => localeWeekStart(navigator.language))
-  const [inviteLink, setInviteLink] = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    return params.has('workspace') && params.has('invite') ? window.location.href : ''
-  })
+  // Opened from an invitation email: onboarding leads with joining, and the link is filled in.
+  const [arrivedWithInvite] = useState(() => hasInviteParams(window.location.href))
+  const [inviteLink, setInviteLink] = useState(() => (arrivedWithInvite ? window.location.href : ''))
+  const [showCreateWorkspace, setShowCreateWorkspace] = useState(false)
+  const emailVerified = useEmailVerified(user)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -174,6 +177,8 @@ export function WorkspaceScreen({ user }: { user: User }) {
       const token = url.searchParams.get('token')
       if (!workspaceId || !invitationId || !token) throw new Error('That invitation link is not valid.')
       await acceptWorkspaceInvitation(user, workspaceId, invitationId, token)
+      // The token is single-use and secret, so it should not stay in the address bar or browser history.
+      clearInviteParamsFromAddressBar()
       setInviteLink('')
       await refreshWorkspaces()
       setNotice('You joined the workspace.')
@@ -270,6 +275,98 @@ export function WorkspaceScreen({ user }: { user: User }) {
     setNotice(setupNotice(summary))
   }
 
+  const createWorkspaceCard = (
+    <Paper
+      id="create-workspace-card"
+      component="form"
+      variant="outlined"
+      onSubmit={handleCreate}
+      aria-busy={pending}
+      sx={onboardingCardSx}
+    >
+      <Box
+        component="span"
+        aria-hidden="true"
+        sx={{ ...cardIconSx, bgcolor: 'app.accentSoft', color: 'app.accentSoftText' }}
+      >
+        ✳
+      </Box>
+      <Typography variant="h2" sx={{ fontSize: 23 }}>
+        Create a workspace
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        You’ll be the owner and can invite people later.
+      </Typography>
+      <TextField
+        label="Workspace name"
+        value={workspaceName}
+        onChange={(event) => setWorkspaceName(event.target.value)}
+        required
+        placeholder="e.g. Acme Studio"
+        slotProps={{ htmlInput: { maxLength: 80 } }}
+      />
+      <div>
+        <Typography id="week-start-label" variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+          Week starts on
+        </Typography>
+        <ToggleButtonGroup
+          aria-labelledby="week-start-label"
+          exclusive
+          size="small"
+          color="primary"
+          value={weekStartsOn}
+          onChange={(_, value: WeekStart | null) => {
+            // Ignore clicks on the selected button so one option always stays chosen.
+            if (value !== null) setWeekStartsOn(value)
+          }}
+          disabled={pending}
+        >
+          <ToggleButton value={1} sx={{ px: 2 }}>
+            Monday
+          </ToggleButton>
+          <ToggleButton value={0} sx={{ px: 2 }}>
+            Sunday
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </div>
+      <Button variant="contained" type="submit" disabled={pending}>
+        Create workspace
+      </Button>
+    </Paper>
+  )
+
+  const joinInvitationCard = (
+    <Paper component="form" variant="outlined" onSubmit={handleAcceptInvite} aria-busy={pending} sx={onboardingCardSx}>
+      <Box
+        component="span"
+        aria-hidden="true"
+        sx={{ ...cardIconSx, bgcolor: 'app.warmSoft', color: 'app.warmSoftText' }}
+      >
+        ↗
+      </Box>
+      <Typography variant="h2" sx={{ fontSize: 23 }}>
+        {arrivedWithInvite ? 'Join your team’s workspace' : 'Join a workspace'}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {arrivedWithInvite
+          ? 'You’ve been invited to a workspace. Accept the invitation to join it.'
+          : 'Paste the invitation link sent to your email.'}
+      </Typography>
+      <TextField
+        label="Invitation link"
+        type="url"
+        value={inviteLink}
+        onChange={(event) => setInviteLink(event.target.value)}
+        required
+        placeholder="https://…?workspace=…&invite=…&token=…"
+        helperText={emailVerified ? undefined : 'Verify your email before accepting an invitation.'}
+      />
+      <Button variant={arrivedWithInvite ? 'contained' : 'outlined'} type="submit" disabled={pending || !emailVerified}>
+        Accept invitation
+      </Button>
+    </Paper>
+  )
+
   const joinWorkspaceForm = (
     <Paper
       component="form"
@@ -302,7 +399,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
           placeholder="https://…?workspace=…&invite=…&token=…"
           slotProps={{ htmlInput: { 'aria-label': 'Invitation link' } }}
         />
-        <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified} sx={{ flex: '0 0 auto' }}>
+        <Button variant="outlined" type="submit" disabled={pending || !emailVerified} sx={{ flex: '0 0 auto' }}>
           Accept invitation
         </Button>
       </Stack>
@@ -428,7 +525,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
       >
         {error && <FormMessage severity="error">{error}</FormMessage>}
         {notice && <FormMessage severity="success">{notice}</FormMessage>}
-        {!user.emailVerified && <EmailVerificationNotice user={user} />}
+        {!emailVerified && <EmailVerificationNotice user={user} />}
         {activeWorkspace && setupWorkspaceId === activeWorkspace.id ? (
           <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
             <SetupWizard
@@ -593,101 +690,32 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 Set up your workspace
               </Typography>
               <Typography color="text.secondary" sx={{ maxWidth: 530, lineHeight: 1.6 }}>
-                Hi {user.displayName?.trim().split(/\s+/)[0] || 'there'} — create a new workspace or join one you’ve
-                been invited to.
+                Hi {user.displayName?.trim().split(/\s+/)[0] || 'there'} —{' '}
+                {arrivedWithInvite
+                  ? 'you’ve been invited to join a workspace.'
+                  : 'create a new workspace or join one you’ve been invited to.'}
               </Typography>
             </Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <Paper
-                component="form"
-                variant="outlined"
-                onSubmit={handleCreate}
-                aria-busy={pending}
-                sx={onboardingCardSx}
-              >
-                <Box
-                  component="span"
-                  aria-hidden="true"
-                  sx={{ ...cardIconSx, bgcolor: 'app.accentSoft', color: 'app.accentSoftText' }}
+            {arrivedWithInvite ? (
+              <Box sx={{ display: 'grid', gap: 2, maxWidth: 560 }}>
+                {joinInvitationCard}
+                <Button
+                  variant="text"
+                  onClick={() => setShowCreateWorkspace((shown) => !shown)}
+                  aria-expanded={showCreateWorkspace}
+                  aria-controls="create-workspace-card"
+                  sx={{ justifySelf: 'start' }}
                 >
-                  ✳
-                </Box>
-                <Typography variant="h2" sx={{ fontSize: 23 }}>
-                  Create a workspace
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  You’ll be the owner and can invite people later.
-                </Typography>
-                <TextField
-                  label="Workspace name"
-                  value={workspaceName}
-                  onChange={(event) => setWorkspaceName(event.target.value)}
-                  required
-                  placeholder="e.g. Acme Studio"
-                  slotProps={{ htmlInput: { maxLength: 80 } }}
-                />
-                <div>
-                  <Typography id="week-start-label" variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-                    Week starts on
-                  </Typography>
-                  <ToggleButtonGroup
-                    aria-labelledby="week-start-label"
-                    exclusive
-                    size="small"
-                    color="primary"
-                    value={weekStartsOn}
-                    onChange={(_, value: WeekStart | null) => {
-                      // Ignore clicks on the selected button so one option always stays chosen.
-                      if (value !== null) setWeekStartsOn(value)
-                    }}
-                    disabled={pending}
-                  >
-                    <ToggleButton value={1} sx={{ px: 2 }}>
-                      Monday
-                    </ToggleButton>
-                    <ToggleButton value={0} sx={{ px: 2 }}>
-                      Sunday
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                </div>
-                <Button variant="contained" type="submit" disabled={pending}>
-                  Create workspace
+                  or create your own workspace {showCreateWorkspace ? '▾' : '▸'}
                 </Button>
-              </Paper>
-              <Paper
-                component="form"
-                variant="outlined"
-                onSubmit={handleAcceptInvite}
-                aria-busy={pending}
-                sx={onboardingCardSx}
-              >
-                <Box
-                  component="span"
-                  aria-hidden="true"
-                  sx={{ ...cardIconSx, bgcolor: 'app.warmSoft', color: 'app.warmSoftText' }}
-                >
-                  ↗
-                </Box>
-                <Typography variant="h2" sx={{ fontSize: 23 }}>
-                  Join a workspace
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Paste the invitation link sent to your email.
-                </Typography>
-                <TextField
-                  label="Invitation link"
-                  type="url"
-                  value={inviteLink}
-                  onChange={(event) => setInviteLink(event.target.value)}
-                  required
-                  placeholder="https://…?workspace=…&invite=…&token=…"
-                  helperText={user.emailVerified ? undefined : 'Verify your email before accepting an invitation.'}
-                />
-                <Button variant="outlined" type="submit" disabled={pending || !user.emailVerified}>
-                  Accept invitation
-                </Button>
-              </Paper>
-            </Box>
+                {showCreateWorkspace && createWorkspaceCard}
+              </Box>
+            ) : (
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                {createWorkspaceCard}
+                {joinInvitationCard}
+              </Box>
+            )}
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               sx={{
@@ -831,7 +859,7 @@ function EmailVerificationNotice({ user }: { user: User }) {
           disabled={pending}
           onClick={() => {
             setPending(true)
-            void sendEmailVerification(user)
+            void sendVerificationEmail(user)
               .then(() => setMessage('A new verification link has been sent.'))
               .catch((error: unknown) => setMessage(readableError(error)))
               .finally(() => setPending(false))
