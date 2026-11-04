@@ -41,7 +41,9 @@ export function subscribeToCatalog(
   onError: (error: Error) => void,
 ): Unsubscribe {
   const catalog: Catalog = { clients: [], projects: [], tasks: [] }
-  const stops = (['clients', 'projects', 'tasks'] as const).map((group) =>
+  const groups = ['clients', 'projects', 'tasks'] as const
+  const loaded = new Set<(typeof groups)[number]>()
+  const stops = groups.map((group) =>
     onSnapshot(
       path(workspaceId, group),
       (snapshot) => {
@@ -49,7 +51,9 @@ export function subscribeToCatalog(
         else if (group === 'projects') catalog.projects = records<Project>(snapshot)
         // Tasks created before the billable flag existed are non-billable.
         else catalog.tasks = records<Task>(snapshot).map((task) => ({ ...task, billable: task.billable === true }))
-        onChange({ ...catalog })
+        loaded.add(group)
+        // Report only complete catalogs, so an empty list really means "none yet" rather than "still loading".
+        if (loaded.size === groups.length) onChange({ ...catalog })
       },
       onError,
     ),
@@ -62,7 +66,7 @@ export async function saveCatalogRecord(
   group: 'clients' | 'projects' | 'tasks',
   input: CatalogInput,
   existing?: { id: string },
-): Promise<void> {
+): Promise<string> {
   const name = input.name.trim()
   if (!name || name.length > 120) throw new Error('Names must be between 1 and 120 characters.')
   const ref = existing ? doc(path(workspaceId, group), existing.id) : doc(path(workspaceId, group))
@@ -85,6 +89,7 @@ export async function saveCatalogRecord(
           }
   if (existing) await updateDoc(ref, { ...fields, updatedAt: serverTimestamp() })
   else await setDoc(ref, { ...fields, archived: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+  return ref.id
 }
 
 export async function setCatalogArchived(
