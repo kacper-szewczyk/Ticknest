@@ -7,15 +7,27 @@ import SpeedDialAction from '@mui/material/SpeedDialAction'
 import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
-import { useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import type { Catalog } from './lib/catalog'
 import { NavIcon } from './AppShell'
 import { EntryEditor } from './EntryEditor'
 import { dayDate, formatElapsed, formatWeekLabel, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
 import { readableError } from './lib/errors'
 import { type TimeEntry, continueTimer, deleteTimeEntry, subscribeToEntriesForRange } from './lib/timeEntries'
+import {
+  OVER_DAY_MESSAGE,
+  OVER_WEEK_MESSAGE,
+  entrySeconds,
+  formatHoursMinutes,
+  isDayOverLimit,
+  isWeekOverLimit,
+  overlappingEntryIds,
+  summarizeDay,
+  type DaySummary,
+} from './lib/timesheetSummary'
 import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
 
 export function TimeEntriesPanel({
@@ -44,6 +56,8 @@ export function TimeEntriesPanel({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [now, setNow] = useState(() => Date.now())
+  // Days start collapsed, and changeWeek collapses them all again.
+  const [expandedDays, setExpandedDays] = useState<ReadonlySet<string>>(() => new Set())
 
   useEffect(() => {
     return subscribeToEntriesForRange(
@@ -99,16 +113,32 @@ export function TimeEntriesPanel({
     if (!value) return
     const nextWeekStart = startOfWeekString(value, weekStartsOn)
     setWeekStart(nextWeekStart)
+    setExpandedDays(new Set())
     setError('')
     setNotice('')
   }
 
+  function setDayExpanded(day: string, isExpanded: boolean) {
+    const next = new Set(expandedDays)
+    if (isExpanded) next.add(day)
+    else next.delete(day)
+    setExpandedDays(next)
+  }
+
   const weekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
-  const secondsFor = (entry: TimeEntry) =>
-    entry.endAt
-      ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000))
-      : Math.max(0, Math.floor(now / 1000 - entry.startAt.toMillis() / 1000))
+  const secondsFor = (entry: TimeEntry) => entrySeconds(entry, now)
   const weekTotal = entries.reduce((total, entry) => total + secondsFor(entry), 0)
+  const isWeekOver = isWeekOverLimit(entries, weekStart, weekDays.length, now)
+  const entriesByDay = new Map(
+    weekDays.map((weekDay) => [
+      weekDay,
+      entries
+        .filter((entry) => localDayString(entry.startAt.toDate()) === weekDay)
+        .sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis()),
+    ]),
+  )
+  const daysWithEntries = weekDays.filter((weekDay) => (entriesByDay.get(weekDay) ?? []).length > 0)
+  const isAllExpanded = daysWithEntries.length > 0 && daysWithEntries.every((weekDay) => expandedDays.has(weekDay))
 
   return (
     <SectionCard labelledBy="entries-heading" sx={{ mb: { xs: 10, sm: 12 } }}>
@@ -184,51 +214,48 @@ export function TimeEntriesPanel({
           <Typography variant="caption" color="text.secondary">
             Week total
           </Typography>
-          <Typography sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums', fontSize: 20, fontWeight: 700 }}>
-            {formatElapsed(weekTotal)}
-          </Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Typography
+              sx={{
+                color: isWeekOver ? 'warning.main' : 'primary.main',
+                fontVariantNumeric: 'tabular-nums',
+                fontSize: 20,
+                fontWeight: 700,
+              }}
+            >
+              {formatElapsed(weekTotal)}
+            </Typography>
+            {isWeekOver && <OverLimitChip label="Over 24h a day" message={OVER_WEEK_MESSAGE} />}
+          </Stack>
         </Box>
-        <Typography variant="caption" color="text.secondary">
-          {entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week
-        </Typography>
+        <Stack spacing={0.5} sx={{ alignItems: 'flex-end' }}>
+          <Typography variant="caption" color="text.secondary">
+            {entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week
+          </Typography>
+          {daysWithEntries.length > 0 && (
+            <Button size="small" onClick={() => setExpandedDays(new Set(isAllExpanded ? [] : daysWithEntries))}>
+              {isAllExpanded ? 'Collapse all' : 'Expand all'}
+            </Button>
+          )}
+        </Stack>
       </Paper>
       <Box aria-live="polite" sx={{ mt: 2.25 }}>
         {weekDays.map((weekDay) => {
-          const dayEntries = entries
-            .filter((entry) => localDayString(entry.startAt.toDate()) === weekDay)
-            .sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis())
-          const dayTotal = dayEntries.reduce((total, entry) => total + secondsFor(entry), 0)
-          const date = dayDate(weekDay)
+          const dayEntries = entriesByDay.get(weekDay) ?? []
+          const isExpanded = expandedDays.has(weekDay)
+          const overlapping = isExpanded ? overlappingEntryIds(dayEntries, now) : null
           return (
-            <Box
-              component="section"
+            <DaySection
               key={weekDay}
-              aria-labelledby={`timesheet-${weekDay}`}
-              sx={{ pt: 2, pb: 0.75, borderBottom: 1, borderColor: 'divider' }}
+              day={weekDay}
+              summary={summarizeDay(dayEntries, now)}
+              // Every week entry, so time spilling over midnight from the day before counts too.
+              isOverLimit={isDayOverLimit(entries, weekDay, now)}
+              isExpanded={isExpanded}
+              onToggle={() => setDayExpanded(weekDay, !isExpanded)}
+              onAdd={() => openEditor(weekDay)}
             >
-              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.75 }}>
-                <Typography
-                  variant="h3"
-                  id={`timesheet-${weekDay}`}
-                  sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}
-                >
-                  <span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span>
-                  <Typography component="time" variant="caption" color="text.secondary" dateTime={weekDay}>
-                    {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </Typography>
-                </Typography>
-                <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                    {formatElapsed(dayTotal)}
-                  </Typography>
-                  <Button size="small" onClick={() => openEditor(weekDay)}>
-                    Add entry
-                  </Button>
-                </Stack>
-              </Stack>
-              {dayEntries.length === 0 ? (
-                <EmptyText>No entries</EmptyText>
-              ) : (
+              {overlapping &&
                 dayEntries.map((entry) => (
                   <Box
                     component="article"
@@ -242,6 +269,12 @@ export function TimeEntriesPanel({
                       borderTop: 1,
                       borderColor: 'app.track',
                       minWidth: 0,
+                      // The warning bar sits in the gutter so overlapping rows stay aligned with the rest.
+                      ...(overlapping.has(entry.id) && {
+                        boxShadow: (theme) => `inset 3px 0 0 ${theme.palette.warning.main}`,
+                        ml: -1.25,
+                        pl: 1.25,
+                      }),
                     }}
                   >
                     <Box sx={{ display: 'grid', gap: 0.5, fontVariantNumeric: 'tabular-nums' }}>
@@ -278,6 +311,9 @@ export function TimeEntriesPanel({
                       }}
                     >
                       {entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}
+                      {overlapping.has(entry.id) && (
+                        <Chip label="Overlaps" color="warning" title="Overlaps another of this person's entries" />
+                      )}
                       {entry.billable && <BillableChip />}
                       {entry.endAt !== null && entry.userId === user.uid && (
                         <Button size="small" onClick={() => void handleContinue(entry)} disabled={pending}>
@@ -301,9 +337,8 @@ export function TimeEntriesPanel({
                       </Button>
                     </Stack>
                   </Box>
-                ))
-              )}
-            </Box>
+                ))}
+            </DaySection>
           )
         })}
       </Box>
@@ -329,12 +364,197 @@ export function TimeEntriesPanel({
           entry={editor.entry}
           day={editor.day}
           onClose={() => setEditor(null)}
-          onSaved={(message) => {
+          onSaved={(message, day) => {
             setEditor(null)
             setNotice(message)
+            // Show the saved entry: open its day if it falls in the week on screen.
+            if (weekDays.includes(day)) setDayExpanded(day, true)
           }}
         />
       )}
     </SectionCard>
+  )
+}
+
+function WarningIcon() {
+  return (
+    <NavIcon>
+      <path d="M12 4 3 20h18L12 4zM12 10v4.5M12 17.5h.01" />
+    </NavIcon>
+  )
+}
+
+function OverLimitChip({ label, message }: { label: string; message: string }) {
+  return (
+    <Tooltip title={message}>
+      <Chip
+        size="small"
+        color="warning"
+        variant="outlined"
+        icon={<WarningIcon />}
+        label={label}
+        tabIndex={0}
+        aria-label={`${label}. ${message}`}
+        // Phones show only the icon; the tooltip and accessible name still carry the full text.
+        sx={{
+          '& .MuiChip-icon': { width: 16, height: 16, mr: { xs: -0.75, sm: 0 } },
+          '& .MuiChip-label': { display: { xs: 'none', sm: 'block' } },
+        }}
+      />
+    </Tooltip>
+  )
+}
+
+function DaySummaryLine({ summary }: { summary: DaySummary }) {
+  const parts = [
+    `${summary.count} ${summary.count === 1 ? 'entry' : 'entries'}`,
+    summary.billableSeconds > 0 && `${formatHoursMinutes(summary.billableSeconds)} billable`,
+    ...summary.topGroups.map((group) => `${group.label} ${formatHoursMinutes(group.seconds)}`),
+    summary.moreGroups > 0 && `+${summary.moreGroups} more`,
+  ].filter(Boolean)
+  return (
+    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0, pb: 1.25, pl: 3.5 }}>
+      {summary.isRunning && <Chip size="small" label="Running" color="warning" variant="outlined" />}
+      <Typography variant="caption" color="text.secondary" noWrap>
+        {parts.join(' · ')}
+      </Typography>
+    </Stack>
+  )
+}
+
+function DaySection({
+  day,
+  summary,
+  isOverLimit,
+  isExpanded,
+  onToggle,
+  onAdd,
+  children,
+}: {
+  day: string
+  summary: DaySummary
+  isOverLimit: boolean
+  isExpanded: boolean
+  onToggle: () => void
+  onAdd: () => void
+  children: ReactNode
+}) {
+  const date = dayDate(day)
+  const headingId = `timesheet-${day}`
+  const panelId = `timesheet-${day}-entries`
+  const hasEntries = summary.count > 0
+  const label = (
+    <>
+      <span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span>
+      <Typography component="time" variant="caption" color="text.secondary" dateTime={day}>
+        {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+      </Typography>
+    </>
+  )
+  return (
+    <Box
+      component="section"
+      aria-labelledby={headingId}
+      sx={{ pt: 2, pb: 0.75, borderBottom: 1, borderColor: 'divider' }}
+    >
+      <Stack
+        direction="row"
+        // A mouse click anywhere on the header toggles; the heading button is the keyboard control.
+        onClick={hasEntries ? onToggle : undefined}
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          columnGap: 1.75,
+          rowGap: 0.5,
+          cursor: hasEntries ? 'pointer' : 'auto',
+        }}
+      >
+        <Typography variant="h3" sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
+          {hasEntries ? (
+            <Box
+              component="button"
+              type="button"
+              id={headingId}
+              aria-expanded={isExpanded}
+              aria-controls={panelId}
+              onClick={(event) => {
+                event.stopPropagation()
+                onToggle()
+              }}
+              sx={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 1,
+                p: 0,
+                border: 0,
+                bgcolor: 'transparent',
+                color: 'inherit',
+                font: 'inherit',
+                cursor: 'pointer',
+                borderRadius: '6px',
+                '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 3 },
+              }}
+            >
+              <Box
+                component="span"
+                aria-hidden="true"
+                sx={{
+                  display: 'inline-flex',
+                  alignSelf: 'center',
+                  flexShrink: 0,
+                  color: 'text.secondary',
+                  transform: isExpanded ? 'rotate(90deg)' : 'none',
+                  transition: 'transform 150ms',
+                }}
+              >
+                <NavIcon>
+                  <path d="m9 6 6 6-6 6" />
+                </NavIcon>
+              </Box>
+              {label}
+            </Box>
+          ) : (
+            <Box component="span" id={headingId} sx={{ display: 'flex', alignItems: 'baseline', gap: 1, pl: 3.5 }}>
+              {label}
+            </Box>
+          )}
+        </Typography>
+        <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}>
+          {isOverLimit && <OverLimitChip label="Over 24h" message={OVER_DAY_MESSAGE} />}
+          <Typography
+            variant="body2"
+            sx={{
+              color: isOverLimit ? 'warning.main' : undefined,
+              fontVariantNumeric: 'tabular-nums',
+              fontWeight: 600,
+            }}
+          >
+            {formatElapsed(summary.totalSeconds)}
+          </Typography>
+          <Button
+            size="small"
+            onClick={(event) => {
+              event.stopPropagation()
+              onAdd()
+            }}
+          >
+            Add entry
+          </Button>
+        </Stack>
+      </Stack>
+      {hasEntries ? (
+        <>
+          {!isExpanded && <DaySummaryLine summary={summary} />}
+          <Box id={panelId} role="region" aria-labelledby={headingId} hidden={!isExpanded}>
+            {isExpanded && children}
+          </Box>
+        </>
+      ) : (
+        <Box sx={{ pl: 3.5 }}>
+          <EmptyText>No entries</EmptyText>
+        </Box>
+      )}
+    </Box>
   )
 }
