@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.19.0...ticknest-v1.20.0) (2026-11-04)
+
+
+### Features
+
+* support Node.js 26 for local development and app builds ([#141](https://github.com/kacper-szewczyk/Ticknest/issues/141)) ([d10a347](https://github.com/kacper-szewczyk/Ticknest/commit/d10a3471fdd2daaee35ec9dce0301e98388c5db2))
+
 ## [1.19.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.18.0...ticknest-v1.19.0) (2026-11-02)
 
 
