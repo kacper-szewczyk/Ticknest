@@ -3,10 +3,15 @@ import type { Budget } from '../../src/lib/budgets'
 import {
   budgetPhase,
   buildBudgetTargetOptions,
+  detectHoursPreset,
   filterBudgets,
   formatHoursInput,
+  groupBudgetsByMember,
   parseHoursInput,
+  presetWeekdayMinutes,
+  totalBudgetMinutes,
   weekdaySummary,
+  weeklyMinutes,
 } from '../../src/lib/budgetForm'
 import type { Catalog } from '../../src/lib/catalog'
 
@@ -103,7 +108,7 @@ describe('filterBudgets', () => {
   const today = () => '2026-11-10'
 
   it('shows active and upcoming budgets by default, ordered by member then start date', () => {
-    expect(ids(filterBudgets(budgets, { userId: '', targetKey: '', phase: 'current' }, today))).toEqual([
+    expect(ids(filterBudgets(budgets, { query: '', phase: 'current' }, today))).toEqual([
       'client',
       'active-alice',
       'upcoming',
@@ -111,21 +116,103 @@ describe('filterBudgets', () => {
     ])
   })
 
-  it('filters by phase, member and target', () => {
-    expect(ids(filterBudgets(budgets, { userId: '', targetKey: '', phase: 'past' }, today))).toEqual(['past'])
-    expect(ids(filterBudgets(budgets, { userId: '', targetKey: '', phase: 'archived' }, today))).toEqual(['archived'])
-    expect(ids(filterBudgets(budgets, { userId: 'bob', targetKey: '', phase: 'all' }, today))).toEqual(['active-bob'])
-    expect(ids(filterBudgets(budgets, { userId: '', targetKey: 'client:acme', phase: 'all' }, today))).toEqual([
-      'client',
-    ])
+  it('filters by phase', () => {
+    expect(ids(filterBudgets(budgets, { query: '', phase: 'past' }, today))).toEqual(['past'])
+    expect(ids(filterBudgets(budgets, { query: '', phase: 'archived' }, today))).toEqual(['archived'])
+  })
+
+  it('searches member and target names, ignoring case, with every word required', () => {
+    expect(ids(filterBudgets(budgets, { query: ' bob ', phase: 'all' }, today))).toEqual(['active-bob'])
+    expect(ids(filterBudgets(budgets, { query: 'ACME', phase: 'all' }, today))).toEqual(['client'])
+    expect(ids(filterBudgets(budgets, { query: 'alice acme', phase: 'all' }, today))).toEqual(['client'])
+    expect(ids(filterBudgets(budgets, { query: 'bob acme', phase: 'all' }, today))).toEqual([])
+  })
+
+  it('searches and orders by the current member name when given', () => {
+    const memberName = (item: Budget) => (item.userId === 'bob' ? 'Aaron' : item.userDisplayName)
+    expect(ids(filterBudgets(budgets, { query: 'aaron', phase: 'all' }, today, memberName))).toEqual(['active-bob'])
+    expect(ids(filterBudgets(budgets, { query: '', phase: 'current' }, today, memberName))[0]).toBe('active-bob')
   })
 
   it('uses each budget’s own today', () => {
     const todayFor = (item: Budget) => (item.userId === 'bob' ? '2026-12-22' : '2026-11-10')
-    expect(ids(filterBudgets(budgets, { userId: '', targetKey: '', phase: 'past' }, todayFor))).toEqual([
-      'past',
-      'active-bob',
+    expect(ids(filterBudgets(budgets, { query: '', phase: 'past' }, todayFor))).toEqual(['past', 'active-bob'])
+  })
+})
+
+describe('groupBudgetsByMember', () => {
+  it('groups consecutive budgets per member, keeping their order', () => {
+    const groups = groupBudgetsByMember([
+      budget({ id: 'a1' }),
+      budget({ id: 'a2' }),
+      budget({ id: 'b1', userId: 'bob', userDisplayName: 'Bob' }),
     ])
+    expect(groups.map((group) => [group.userId, group.name, group.budgets.map((item) => item.id)])).toEqual([
+      ['alice', 'Alice', ['a1', 'a2']],
+      ['bob', 'Bob', ['b1']],
+    ])
+  })
+})
+
+describe('hours presets', () => {
+  const minutes = (mon: number, tue: number, wed: number, thu: number, fri: number, sat: number, sun: number) => ({
+    mon,
+    tue,
+    wed,
+    thu,
+    fri,
+    sat,
+    sun,
+  })
+
+  it('spreads a daily value over the preset days', () => {
+    expect(presetWeekdayMinutes('weekdays', 240)).toEqual(minutes(240, 240, 240, 240, 240, 0, 0))
+    expect(presetWeekdayMinutes('everyday', 60)).toEqual(minutes(60, 60, 60, 60, 60, 60, 60))
+  })
+
+  it('detects the preset that reproduces the targets', () => {
+    expect(detectHoursPreset(minutes(450, 450, 450, 450, 450, 0, 0))).toEqual({ preset: 'weekdays', dailyMinutes: 450 })
+    expect(detectHoursPreset(minutes(60, 60, 60, 60, 60, 60, 60))).toEqual({ preset: 'everyday', dailyMinutes: 60 })
+    expect(detectHoursPreset(minutes(480, 480, 480, 480, 240, 0, 0)).preset).toBe('custom')
+    expect(detectHoursPreset(minutes(480, 0, 0, 0, 0, 0, 0)).preset).toBe('custom')
+    expect(detectHoursPreset(minutes(0, 0, 0, 0, 0, 0, 0)).preset).toBe('custom')
+  })
+
+  it('sums a week', () => {
+    expect(weeklyMinutes(minutes(240, 240, 240, 240, 240, 0, 0))).toBe(1200)
+  })
+})
+
+describe('totalBudgetMinutes', () => {
+  const weekdays = { mon: 240, tue: 240, wed: 240, thu: 240, fri: 240, sat: 0, sun: 0 }
+
+  it('totals full and partial weeks', () => {
+    // 2026-11-02 is a Monday; two full weeks.
+    expect(
+      totalBudgetMinutes({ startDay: '2026-11-02', endDay: '2026-11-15', weekdayMinutes: weekdays, exceptions: [] }),
+    ).toBe(10 * 240)
+    // Thursday to the next Tuesday: Thu, Fri, Mon, Tue.
+    expect(
+      totalBudgetMinutes({ startDay: '2026-11-05', endDay: '2026-11-10', weekdayMinutes: weekdays, exceptions: [] }),
+    ).toBe(4 * 240)
+  })
+
+  it('skips days off', () => {
+    expect(
+      totalBudgetMinutes({
+        startDay: '2026-11-02',
+        endDay: '2026-11-08',
+        weekdayMinutes: weekdays,
+        exceptions: ['2026-11-04', '2026-11-07'],
+      }),
+    ).toBe(4 * 240)
+  })
+
+  it('returns null for an incomplete, reversed or too long range', () => {
+    const base = { weekdayMinutes: weekdays, exceptions: [] }
+    expect(totalBudgetMinutes({ ...base, startDay: '', endDay: '2026-11-08' })).toBeNull()
+    expect(totalBudgetMinutes({ ...base, startDay: '2026-11-08', endDay: '2026-11-02' })).toBeNull()
+    expect(totalBudgetMinutes({ ...base, startDay: '2026-01-01', endDay: '2028-01-02' })).toBeNull()
   })
 })
 
