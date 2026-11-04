@@ -231,7 +231,7 @@ service cloud.firestore {
       match /timeEntries/{entryId} {
         function validEntry(data) {
           return data.keys().hasAll(['userId', 'description', 'clientName', 'projectName', 'taskName', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
-            && data.keys().hasOnly(['userId', 'userDisplayName', 'description', 'clientName', 'projectName', 'taskName', 'clientId', 'projectId', 'taskId', 'billable', 'startAt', 'endAt', 'createdAt', 'updatedAt'])
+            && data.keys().hasOnly(['userId', 'userDisplayName', 'description', 'clientName', 'projectName', 'taskName', 'clientId', 'projectId', 'taskId', 'billable', 'startAt', 'endAt', 'startTimeZone', 'autoStopped', 'createdAt', 'updatedAt'])
             && data.userId is string
             && (data.get('userDisplayName', null) == null || (data.get('userDisplayName', null) is string && data.get('userDisplayName', null).size() <= 320))
             && data.description is string
@@ -245,7 +245,12 @@ service cloud.firestore {
             && (data.get('taskId', null) == null || (data.get('taskId', null) is string && data.get('taskId', null).size() <= 128))
             && data.billable is bool
             && data.startAt is timestamp
-            && (data.endAt == null || (data.endAt is timestamp && data.endAt > data.startAt));
+            && (data.endAt == null || (data.endAt is timestamp && data.endAt > data.startAt))
+            && (data.get('startTimeZone', null) == null
+              || (data.get('startTimeZone', null) is string
+                && data.get('startTimeZone', null).size() > 0
+                && data.get('startTimeZone', null).size() <= 100))
+            && (data.get('autoStopped', null) == null || data.get('autoStopped', null) is bool);
         }
 
         // Every referenced catalog item exists, is active, matches its name snapshot, and belongs to the
@@ -272,7 +277,9 @@ service cloud.firestore {
         }
 
         function validEntryCreate(data) {
+          // Only the scheduled auto-stop marks an entry as auto-stopped.
           return validEntry(data)
+            && !('autoStopped' in data)
             && data.createdAt == request.time
             && data.updatedAt == request.time;
         }

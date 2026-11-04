@@ -28,7 +28,7 @@ import {
   summarizeDay,
   type DaySummary,
 } from './lib/timesheetSummary'
-import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
+import { AutoStoppedChip, BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
 
 export function TimeEntriesPanel({
   user,
@@ -311,6 +311,7 @@ export function TimeEntriesPanel({
                       }}
                     >
                       {entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}
+                      {entry.autoStopped === true && <AutoStoppedChip />}
                       {overlapping.has(entry.id) && (
                         <Chip label="Overlaps" color="warning" title="Overlaps another of this person's entries" />
                       )}

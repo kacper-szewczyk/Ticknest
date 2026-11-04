@@ -27,7 +27,7 @@ import { dayDate, localDayString, shiftDayString, startOfWeekString } from './li
 import { deleteTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import { EntryEditor } from './EntryEditor'
-import { BillableChip, EmptyText, FormMessage, SelectField } from './ui'
+import { AutoStoppedChip, BillableChip, EmptyText, FormMessage, SelectField } from './ui'
 
 type Props = {
   user: User
@@ -1215,6 +1215,7 @@ function EntryList({
               sx={{ alignItems: 'center', justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', sm: 'auto' } }}
             >
               {entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}
+              {entry.autoStopped === true && <AutoStoppedChip />}
               {entry.billable && <BillableChip />}
               {canEdit(entry) && (
                 <>

@@ -37,6 +37,10 @@ export type TimeEntry = {
   billable: boolean
   startAt: Timestamp
   endAt: Timestamp | null
+  /** IANA time zone the timer was started in; missing on manual entries and timers started before it existed. */
+  startTimeZone?: string
+  /** Set when the timer ran past midnight in `startTimeZone` and was stopped at 24:00 of its start day. */
+  autoStopped?: boolean
 }
 
 export type TimerDetails = Pick<TimeEntry, 'description' | 'clientName' | 'projectName' | 'taskName' | 'billable'> &
@@ -226,6 +230,8 @@ export async function startTimer(user: User, workspaceId: string, details: Timer
       userDisplayName: user.displayName?.trim() || user.email || user.uid,
       ...details,
       startAt: serverTimestamp(),
+      // The timer is stopped automatically at the end of its start day in this time zone.
+      startTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       endAt: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

@@ -1,9 +1,12 @@
 import Box from '@mui/material/Box'
+import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
+import Snackbar from '@mui/material/Snackbar'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { autoStopNoticeEntry, markAutoStopNoticeSeen, readSeenAutoStopNotice } from './lib/autoStopNotice'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed } from './lib/dates'
 import { readableError } from './lib/errors'
@@ -31,6 +34,17 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   }, [])
 
   const runningEntry = entries.find((entry) => entry.endAt === null)
+
+  // Tell the user once when their last timer was stopped automatically at midnight. The notice compares against
+  // what was seen when the workspace opened, so it stays up for this visit after being recorded as seen.
+  const seenAutoStopId = useMemo(() => readSeenAutoStopNotice(user.uid, workspaceId), [user.uid, workspaceId])
+  const autoStoppedEntry = autoStopNoticeEntry(entries, seenAutoStopId)
+  const autoStoppedEntryId = autoStoppedEntry?.id
+  const [dismissedAutoStopId, setDismissedAutoStopId] = useState<string | null>(null)
+  const isAutoStopNoticeOpen = autoStoppedEntry !== null && autoStoppedEntry.id !== dismissedAutoStopId
+  useEffect(() => {
+    if (autoStoppedEntryId) markAutoStopNoticeSeen(user.uid, workspaceId, autoStoppedEntryId)
+  }, [autoStoppedEntryId, user.uid, workspaceId])
 
   async function handleStart(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -94,6 +108,21 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   return (
     <Box component="section" aria-label="Timer" sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25 }}>
       {error && <FormMessage severity="error">{error}</FormMessage>}
+      <Snackbar
+        open={isAutoStopNoticeOpen}
+        onClose={(_event, reason) => reason !== 'clickaway' && setDismissedAutoStopId(autoStoppedEntryId ?? null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          variant="filled"
+          onClose={() => setDismissedAutoStopId(autoStoppedEntryId ?? null)}
+          sx={{ width: '100%' }}
+        >
+          Your timer “{autoStoppedEntry?.description || 'Untitled entry'}” ran past midnight, so it was stopped at the
+          end of the day it started. Edit the entry if you worked later.
+        </Alert>
+      </Snackbar>
       {runningEntry ? (
         <Box
           sx={{
