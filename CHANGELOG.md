@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.27.0...ticknest-v1.28.0) (2026-11-04)
+
+
+### Features
+
+* clearer promote/demote between Member and Manager ([#170](https://github.com/kacper-szewczyk/Ticknest/issues/170)) ([ba01d81](https://github.com/kacper-szewczyk/Ticknest/commit/ba01d816529d510f87302bd07acf8367269e39b1)), closes [#159](https://github.com/kacper-szewczyk/Ticknest/issues/159)
+
 ## [1.27.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.26.0...ticknest-v1.27.0) (2026-11-04)
 
 
