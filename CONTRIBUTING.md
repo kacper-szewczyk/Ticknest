@@ -8,7 +8,7 @@ Use Node.js 22.12+, 24.x, or 26.x and npm. Java JDK 11+ is required to run the F
 
 ## Run the tests
 
-Tests live in `tests/`: `tests/unit` covers pure domain helpers, and `tests/emulator` covers the Firestore rules and the callable Functions.
+Tests live in `tests/`: `tests/unit` covers pure domain helpers and component behavior (Testing Library on jsdom, opted in per file with `// @vitest-environment jsdom`), and `tests/emulator` covers the Firestore rules and the callable Functions.
 
 ```sh
 npm test

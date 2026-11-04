@@ -75,7 +75,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 ### 5.5 Workspace and membership
 
-- Owner can rename the workspace, invite members, revoke invitations, remove members, and promote a member to manager or demote a manager back to member. The owner's own role cannot be changed.
+- Owner can rename the workspace, invite members, revoke invitations, remove members, and promote a member to manager or demote a manager back to member from a role selector that shows the current role and asks for confirmation, saying what the new role allows or removes. The owner's own role cannot be changed.
 - A member cannot remove the owner or change owner permissions.
 - Removing a member revokes access but preserves their historical time entries, attributed to the user ID and display name snapshot.
 - Show a basic team directory with name, email, and role.
