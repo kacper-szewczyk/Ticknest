@@ -39,7 +39,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 - Sign up and sign in with email and password using Firebase Authentication.
 - Support password reset, sign out, and account deletion.
 - On first sign-in, create a workspace and make the user its owner, or accept an invitation to an existing workspace.
-- After creating a workspace, guide the new owner through adding a first client, project, and task; every step can be skipped, and the owner then lands on the dashboard. Owners of a workspace without projects see a dismissible reminder to finish setup.
+- After creating a workspace, guide the new owner through adding a first client, project, and task, then inviting their team: the owner enters one or more email addresses and gets an invitation link to copy for each, with each address's result (created, already a member, already invited, invalid) shown on its own so one failure doesn't block the rest. Every step can be skipped, and the owner then lands on the dashboard. Until the workspace has a project, and while the owner has no teammates or pending invitations, a dismissible "Finish setup" reminder lists what is left and reopens setup at that step.
 - Workspace invitations use a unique, expiring token delivered as a link. An invitee must authenticate before accepting. The owner can revoke outstanding invitations.
 - Users can switch between workspaces they belong to.
 

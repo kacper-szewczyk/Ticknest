@@ -10,6 +10,7 @@ import Stepper from '@mui/material/Stepper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { type FormEvent, useState } from 'react'
+import { InviteTeamStep } from './InviteTeamStep'
 import { type Catalog, saveCatalogRecord } from './lib/catalog'
 import { readableError } from './lib/errors'
 import { SETUP_STEPS, type SetupStep, nextSetupStep } from './lib/onboarding'
@@ -17,7 +18,11 @@ import { FormMessage, SelectField } from './ui'
 
 const DEFAULT_PROJECT_COLOR = '#668a6b'
 
-const STEP_COPY: Record<SetupStep, { label: string; title: string; hint: string; placeholder: string }> = {
+type CatalogStep = Exclude<SetupStep, 'invite'>
+
+const STEP_LABELS: Record<SetupStep, string> = { client: 'Client', project: 'Project', task: 'Task', invite: 'Team' }
+
+const STEP_COPY: Record<CatalogStep, { label: string; title: string; hint: string; placeholder: string }> = {
   client: {
     label: 'Client',
     title: 'Who do you work for?',
@@ -38,24 +43,31 @@ const STEP_COPY: Record<SetupStep, { label: string; title: string; hint: string;
   },
 }
 
-export type SetupSummary = { clientName?: string; projectName?: string; taskName?: string }
+export type SetupSummary = { clientName?: string; projectName?: string; taskName?: string; invitedCount?: number }
+
+function isStepCompleted(item: SetupStep, summary: SetupSummary): boolean {
+  return item === 'invite' ? (summary.invitedCount ?? 0) > 0 : summary[`${item}Name`] !== undefined
+}
 
 /**
- * Guides a new owner through adding a first client, project, and task. Each step saves on its own, so
- * leaving part-way keeps what was already added; `onFinish` fires when the owner completes or skips the rest.
+ * Guides a new owner through adding a first client, project, and task, then inviting their team. Each step
+ * saves on its own, so leaving part-way keeps what was already added; `onFinish` fires when the owner
+ * completes or skips the rest. `initialStep` opens it part-way, e.g. straight at inviting the team.
  */
 export function SetupWizard({
   workspaceId,
   workspaceName,
   catalog,
+  initialStep = 'client',
   onFinish,
 }: {
   workspaceId: string
   workspaceName: string
   catalog: Catalog
+  initialStep?: SetupStep
   onFinish: (summary: SetupSummary) => void
 }) {
-  const [step, setStep] = useState<SetupStep>('client')
+  const [step, setStep] = useState<SetupStep>(initialStep)
   const [name, setName] = useState('')
   const [color, setColor] = useState(DEFAULT_PROJECT_COLOR)
   const [billable, setBillable] = useState(false)
@@ -67,7 +79,9 @@ export function SetupWizard({
   const [error, setError] = useState('')
 
   const activeClients = catalog.clients.filter((client) => !client.archived)
-  const copy = STEP_COPY[step]
+  const visibleSteps = SETUP_STEPS.slice(SETUP_STEPS.indexOf(initialStep))
+  // The catalog form below is only shown on catalog steps; the invite step has its own form.
+  const copy = STEP_COPY[step === 'invite' ? 'task' : step]
 
   function advance(hasProject: boolean, nextSummary: SetupSummary) {
     setName('')
@@ -95,7 +109,7 @@ export function SetupWizard({
         const next = { ...summary, projectName: trimmed }
         setSummary(next)
         advance(true, next)
-      } else if (project) {
+      } else if (step === 'task' && project) {
         await saveCatalogRecord(workspaceId, 'tasks', { name: trimmed, projectId: project.id, billable })
         const next = { ...summary, taskName: trimmed }
         setSummary(next)
@@ -126,91 +140,98 @@ export function SetupWizard({
           Skip setup
         </Button>
       </Stack>
-      <Stepper activeStep={SETUP_STEPS.indexOf(step)} sx={{ mb: 2.5 }}>
-        {SETUP_STEPS.map((item) => (
-          // Only steps that added something get a checkmark; skipped ones stay plain.
-          <Step key={item} completed={summary[`${item}Name`] !== undefined}>
-            <StepLabel optional={skipped.includes(item) ? 'Skipped' : undefined}>{STEP_COPY[item].label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-      <Paper
-        component="form"
-        variant="outlined"
-        onSubmit={(event) => void handleSubmit(event)}
-        aria-busy={pending}
-        aria-labelledby="setup-step-heading"
-        sx={{ display: 'grid', gap: 2, p: { xs: 2.25, sm: 4 }, borderRadius: '18px' }}
-      >
-        <div>
-          <Typography variant="h2" id="setup-step-heading" sx={{ fontSize: 23 }}>
-            {copy.title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            {copy.hint}
-          </Typography>
-        </div>
-        {error && <FormMessage severity="error">{error}</FormMessage>}
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: step === 'project' ? 'minmax(0, 1fr) 96px' : '1fr' },
-            alignItems: 'start',
-          }}
+      {/* Opened part-way (from the "Finish setup" card), only the steps from there on are shown, if more than one. */}
+      {visibleSteps.length > 1 && (
+        <Stepper activeStep={visibleSteps.indexOf(step)} sx={{ mb: 2.5 }}>
+          {visibleSteps.map((item) => (
+            // Only steps that added something get a checkmark; skipped ones stay plain.
+            <Step key={item} completed={isStepCompleted(item, summary)}>
+              <StepLabel optional={skipped.includes(item) ? 'Skipped' : undefined}>{STEP_LABELS[item]}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      )}
+      {step === 'invite' ? (
+        <InviteTeamStep workspaceId={workspaceId} onDone={(invitedCount) => onFinish({ ...summary, invitedCount })} />
+      ) : (
+        <Paper
+          component="form"
+          variant="outlined"
+          onSubmit={(event) => void handleSubmit(event)}
+          aria-busy={pending}
+          aria-labelledby="setup-step-heading"
+          sx={{ display: 'grid', gap: 2, p: { xs: 2.25, sm: 4 }, borderRadius: '18px' }}
         >
-          <TextField
-            // Re-mount per step so the field takes focus again after advancing.
-            key={step}
-            label={`${copy.label} name`}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            autoFocus
-            placeholder={copy.placeholder}
-            helperText={step === 'task' && project ? `Part of ${project.name}` : undefined}
-            slotProps={{ htmlInput: { maxLength: 120 } }}
-          />
-          {step === 'project' && (
-            <TextField label="Color" type="color" value={color} onChange={(event) => setColor(event.target.value)} />
-          )}
-          {step === 'project' && activeClients.length > 0 && (
-            <SelectField
-              label="Client"
-              value={clientId}
-              onChange={(event) => setClientId(event.target.value)}
-              sx={{ gridColumn: '1 / -1' }}
-            >
-              <option value="">No client</option>
-              {activeClients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </SelectField>
-          )}
-          {step === 'task' && (
-            <FormControlLabel
-              control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />}
-              label="Billable"
-            />
-          )}
-        </Box>
-        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-          <Button
-            onClick={() => {
-              setSkipped((current) => [...current, step])
-              advance(project !== null, summary)
+          <div>
+            <Typography variant="h2" id="setup-step-heading" sx={{ fontSize: 23 }}>
+              {copy.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              {copy.hint}
+            </Typography>
+          </div>
+          {error && <FormMessage severity="error">{error}</FormMessage>}
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', sm: step === 'project' ? 'minmax(0, 1fr) 96px' : '1fr' },
+              alignItems: 'start',
             }}
-            disabled={pending}
           >
-            Skip
-          </Button>
-          <Button variant="contained" type="submit" disabled={pending || !name.trim()}>
-            {pending ? 'Saving…' : step === 'task' ? 'Finish' : 'Continue'}
-          </Button>
-        </Stack>
-      </Paper>
+            <TextField
+              // Re-mount per step so the field takes focus again after advancing.
+              key={step}
+              label={`${copy.label} name`}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              autoFocus
+              placeholder={copy.placeholder}
+              helperText={step === 'task' && project ? `Part of ${project.name}` : undefined}
+              slotProps={{ htmlInput: { maxLength: 120 } }}
+            />
+            {step === 'project' && (
+              <TextField label="Color" type="color" value={color} onChange={(event) => setColor(event.target.value)} />
+            )}
+            {step === 'project' && activeClients.length > 0 && (
+              <SelectField
+                label="Client"
+                value={clientId}
+                onChange={(event) => setClientId(event.target.value)}
+                sx={{ gridColumn: '1 / -1' }}
+              >
+                <option value="">No client</option>
+                {activeClients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
+                  </option>
+                ))}
+              </SelectField>
+            )}
+            {step === 'task' && (
+              <FormControlLabel
+                control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />}
+                label="Billable"
+              />
+            )}
+          </Box>
+          <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+            <Button
+              onClick={() => {
+                setSkipped((current) => [...current, step])
+                advance(project !== null, summary)
+              }}
+              disabled={pending}
+            >
+              Skip
+            </Button>
+            <Button variant="contained" type="submit" disabled={pending || !name.trim()}>
+              {pending ? 'Saving…' : step === 'task' ? 'Finish' : 'Continue'}
+            </Button>
+          </Stack>
+        </Paper>
+      )}
     </Box>
   )
 }
