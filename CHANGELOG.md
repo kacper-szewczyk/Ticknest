@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.20.0...ticknest-v1.21.0) (2026-11-04)
+
+
+### Features
+
+* guide new owners through a first client, project, and task ([#148](https://github.com/kacper-szewczyk/Ticknest/issues/148)) ([e16bcc2](https://github.com/kacper-szewczyk/Ticknest/commit/e16bcc2aaa723571e2b7a642b09dfa273f4ae6d7))
+
 ## [1.20.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.19.0...ticknest-v1.20.0) (2026-11-04)
 
 
