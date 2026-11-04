@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.25.0...ticknest-v1.26.0) (2026-11-04)
+
+
+### Features
+
+* collapse timesheet days by default and show a daily summary ([#164](https://github.com/kacper-szewczyk/Ticknest/issues/164)) ([5a8be73](https://github.com/kacper-szewczyk/Ticknest/commit/5a8be73818a9c5a428996ecf968e47143fc20fd6)), closes [#163](https://github.com/kacper-szewczyk/Ticknest/issues/163)
+
 ## [1.25.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.24.0...ticknest-v1.25.0) (2026-11-04)
 
 
