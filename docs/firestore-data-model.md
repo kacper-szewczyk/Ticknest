@@ -27,7 +27,7 @@ Cloud Functions deployment currently requires Firebase's Blaze plan and a linked
 
 ## Security rules
 
-- Workspace documents can be read only by members. Owners can update only the workspace name, week start, and update timestamp; ownership cannot be changed by a client.
+- Workspace documents can be read only by members. Owners can update only the workspace name (1–80 characters), week start (Sunday `0` or Monday `1`), and update timestamp; ownership cannot be changed by a client.
 - Members can read workspace clients, projects, and tasks. Members can read only their own time entries; owners and managers can read every workspace time entry. Firestore queries by members must constrain `userId` to their authenticated UID.
 - Owners can create, update, and delete clients, projects, and tasks.
 - Members can read only their own budgets; owners and managers can read every workspace budget. Member queries must constrain `userId` to their authenticated UID. Budget writes are denied to all web clients and go through the budget callables.
