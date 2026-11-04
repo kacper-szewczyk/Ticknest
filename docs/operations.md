@@ -31,6 +31,11 @@ The repository includes two workflows that deploy to your Firebase project from 
 
 > ⚠️ **A preview channel only deploys Hosting.** The preview connects to the Firestore data, rules, and Functions of the project it is built for. If that is your production project, anyone who opens a preview can sign in and change real data, and a pull request that changes the rules or Functions is previewed against the deployed ones. Point previews at a separate project, as described below, unless that is acceptable.
 
+Before you start, decide two things, because they change which steps below you need:
+
+- **Where the web app is hosted.** On Firebase Hosting, the deploy builds and publishes it. On Vercel, set `FIREBASE_DEPLOY_ONLY` and `FIREBASE_PREVIEW_CHANNELS` as described in [Configure GitHub](#configure-github), and skip the `VITE_*` build variables.
+- **Whether you want preview channels.** If you only have one project, consider turning them off with `FIREBASE_PREVIEW_CHANNELS=false`, for the reason in the warning above. Then you can skip the preview service account and the `preview` environment.
+
 #### Set up Google Cloud
 
 Run these commands with the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install), signed in as an owner of the project. Replace the values in the first two lines.
@@ -65,7 +70,7 @@ gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" --project="$PROJ
 
 `roles/firebase.admin` covers Hosting, Firestore rules and indexes, and Functions. `roles/iam.serviceAccountUser` lets the deploy attach the runtime service account to the Functions. If a deploy fails with a permission error, the Firebase CLI names the missing permission; grant a role that includes it.
 
-For previews, create a second service account with only what a preview channel needs. Firebase Authentication Admin lets the CLI add each channel's domain to the authorized domains, so Google sign-in works on the preview. If previews use a separate project, run the pool, provider, and service-account commands in that project instead.
+For previews, unless you turned them off, create a second service account with only what a preview channel needs. Firebase Authentication Admin lets the CLI add each channel's domain to the authorized domains, so Google sign-in works on the preview. If previews use a separate project, run the pool, provider, and service-account commands in that project instead.
 
 ```sh
 gcloud iam service-accounts create ticknest-preview --project="$PROJECT_ID"
@@ -103,6 +108,16 @@ The project must be on the Blaze plan, as for a manual deploy.
 `functions/.env` is ignored by Git, so the deploy workflow writes it from `FUNCTIONS_REGION`, `ENFORCE_APP_CHECK`, `DEMO_MODE`, and `DEMO_PROJECT_ID`. Params you leave unset keep their defaults.
 
 The deploy runs `firebase deploy --force`, so the CLI deletes Functions that are no longer in the source without asking, including the ones left behind when you change `FUNCTIONS_REGION`.
+
+#### Run the first deploy
+
+If you deployed by hand before, compare your local `functions/.env` with the variables you set. The workflow writes only the params it has variables for, so a param you set by hand but have no variable for goes back to its default on the first deploy.
+
+> ⚠️ **Check demo mode before you deploy.** Set `DEMO_MODE=true` and `DEMO_PROJECT_ID` only on a project dedicated to a public demo. Every night, the reset deletes all Auth users and Firestore data in that project and seeds sample data. On a project with real data, leave both unset. `VITE_DEMO_MODE` only changes the web app, but keep it in line with the Functions params so the banner matches what the project does.
+
+Then run the workflow by hand: on the **Actions** tab, open **Deploy** and choose **Run workflow** on `main`. If you added required reviewers to `production`, approve the run. When it succeeds, the Firebase console shows the new deploy under Functions, and under Hosting if you deploy it. From then on, every push to `main` deploys on its own once its quality checks pass.
+
+If the run shows as **skipped**, GitHub cannot see `FIREBASE_PROJECT_ID`. Check that you set it as a repository variable, not only on an environment.
 
 ### Hosting the web app on Vercel (optional)
 
