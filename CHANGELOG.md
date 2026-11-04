@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.24.0...ticknest-v1.25.0) (2026-11-04)
+
+
+### Features
+
+* let owners rename the workspace and change the week start ([#156](https://github.com/kacper-szewczyk/Ticknest/issues/156)) ([c5b1497](https://github.com/kacper-szewczyk/Ticknest/commit/c5b14979bc86cd15fa13b83f1231444a7bf95fc8)), closes [#146](https://github.com/kacper-szewczyk/Ticknest/issues/146)
+
 ## [1.24.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.23.0...ticknest-v1.24.0) (2026-11-04)
 
 
