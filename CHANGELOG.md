@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.23.0...ticknest-v1.24.0) (2026-11-04)
+
+
+### Features
+
+* add an optional "Invite your team" step to onboarding ([#154](https://github.com/kacper-szewczyk/Ticknest/issues/154)) ([a61a4c8](https://github.com/kacper-szewczyk/Ticknest/commit/a61a4c8c2e48a87ebba08472cb2db66f7cd6d2b6)), closes [#145](https://github.com/kacper-szewczyk/Ticknest/issues/145)
+
 ## [1.23.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.22.0...ticknest-v1.23.0) (2026-11-04)
 
 
