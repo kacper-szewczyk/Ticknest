@@ -12,6 +12,7 @@ import { type ChangeEvent, type FormEvent, lazy, Suspense, useEffect, useState }
 import { deleteCurrentAccount, getReauthMethod, signOutUser } from './lib/auth'
 import { type Catalog, subscribeToCatalog } from './lib/catalog'
 import { readableError } from './lib/errors'
+import { dismissSetupReminder, hasSetupLeft, isSetupReminderDismissed } from './lib/onboarding'
 import {
   type Workspace,
   acceptWorkspaceInvitation,
@@ -26,6 +27,7 @@ import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { AppearancePanel } from './AppearancePanel'
 import { Brand } from './Brand'
 import { CatalogPanel } from './CatalogPanel'
+import type { SetupSummary } from './SetupWizard'
 import { TimeEntriesPanel } from './TimeEntriesPanel'
 import { TimerBar } from './TimerBar'
 import { TimesheetDashboard } from './TimesheetDashboard'
@@ -41,6 +43,8 @@ const MyBudgetsPanel = lazy(() => import('./MyBudgetsPanel').then((module) => ({
 const TeamBudgetsPanel = lazy(() =>
   import('./TeamBudgetsPanel').then((module) => ({ default: module.TeamBudgetsPanel })),
 )
+// Setup runs once per workspace, right after it is created.
+const SetupWizard = lazy(() => import('./SetupWizard').then((module) => ({ default: module.SetupWizard })))
 
 type WorkspaceView =
   'timesheet' | 'dashboard' | 'reports' | 'my-budgets' | 'team-budgets' | 'budgets' | 'catalog' | 'members' | 'settings'
@@ -80,7 +84,12 @@ export function WorkspaceScreen({ user }: { user: User }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [catalog, setCatalog] = useState<Catalog>({ clients: [], projects: [], tasks: [] })
+  const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG)
+  // False until the active workspace's catalog has loaded, so an empty catalog really means "nothing added yet".
+  const [catalogReady, setCatalogReady] = useState(false)
+  // The workspace whose guided setup is showing, if any.
+  const [setupWorkspaceId, setSetupWorkspaceId] = useState<string | null>(null)
+  const [dismissedReminders, setDismissedReminders] = useState<string[]>([])
   const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : 'timesheet'))
 
   useEffect(() => {
@@ -90,8 +99,17 @@ export function WorkspaceScreen({ user }: { user: User }) {
   }, [])
 
   useEffect(() => {
+    setCatalog(EMPTY_CATALOG)
+    setCatalogReady(false)
     if (!activeId) return
-    return subscribeToCatalog(activeId, setCatalog, (loadError) => setError(readableError(loadError)))
+    return subscribeToCatalog(
+      activeId,
+      (next) => {
+        setCatalog(next)
+        setCatalogReady(true)
+      },
+      (loadError) => setError(readableError(loadError)),
+    )
   }, [activeId])
 
   async function refreshWorkspaces() {
@@ -131,6 +149,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
       const id = await createWorkspace(user, workspaceName)
       setWorkspaceName('')
       setActiveId(id)
+      setSetupWorkspaceId(id)
       await refreshWorkspaces()
     } catch (requestError) {
       setError(readableError(requestError))
@@ -229,8 +248,22 @@ export function WorkspaceScreen({ user }: { user: User }) {
   function navigate(next: WorkspaceView) {
     setError('')
     setNotice('')
+    // Leaving setup through the sidebar counts as skipping it; the reminder card offers it again.
+    setSetupWorkspaceId(null)
     window.location.hash = next
     setView(next)
+  }
+
+  const showSetupReminder =
+    activeWorkspace !== undefined &&
+    catalogReady &&
+    hasSetupLeft(activeWorkspace.role, catalog) &&
+    !dismissedReminders.includes(activeWorkspace.id) &&
+    !isSetupReminderDismissed(user.uid, activeWorkspace.id)
+
+  function finishSetup(summary: SetupSummary) {
+    navigate('dashboard')
+    setNotice(setupNotice(summary))
   }
 
   const joinWorkspaceForm = (
@@ -285,6 +318,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
           component="select"
           value={activeId ?? ''}
           onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+            setSetupWorkspaceId(null)
             setActiveId(event.target.value)
             saveActiveWorkspaceId(user.uid, event.target.value)
           }}
@@ -374,7 +408,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
         )
       }
       items={navItems}
-      active={activeWorkspace ? currentView : null}
+      active={activeWorkspace && setupWorkspaceId !== activeWorkspace.id ? currentView : null}
       onNavigate={navigate}
       footer={sidebarFooter}
     >
@@ -391,8 +425,29 @@ export function WorkspaceScreen({ user }: { user: User }) {
         {error && <FormMessage severity="error">{error}</FormMessage>}
         {notice && <FormMessage severity="success">{notice}</FormMessage>}
         {!user.emailVerified && <EmailVerificationNotice user={user} />}
-        {activeWorkspace ? (
+        {activeWorkspace && setupWorkspaceId === activeWorkspace.id ? (
+          <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+            <SetupWizard
+              workspaceId={activeWorkspace.id}
+              workspaceName={activeWorkspace.name}
+              catalog={catalog}
+              onFinish={finishSetup}
+            />
+          </Suspense>
+        ) : activeWorkspace ? (
           <>
+            {showSetupReminder && (currentView === 'timesheet' || currentView === 'dashboard') && (
+              <SetupReminder
+                onContinue={() => {
+                  setNotice('')
+                  setSetupWorkspaceId(activeWorkspace.id)
+                }}
+                onDismiss={() => {
+                  dismissSetupReminder(user.uid, activeWorkspace.id)
+                  setDismissedReminders((current) => [...current, activeWorkspace.id])
+                }}
+              />
+            )}
             {currentView === 'timesheet' && (
               <TimeEntriesPanel
                 user={user}
@@ -532,8 +587,8 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 Set up your workspace
               </Typography>
               <Typography color="text.secondary" sx={{ maxWidth: 530, lineHeight: 1.6 }}>
-                Hi {user.displayName?.split(' ')[0] ?? 'there'} — create a new workspace or join one you’ve been invited
-                to.
+                Hi {user.displayName?.trim().split(/\s+/)[0] || 'there'} — create a new workspace or join one you’ve
+                been invited to.
               </Typography>
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
@@ -687,6 +742,35 @@ const navIcons = {
       <circle cx="18" cy="18" r="2" />
     </NavIcon>
   ),
+}
+
+const EMPTY_CATALOG: Catalog = { clients: [], projects: [], tasks: [] }
+
+// Without a project there is nothing to track yet; the setup reminder covers that case instead.
+function setupNotice({ projectName, taskName }: SetupSummary): string {
+  const target = taskName ?? projectName
+  return target ? `You’re all set. Start the timer above to track time on ${target}.` : ''
+}
+
+function SetupReminder({ onContinue, onDismiss }: { onContinue: () => void; onDismiss: () => void }) {
+  return (
+    <Alert
+      severity="info"
+      sx={{ maxWidth: 750, mx: 'auto', mb: 2.25, alignItems: 'center' }}
+      action={
+        <Stack direction="row" spacing={0.5}>
+          <Button size="small" color="inherit" onClick={onDismiss}>
+            Dismiss
+          </Button>
+          <Button size="small" variant="outlined" color="inherit" onClick={onContinue}>
+            Finish setup
+          </Button>
+        </Stack>
+      }
+    >
+      Add a first project so you have something to track time against.
+    </Alert>
+  )
 }
 
 const onboardingCardSx = {
