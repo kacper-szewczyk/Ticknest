@@ -431,6 +431,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   userId={user.uid}
                   memberTimeZone={activeWorkspace.timezone}
                   weekStartsOn={activeWorkspace.weekStartsOn}
+                  onManageBudgets={seesAllEntries ? () => navigate('budgets') : undefined}
                 />
               </Suspense>
             )}
@@ -440,6 +441,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}
                   weekStartsOn={activeWorkspace.weekStartsOn}
+                  onManageBudgets={() => navigate('budgets')}
                 />
               </Suspense>
             )}

@@ -5,6 +5,7 @@ import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
+import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -49,7 +50,16 @@ function groupKey(group: Budget[]): string {
 
 // Owners and managers follow every member's budgets. Entries are read once per member, bounded by the shown
 // budgets' days, and refreshed on demand rather than kept live for the whole team.
-export function TeamBudgetsPanel({ workspaceId, weekStartsOn }: { workspaceId: string; weekStartsOn: number }) {
+export function TeamBudgetsPanel({
+  workspaceId,
+  weekStartsOn,
+  onManageBudgets,
+}: {
+  workspaceId: string
+  weekStartsOn: number
+  // Opens the Budgets page, where budgets are created and edited.
+  onManageBudgets: () => void
+}) {
   const [budgets, setBudgets] = useState<Budget[] | undefined>()
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [filters, setFilters] = useState<TeamBudgetFilters>(() => {
@@ -150,9 +160,14 @@ export function TeamBudgetsPanel({ workspaceId, weekStartsOn }: { workspaceId: s
         kicker="TEAM HOUR TARGETS"
         title="Budget progress"
         action={
-          <Button variant="outlined" onClick={() => setReloads((count) => count + 1)} disabled={loading}>
-            Refresh
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" onClick={onManageBudgets}>
+              Manage budgets
+            </Button>
+            <Button variant="outlined" onClick={() => setReloads((count) => count + 1)} disabled={loading}>
+              Refresh
+            </Button>
+          </Stack>
         }
       />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
@@ -210,9 +225,17 @@ export function TeamBudgetsPanel({ workspaceId, weekStartsOn }: { workspaceId: s
         <LoadingState label="Loading budget progress…" sx={{ py: 6 }} />
       ) : groups.length === 0 ? (
         <EmptyText>
-          {budgets && budgets.some((budget) => !budget.archived)
-            ? 'No budgets match these filters.'
-            : 'No one has a budget yet. Create budgets from the Budgets page.'}
+          {budgets && budgets.some((budget) => !budget.archived) ? (
+            'No budgets match these filters.'
+          ) : (
+            <>
+              No one has a budget yet. Create budgets from the{' '}
+              <Link component="button" type="button" onClick={onManageBudgets} sx={{ verticalAlign: 'baseline' }}>
+                Budgets page
+              </Link>
+              .
+            </>
+          )}
         </EmptyText>
       ) : (
         <Box sx={{ overflowX: 'auto', mt: 2 }}>
