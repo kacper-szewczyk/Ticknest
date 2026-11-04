@@ -18,6 +18,7 @@ import {
   type WorkspaceMember,
   type WorkspaceRole,
 } from './lib/workspaces'
+import { invitationUrl } from './lib/inviteLink'
 import { EmptyText, FormMessage, ListRow, SectionCard, SectionHeading } from './ui'
 
 const ROLE_LABELS: Record<WorkspaceRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
@@ -26,7 +27,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([])
   const [email, setEmail] = useState('')
-  const [invitationUrl, setInvitationUrl] = useState('')
+  const [inviteUrl, setInviteUrl] = useState('')
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
@@ -47,14 +48,10 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     setPending(true)
     setError('')
     setNotice('')
-    setInvitationUrl('')
+    setInviteUrl('')
     try {
       const invitation = await createWorkspaceInvitation(workspaceId, email)
-      const url = new URL('/', window.location.origin)
-      url.searchParams.set('workspace', workspaceId)
-      url.searchParams.set('invite', invitation.invitationId)
-      url.searchParams.set('token', invitation.token)
-      setInvitationUrl(url.toString())
+      setInviteUrl(invitationUrl(window.location.origin, workspaceId, invitation.invitationId, invitation.token))
       setNotice(`Invitation created for ${email.trim()}. Copy the link and send it to them. It expires in 7 days.`)
       setEmail('')
     } catch (issue) {
@@ -71,7 +68,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     try {
       await revokeWorkspaceInvitation(workspaceId, invitation.id)
       setNotice(`Invitation for ${invitation.email} revoked.`)
-      setInvitationUrl('')
+      setInviteUrl('')
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : 'Could not revoke this invitation.')
     } finally {
@@ -117,7 +114,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(invitationUrl)
+      await navigator.clipboard.writeText(inviteUrl)
       setNotice('Invitation link copied.')
     } catch {
       setNotice('Select and copy the invitation link below.')
@@ -160,7 +157,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
           {pending ? 'Creating…' : 'Create invitation'}
         </Button>
       </Stack>
-      {invitationUrl && (
+      {inviteUrl && (
         <Paper
           variant="outlined"
           sx={{
@@ -175,7 +172,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
         >
           <TextField
             label="Invitation link"
-            value={invitationUrl}
+            value={inviteUrl}
             onFocus={(event) => event.target.select()}
             slotProps={{ htmlInput: { readOnly: true } }}
           />

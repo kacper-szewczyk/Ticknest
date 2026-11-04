@@ -145,6 +145,42 @@ export function subscribeToWorkspaceInvitations(
   )
 }
 
+/**
+ * Follows how many active members and pending invitations a workspace has; owner-only, since only owners
+ * can list invitations. Reports once both counts have loaded.
+ */
+export function subscribeToTeamSize(
+  workspaceId: string,
+  onChange: (team: { activeMembers: number; pendingInvitations: number }) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  let activeMembers: number | undefined
+  let pendingInvitations: number | undefined
+  const report = () => {
+    if (activeMembers !== undefined && pendingInvitations !== undefined) onChange({ activeMembers, pendingInvitations })
+  }
+  const stopMembers = subscribeToWorkspaceMembers(
+    workspaceId,
+    (members) => {
+      activeMembers = members.filter((member) => member.status !== 'removed').length
+      report()
+    },
+    onError,
+  )
+  const stopInvitations = subscribeToWorkspaceInvitations(
+    workspaceId,
+    (invitations) => {
+      pendingInvitations = invitations.length
+      report()
+    },
+    onError,
+  )
+  return () => {
+    stopMembers()
+    stopInvitations()
+  }
+}
+
 export async function createWorkspaceInvitation(
   workspaceId: string,
   email: string,

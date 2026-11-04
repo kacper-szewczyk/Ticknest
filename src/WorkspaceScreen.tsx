@@ -16,7 +16,14 @@ import { type Catalog, subscribeToCatalog } from './lib/catalog'
 import { localeWeekStart, type WeekStart } from './lib/dates'
 import { readableError } from './lib/errors'
 import { clearInviteParamsFromAddressBar, hasInviteParams } from './lib/inviteLink'
-import { dismissSetupReminder, hasSetupLeft, isSetupReminderDismissed } from './lib/onboarding'
+import {
+  type SetupItem,
+  type SetupStep,
+  type TeamSize,
+  dismissSetupReminder,
+  isSetupReminderDismissed,
+  setupItemsLeft,
+} from './lib/onboarding'
 import {
   type Workspace,
   acceptWorkspaceInvitation,
@@ -26,6 +33,7 @@ import {
   loadWorkspaces,
   saveActiveWorkspaceId,
   subscribeToMembershipStatus,
+  subscribeToTeamSize,
 } from './lib/workspaces'
 import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { AppearancePanel } from './AppearancePanel'
@@ -96,6 +104,9 @@ export function WorkspaceScreen({ user }: { user: User }) {
   const [catalogReady, setCatalogReady] = useState(false)
   // The workspace whose guided setup is showing, if any.
   const [setupWorkspaceId, setSetupWorkspaceId] = useState<string | null>(null)
+  const [setupStartStep, setSetupStartStep] = useState<SetupStep>('client')
+  // The active workspace's member and invitation counts, for owners; undefined until loaded.
+  const [team, setTeam] = useState<TeamSize | undefined>()
   const [dismissedReminders, setDismissedReminders] = useState<string[]>([])
   const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : 'timesheet'))
 
@@ -156,6 +167,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
       const id = await createWorkspace(user, workspaceName, weekStartsOn)
       setWorkspaceName('')
       setActiveId(id)
+      setSetupStartStep('client')
       setSetupWorkspaceId(id)
       await refreshWorkspaces()
     } catch (requestError) {
@@ -224,6 +236,12 @@ export function WorkspaceScreen({ user }: { user: User }) {
 
   const activeWorkspace = workspaces?.find((workspace) => workspace.id === activeId)
   const isOwner = activeWorkspace?.role === 'owner'
+
+  useEffect(() => {
+    setTeam(undefined)
+    if (!activeId || !isOwner) return
+    return subscribeToTeamSize(activeId, setTeam, (loadError) => setError(readableError(loadError)))
+  }, [activeId, isOwner])
   const seesAllEntries = canSeeAllEntries(activeWorkspace?.role)
   const currentView: WorkspaceView =
     (!isOwner && OWNER_VIEWS.includes(view)) || (!seesAllEntries && MANAGER_VIEWS.includes(view)) ? 'timesheet' : view
@@ -263,10 +281,11 @@ export function WorkspaceScreen({ user }: { user: User }) {
     setView(next)
   }
 
+  const setupItems: SetupItem[] =
+    activeWorkspace && catalogReady ? setupItemsLeft(activeWorkspace.role, catalog, team) : []
   const showSetupReminder =
     activeWorkspace !== undefined &&
-    catalogReady &&
-    hasSetupLeft(activeWorkspace.role, catalog) &&
+    setupItems.length > 0 &&
     !dismissedReminders.includes(activeWorkspace.id) &&
     !isSetupReminderDismissed(user.uid, activeWorkspace.id)
 
@@ -532,6 +551,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
               workspaceId={activeWorkspace.id}
               workspaceName={activeWorkspace.name}
               catalog={catalog}
+              initialStep={setupStartStep}
               onFinish={finishSetup}
             />
           </Suspense>
@@ -539,8 +559,10 @@ export function WorkspaceScreen({ user }: { user: User }) {
           <>
             {showSetupReminder && (currentView === 'timesheet' || currentView === 'dashboard') && (
               <SetupReminder
-                onContinue={() => {
+                items={setupItems}
+                onContinue={(item) => {
                   setNotice('')
+                  setSetupStartStep(item === 'invite' ? 'invite' : 'client')
                   setSetupWorkspaceId(activeWorkspace.id)
                 }}
                 onDismiss={() => {
@@ -805,28 +827,64 @@ const navIcons = {
 const EMPTY_CATALOG: Catalog = { clients: [], projects: [], tasks: [] }
 
 // Without a project there is nothing to track yet; the setup reminder covers that case instead.
-function setupNotice({ projectName, taskName }: SetupSummary): string {
+function setupNotice({ projectName, taskName, invitedCount = 0 }: SetupSummary): string {
   const target = taskName ?? projectName
-  return target ? `You’re all set. Start the timer above to track time on ${target}.` : ''
+  const invited =
+    invitedCount > 0
+      ? `${invitedCount === 1 ? 'Your invitation is' : `${invitedCount} invitations are`} pending under Members.`
+      : ''
+  const tracking = target ? `You’re all set. Start the timer above to track time on ${target}.` : ''
+  return [tracking, invited].filter(Boolean).join(' ')
 }
 
-function SetupReminder({ onContinue, onDismiss }: { onContinue: () => void; onDismiss: () => void }) {
+const SETUP_ITEM_COPY: Record<SetupItem, { text: string; action: string }> = {
+  project: { text: 'Add a first project so you have something to track time against.', action: 'Add a project' },
+  invite: { text: 'Invite a teammate so they can track time in this workspace too.', action: 'Invite a teammate' },
+}
+
+function SetupReminder({
+  items,
+  onContinue,
+  onDismiss,
+}: {
+  items: SetupItem[]
+  onContinue: (item: SetupItem) => void
+  onDismiss: () => void
+}) {
   return (
     <Alert
       severity="info"
-      sx={{ maxWidth: 750, mx: 'auto', mb: 2.25, alignItems: 'center' }}
+      sx={{ maxWidth: 750, mx: 'auto', mb: 2.25, '& .MuiAlert-message': { flex: 1, minWidth: 0 } }}
       action={
-        <Stack direction="row" spacing={0.5}>
-          <Button size="small" color="inherit" onClick={onDismiss}>
-            Dismiss
-          </Button>
-          <Button size="small" variant="outlined" color="inherit" onClick={onContinue}>
-            Finish setup
-          </Button>
-        </Stack>
+        <Button size="small" color="inherit" onClick={onDismiss}>
+          Dismiss
+        </Button>
       }
     >
-      Add a first project so you have something to track time against.
+      <Typography component="h2" sx={{ fontWeight: 700, fontSize: 'inherit', mb: 0.75 }}>
+        Finish setup
+      </Typography>
+      <Box component="ul" sx={{ display: 'grid', gap: 1, m: 0, p: 0, listStyle: 'none' }}>
+        {items.map((item) => (
+          <Stack
+            component="li"
+            key={item}
+            direction={{ xs: 'column', sm: 'row' }}
+            sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 1 }}
+          >
+            <span>{SETUP_ITEM_COPY[item].text}</span>
+            <Button
+              size="small"
+              variant="outlined"
+              color="inherit"
+              onClick={() => onContinue(item)}
+              sx={{ flex: '0 0 auto', alignSelf: { xs: 'flex-start', sm: 'center' } }}
+            >
+              {SETUP_ITEM_COPY[item].action}
+            </Button>
+          </Stack>
+        ))}
+      </Box>
     </Alert>
   )
 }

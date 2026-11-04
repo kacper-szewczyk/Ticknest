@@ -27,3 +27,12 @@ export function verificationContinueUrl(href: string): string {
   url.hash = ''
   return url.toString()
 }
+
+/** The link an invited person opens to join: the app's root with the workspace, invitation, and its secret token. */
+export function invitationUrl(origin: string, workspaceId: string, invitationId: string, token: string): string {
+  const url = new URL('/', origin)
+  url.searchParams.set('workspace', workspaceId)
+  url.searchParams.set('invite', invitationId)
+  url.searchParams.set('token', token)
+  return url.toString()
+}

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   clearInviteParamsFromAddressBar,
   hasInviteParams,
+  invitationUrl,
   verificationContinueUrl,
   withoutInviteParams,
 } from '../../src/lib/inviteLink'
@@ -54,5 +55,13 @@ describe('clearInviteParamsFromAddressBar', () => {
 describe('verificationContinueUrl', () => {
   it('returns to this page with the invitation but without the in-app hash', () => {
     expect(verificationContinueUrl(INVITE_URL)).toBe('https://ticknest.app/?workspace=w1&invite=i1&token=secret')
+  })
+})
+
+describe('invitationUrl', () => {
+  it('builds a link that onboarding recognises as an invitation', () => {
+    const link = invitationUrl('https://ticknest.app', 'w1', 'i1', 'secret')
+    expect(link).toBe('https://ticknest.app/?workspace=w1&invite=i1&token=secret')
+    expect(hasInviteParams(link)).toBe(true)
   })
 })
