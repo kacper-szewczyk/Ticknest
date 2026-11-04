@@ -164,6 +164,18 @@ describe('createWorkspace', () => {
     })
   })
 
+  it('stores a Sunday week start when the owner picks it', async () => {
+    const owner = await createUser('owner', 'owner@example.com')
+    const { workspaceId } = await owner.call<{ workspaceId: string }>('createWorkspace', {
+      name: 'Studio',
+      timezone: 'UTC',
+      displayName: '',
+      weekStartsOn: 0,
+    })
+    const workspace = await adminDb.doc(`workspaces/${workspaceId}`).get()
+    expect(workspace.data()).toMatchObject({ weekStartsOn: 0 })
+  })
+
   it('requires a signed-in user', async () => {
     await expectCallError(
       anonymousCall('createWorkspace', { name: 'Studio', timezone: 'UTC', displayName: '' }),
@@ -176,6 +188,9 @@ describe('createWorkspace', () => {
     ['an oversized name', { name: 'a'.repeat(81), timezone: 'UTC', displayName: '' }],
     ['an unknown time zone', { name: 'Studio', timezone: 'Mars/Olympus', displayName: '' }],
     ['an oversized display name', { name: 'Studio', timezone: 'UTC', displayName: 'a'.repeat(81) }],
+    ['a Saturday week start', { name: 'Studio', timezone: 'UTC', displayName: '', weekStartsOn: 6 }],
+    ['a week start that is not a number', { name: 'Studio', timezone: 'UTC', displayName: '', weekStartsOn: '1' }],
+    ['a null week start', { name: 'Studio', timezone: 'UTC', displayName: '', weekStartsOn: null }],
     ['a body that is not an object', ['Studio']],
   ])('rejects %s', async (_, data) => {
     const owner = await createUser('owner', 'owner@example.com')

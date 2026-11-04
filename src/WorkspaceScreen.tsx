@@ -5,12 +5,15 @@ import Chip from '@mui/material/Chip'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { type Theme, alpha } from '@mui/material/styles'
 import { type User, sendEmailVerification } from 'firebase/auth'
 import { type ChangeEvent, type FormEvent, lazy, Suspense, useEffect, useState } from 'react'
 import { deleteCurrentAccount, getReauthMethod, signOutUser } from './lib/auth'
 import { type Catalog, subscribeToCatalog } from './lib/catalog'
+import { localeWeekStart, type WeekStart } from './lib/dates'
 import { readableError } from './lib/errors'
 import { dismissSetupReminder, hasSetupLeft, isSetupReminderDismissed } from './lib/onboarding'
 import {
@@ -77,6 +80,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
   const [workspaces, setWorkspaces] = useState<Workspace[] | undefined>()
   const [activeId, setActiveId] = useState<string | null>(getSavedWorkspaceId(user.uid))
   const [workspaceName, setWorkspaceName] = useState('')
+  const [weekStartsOn, setWeekStartsOn] = useState<WeekStart>(() => localeWeekStart(navigator.language))
   const [inviteLink, setInviteLink] = useState(() => {
     const params = new URLSearchParams(window.location.search)
     return params.has('workspace') && params.has('invite') ? window.location.href : ''
@@ -146,7 +150,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
     setPending(true)
     setError('')
     try {
-      const id = await createWorkspace(user, workspaceName)
+      const id = await createWorkspace(user, workspaceName, weekStartsOn)
       setWorkspaceName('')
       setActiveId(id)
       setSetupWorkspaceId(id)
@@ -622,6 +626,30 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   placeholder="e.g. Acme Studio"
                   slotProps={{ htmlInput: { maxLength: 80 } }}
                 />
+                <div>
+                  <Typography id="week-start-label" variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+                    Week starts on
+                  </Typography>
+                  <ToggleButtonGroup
+                    aria-labelledby="week-start-label"
+                    exclusive
+                    size="small"
+                    color="primary"
+                    value={weekStartsOn}
+                    onChange={(_, value: WeekStart | null) => {
+                      // Ignore clicks on the selected button so one option always stays chosen.
+                      if (value !== null) setWeekStartsOn(value)
+                    }}
+                    disabled={pending}
+                  >
+                    <ToggleButton value={1} sx={{ px: 2 }}>
+                      Monday
+                    </ToggleButton>
+                    <ToggleButton value={0} sx={{ px: 2 }}>
+                      Sunday
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </div>
                 <Button variant="contained" type="submit" disabled={pending}>
                   Create workspace
                 </Button>

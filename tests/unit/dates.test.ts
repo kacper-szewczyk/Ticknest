@@ -6,6 +6,7 @@ import {
   localDateTimeValue,
   localDayBounds,
   localDayString,
+  localeWeekStart,
   shiftDayString,
   startOfWeekString,
 } from '../../src/lib/dates'
@@ -118,5 +119,23 @@ describe('formatElapsed', () => {
     [100 * 3600, '100:00:00'],
   ])('formats %i seconds as %s', (seconds, expected) => {
     expect(formatElapsed(seconds)).toBe(expected)
+  })
+})
+
+describe('localeWeekStart', () => {
+  it.each([
+    ['en-US', 0],
+    ['pl-PL', 1],
+    ['en-GB', 1],
+  ])('uses the week start of %s', (locale, expected) => {
+    expect(localeWeekStart(locale)).toBe(expected)
+  })
+
+  it('falls back to Monday for locales whose week starts on Saturday', () => {
+    expect(localeWeekStart('ar-EG')).toBe(1)
+  })
+
+  it('falls back to Monday for a locale it cannot parse', () => {
+    expect(localeWeekStart('not a locale!')).toBe(1)
   })
 })
