@@ -110,7 +110,7 @@ You can serve the web app from [Vercel](https://vercel.com) instead of Firebase 
 
 1. Import the repository as a Vercel project. `vercel.json` sets the Vite build, the `dist/` output, the rewrite of every path to `index.html`, and the same response headers as `firebase.json`.
 2. Add the `VITE_*` values from step 3 above as Vercel environment variables for Production (and Preview, if previews should reach the same project). Set the Node.js version to 22.x or 24.x.
-3. Add the Vercel domain under Authentication → Settings → Authorized domains in the Firebase console, or Google sign-in fails with `auth/unauthorized-domain`.
+3. Add the Vercel domain under Authentication → Settings → Authorized domains in the Firebase console, or Google sign-in fails with `auth/unauthorized-domain`. The same list decides where email verification links may return: on an unlisted domain, verification emails still send but end on Firebase's confirmation page instead of returning to the app with the invitation link.
 
 **Preview deployments.** Firebase authorized domains do not accept wildcards, and every Vercel preview gets its own hostname, so Google sign-in cannot work on previews. Set `VITE_GOOGLE_SIGN_IN_ENABLED=false` for the Preview environment only. Preview builds then hide the Google button, and reviewers sign in with email and password (or the demo accounts in [Demo mode](#demo-mode-optional)). Leave the variable unset for Production, where Google sign-in stays on. The flag is read at build time, so redeploy after you change it.
 

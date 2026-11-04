@@ -15,12 +15,40 @@ import {
 } from 'firebase/auth'
 import { deleteDoc, doc } from 'firebase/firestore'
 import { auth, db } from './firebase'
+import { verificationContinueUrl } from './inviteLink'
 
 export async function registerWithEmail(name: string, email: string, password: string): Promise<User> {
   const credential = await createUserWithEmailAndPassword(auth, email.trim(), password)
   await updateProfile(credential.user, { displayName: name.trim() })
-  await sendEmailVerification(credential.user)
+  await sendVerificationEmail(credential.user)
   return credential.user
+}
+
+function hasErrorCode(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code
+}
+
+/**
+ * Sends the verification email with a link back to this page, so an invitation in the URL survives verification.
+ * Falls back to Firebase's plain confirmation page when this domain is not an authorized return address.
+ */
+export async function sendVerificationEmail(user: User): Promise<void> {
+  try {
+    await sendEmailVerification(user, { url: verificationContinueUrl(window.location.href) })
+  } catch (error) {
+    if (!hasErrorCode(error, 'auth/unauthorized-continue-uri')) throw error
+    await sendEmailVerification(user)
+  }
+}
+
+/**
+ * Re-reads the account after the user verified their email elsewhere. A verified account also gets a fresh ID token,
+ * because the backend checks the token's `email_verified` claim rather than the profile.
+ */
+export async function refreshEmailVerification(user: User): Promise<boolean> {
+  await user.reload()
+  if (user.emailVerified) await user.getIdToken(true)
+  return user.emailVerified
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<User> {
