@@ -15,7 +15,10 @@ npm --prefix functions install
 npm run emulators
 ```
 
-In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>. See [local setup and deployment](docs/operations.md) for configuring Firebase, authentication, billing, backups, and teardown.
+In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
+
+> [!IMPORTANT]
+> The quick start only runs Ticknest locally against the Firebase emulators. To run it for real users, follow the **[full setup guide](docs/operations.md)**. It covers creating and configuring your Firebase project, authentication providers, billing, deploying (by hand, from GitHub Actions, or to Vercel), demo mode, App Check, security headers, backups, and teardown.
 
 ## Support and contact
 
@@ -31,7 +34,7 @@ In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>. See [lo
 
 ## Documentation
 
-- [Self-hosting, privacy, costs, backups, and teardown](docs/operations.md)
+- [Full setup guide: self-hosting, deployment, privacy, costs, backups, and teardown](docs/operations.md)
 - [Running a public demo](docs/operations.md#demo-mode-optional)
 - [Contributing](CONTRIBUTING.md)
 - [Coding standards](CODING_STANDARDS.md)
