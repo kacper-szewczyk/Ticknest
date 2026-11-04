@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.26.0...ticknest-v1.27.0) (2026-11-04)
+
+
+### Features
+
+* edit budgets in a side drawer and simplify the budgets list ([#166](https://github.com/kacper-szewczyk/Ticknest/issues/166)) ([3d8ed99](https://github.com/kacper-szewczyk/Ticknest/commit/3d8ed99a732312d1ee7867adf06ce2fb3680b75b)), closes [#158](https://github.com/kacper-szewczyk/Ticknest/issues/158)
+
 ## [1.26.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.25.0...ticknest-v1.26.0) (2026-11-04)
 
 
