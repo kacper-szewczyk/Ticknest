@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { BudgetProgressCard } from './BudgetProgressCard'
@@ -20,11 +22,14 @@ export function MyBudgetsPanel({
   userId,
   memberTimeZone,
   weekStartsOn,
+  onManageBudgets,
 }: {
   workspaceId: string
   userId: string
   memberTimeZone: string | undefined
   weekStartsOn: number
+  // Given to owners and managers, who can open the Budgets page to set budgets up.
+  onManageBudgets?: () => void
 }) {
   const [budgets, setBudgets] = useState<Budget[] | undefined>()
   const [entries, setEntries] = useState<TimeEntry[] | undefined>()
@@ -69,7 +74,18 @@ export function MyBudgetsPanel({
 
   return (
     <SectionCard labelledBy="my-budgets-heading">
-      <SectionHeading id="my-budgets-heading" kicker="YOUR HOUR TARGETS" title="My budgets" />
+      <SectionHeading
+        id="my-budgets-heading"
+        kicker="YOUR HOUR TARGETS"
+        title="My budgets"
+        action={
+          onManageBudgets && (
+            <Button variant="outlined" onClick={onManageBudgets}>
+              Manage budgets
+            </Button>
+          )
+        }
+      />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
         Hours you’re asked to log on a project or client. Only completed entries count, and days are counted in{' '}
         {timeZone.replaceAll('_', ' ')}.
@@ -80,7 +96,15 @@ export function MyBudgetsPanel({
         <LoadingState label="Loading your budgets…" sx={{ py: 6 }} />
       ) : !hasActive && groups.upcoming.length === 0 ? (
         <EmptyText>
-          You have no active or upcoming budgets. Owners and managers set them from the Budgets page.
+          You have no active or upcoming budgets. Owners and managers set them from the{' '}
+          {onManageBudgets ? (
+            <Link component="button" type="button" onClick={onManageBudgets} sx={{ verticalAlign: 'baseline' }}>
+              Budgets page
+            </Link>
+          ) : (
+            'Budgets page'
+          )}
+          .
         </EmptyText>
       ) : (
         <>
