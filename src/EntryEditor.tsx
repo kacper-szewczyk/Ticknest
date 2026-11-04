@@ -28,7 +28,8 @@ export function EntryEditor({
   entry?: TimeEntry
   day: string
   onClose: () => void
-  onSaved: (message: string) => void
+  /** Called after a save with the day the entry was saved on, which the date field may have changed. */
+  onSaved: (message: string, day: string) => void
 }) {
   const [description, setDescription] = useState(entry?.description ?? '')
   const [work, setWork] = useState<WorkDetails>(() =>
@@ -73,7 +74,7 @@ export function EntryEditor({
         },
         entry?.id,
       )
-      onSaved(entry ? 'Time entry updated.' : 'Time entry added.')
+      onSaved(entry ? 'Time entry updated.' : 'Time entry added.', date)
     } catch (requestError) {
       if (!showFieldError(requestError)) setError(readableError(requestError))
       setPending(false)
