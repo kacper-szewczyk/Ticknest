@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.21.0...ticknest-v1.22.0) (2026-11-04)
+
+
+### Features
+
+* let owners choose the week start when creating a workspace ([#150](https://github.com/kacper-szewczyk/Ticknest/issues/150)) ([2618152](https://github.com/kacper-szewczyk/Ticknest/commit/26181525ad10b72d40d92a8eedf93034b20372e3)), closes [#143](https://github.com/kacper-szewczyk/Ticknest/issues/143)
+
 ## [1.21.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.20.0...ticknest-v1.21.0) (2026-11-04)
 
 
