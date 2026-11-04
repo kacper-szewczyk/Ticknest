@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.28.0...ticknest-v1.29.0) (2026-11-04)
+
+
+### Features
+
+* stop running timers automatically at midnight in their start time zone ([#171](https://github.com/kacper-szewczyk/Ticknest/issues/171)) ([5f68ebc](https://github.com/kacper-szewczyk/Ticknest/commit/5f68ebc390254703f68e2096cd0fc8069ea3d86c)), closes [#167](https://github.com/kacper-szewczyk/Ticknest/issues/167)
+
 ## [1.28.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.27.0...ticknest-v1.28.0) (2026-11-04)
 
 
