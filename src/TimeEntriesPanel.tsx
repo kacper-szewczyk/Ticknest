@@ -16,7 +16,7 @@ import { EntryEditor } from './EntryEditor'
 import { dayDate, formatElapsed, formatWeekLabel, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
 import { readableError } from './lib/errors'
 import { type TimeEntry, continueTimer, deleteTimeEntry, subscribeToEntriesForRange } from './lib/timeEntries'
-import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
+import { AutoStoppedChip, BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
 
 export function TimeEntriesPanel({
   user,
@@ -278,6 +278,7 @@ export function TimeEntriesPanel({
                       }}
                     >
                       {entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}
+                      {entry.autoStopped === true && <AutoStoppedChip />}
                       {entry.billable && <BillableChip />}
                       {entry.endAt !== null && entry.userId === user.uid && (
                         <Button size="small" onClick={() => void handleContinue(entry)} disabled={pending}>

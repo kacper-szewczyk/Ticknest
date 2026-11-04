@@ -245,7 +245,7 @@ Before removing a user or workspace's data, export a backup. To remove all data 
 
 ## Costs
 
-Cloud Functions require Blaze and an attached billing account. Firestore reads, writes, storage, Hosting usage and bandwidth, Functions invocations/compute/networking, Cloud Storage backups, and other linked Google Cloud resources can incur charges. Firebase may provide no-cost quotas, but usage beyond applicable quotas is billed at current rates. Budget alerts notify you; they do not cap spending.
+Cloud Functions require Blaze and an attached billing account. The scheduled `autoStopTimers` Function runs every 15 minutes and uses one Cloud Scheduler job; each run reads every running timer and its entry, so its Firestore cost grows with the number of timers running at once, not with stored history. Firestore reads, writes, storage, Hosting usage and bandwidth, Functions invocations/compute/networking, Cloud Storage backups, and other linked Google Cloud resources can incur charges. Firebase may provide no-cost quotas, but usage beyond applicable quotas is billed at current rates. Budget alerts notify you; they do not cap spending.
 
 Review the current [Firebase pricing plans](https://firebase.google.com/docs/projects/billing/firebase-pricing-plans), [Firebase pricing details](https://firebase.google.com/pricing), and Google Cloud Billing reports for your region and usage. Set budgets and alerts, monitor actual use, and account for backups and retention when estimating cost. Do not assume the same cost for every workspace or traffic level.
 

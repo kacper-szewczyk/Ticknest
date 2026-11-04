@@ -9,6 +9,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { getDemoGuardResult } from './demo/config'
 import { resetDemoProject } from './demo/reset'
 import { DEMO_RESET_SCHEDULE, DEMO_RESET_TIME_ZONE } from './demo/schedule'
+import { autoStopRunningTimers } from './timers/autoStop'
 
 initializeApp()
 
@@ -487,7 +488,10 @@ export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
       }
       transaction.set(lockRef, { updatedAt: now })
       if (existingData) {
-        transaction.update(entryRef, values)
+        // A changed end time replaces the automatic one, so the entry no longer counts as auto-stopped.
+        const isAutoStopReplaced =
+          existingData.autoStopped === true && !(existingData.endAt as Timestamp).isEqual(endAt)
+        transaction.update(entryRef, isAutoStopReplaced ? { ...values, autoStopped: FieldValue.delete() } : values)
       } else {
         const name = request.auth?.token.name
         transaction.create(entryRef, {
@@ -696,6 +700,23 @@ export const deleteBudget = onCall(FUNCTION_OPTIONS, async (request) => {
   })
   return { budgetId }
 })
+
+// Stops timers left running past the end of the day they were started on, in the time zone they were started in.
+export const autoStopTimers = onSchedule(
+  {
+    schedule: 'every 15 minutes',
+    timeZone: 'UTC',
+    region: REGION,
+    // One run at a time; each stop re-checks the timer in its own transaction, so a retry is safe.
+    maxInstances: 1,
+    retryCount: 2,
+    timeoutSeconds: 540,
+  },
+  async () => {
+    const result = await autoStopRunningTimers(db, new Date())
+    if (result.stopped > 0 || result.skipped > 0) logger.info('Auto-stopped running timers.', result)
+  },
+)
 
 // The public demo's daily reset. Deploys everywhere but does nothing unless the demo guard allows it.
 export const resetDemo = onSchedule(

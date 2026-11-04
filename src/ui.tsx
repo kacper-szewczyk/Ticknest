@@ -104,6 +104,18 @@ export function BillableChip() {
   return <Chip label="Billable" color="success" variant="outlined" />
 }
 
+// Marks an entry whose timer ran past midnight and was stopped at the end of the day it started.
+export function AutoStoppedChip() {
+  return (
+    <Chip
+      label="Auto-stopped"
+      color="info"
+      variant="outlined"
+      title="This timer ran past midnight, so it was stopped at the end of the day it started."
+    />
+  )
+}
+
 export function EmptyText({ children }: { children: ReactNode }) {
   return (
     <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>

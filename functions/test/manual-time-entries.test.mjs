@@ -200,3 +200,18 @@ test('invalid durations are rejected', async () => {
   const result = await save(member, entry(400, 400))
   assert.equal(result.status, 'INVALID_ARGUMENT')
 })
+
+test('editing the end of an auto-stopped entry clears the auto-stopped marker', async () => {
+  const created = await save(member, entry(600, 601))
+  assert.ok(created.ok, JSON.stringify(created))
+  const entryRef = db.collection('workspaces').doc(workspaceId).collection('timeEntries').doc(created.entryId)
+  await entryRef.update({ autoStopped: true })
+
+  const sameEnd = await save(member, { ...entry(600, 601), entryId: created.entryId, description: 'Renamed' })
+  assert.ok(sameEnd.ok, JSON.stringify(sameEnd))
+  assert.equal((await entryRef.get()).data().autoStopped, true)
+
+  const laterEnd = await save(member, { ...entry(600, 602), entryId: created.entryId })
+  assert.ok(laterEnd.ok, JSON.stringify(laterEnd))
+  assert.equal((await entryRef.get()).data().autoStopped, undefined)
+})

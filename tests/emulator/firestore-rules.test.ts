@@ -625,6 +625,8 @@ describe('running timers', () => {
     ['a reference to a missing task', { taskId: 'task-missing' }],
     ['a description change', { description: 'Changed' }],
     ['a start time change', { startAt: PAST }],
+    ['a start time zone change', { startTimeZone: 'Pacific/Auckland' }],
+    ['an auto-stopped marker', { autoStopped: true }],
   ])('denies editing a running timer with %s', async (_, changes) => {
     const db = firestoreFor(MEMBER)
     await seedRunningTimer(MEMBER.uid, 'running')
@@ -666,6 +668,10 @@ describe('boundary validation', () => {
       await assertSucceeds(createEntry({}))
     })
 
+    it('accepts the time zone the timer was started in', async () => {
+      await assertSucceeds(createEntry({ startTimeZone: 'Europe/Warsaw' }))
+    })
+
     it.each<[string, Record<string, unknown>]>([
       ['an unknown field', { invoiced: true }],
       ['an empty description', { description: '' }],
@@ -681,6 +687,11 @@ describe('boundary validation', () => {
       ['a reference to a missing catalog item', { taskId: 'task-missing' }],
       ['a name without its reference', { clientId: null }],
       ['an oversized reference', { clientId: 'c'.repeat(129) }],
+      ['an empty start time zone', { startTimeZone: '' }],
+      ['an oversized start time zone', { startTimeZone: 'a'.repeat(101) }],
+      ['a start time zone that is not a string', { startTimeZone: 1 }],
+      ['an auto-stopped marker', { autoStopped: true }],
+      ['a null auto-stopped marker', { autoStopped: null }],
     ])('denies %s', async (_, overrides) => {
       await assertFails(createEntry(overrides))
     })
