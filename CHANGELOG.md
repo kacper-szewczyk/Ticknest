@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.31.0...ticknest-v1.32.0) (2026-11-06)
+
+
+### Features
+
+* group catalog tasks by project with quick add per project ([#180](https://github.com/kacper-szewczyk/Ticknest/issues/180)) ([ec9684b](https://github.com/kacper-szewczyk/Ticknest/commit/ec9684b202815c2d46d2c23ba3eec8ff70791a2d)), closes [#162](https://github.com/kacper-szewczyk/Ticknest/issues/162)
+
 ## [1.31.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.30.0...ticknest-v1.31.0) (2026-11-06)
 
 
