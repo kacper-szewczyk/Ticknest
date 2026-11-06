@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
@@ -21,7 +21,9 @@ import {
   activeProjectCounts,
   filterCatalogRecords,
   groupProjectsByClient,
+  groupTasksByProject,
   projectSearchText,
+  taskSearchText,
   type CatalogKind,
   type CatalogRecord,
 } from './lib/catalogList'
@@ -38,11 +40,12 @@ const EMPTY_HINTS: Record<CatalogKind, string> = {
 const SEARCH_PLACEHOLDERS: Record<CatalogKind, string> = {
   clients: 'Client name',
   projects: 'Project, client or description',
-  tasks: 'Task name',
+  tasks: 'Task or project name',
 }
 
-type EditorState = { key: number; open: boolean; record?: CatalogRecord }
+type EditorState = { key: number; open: boolean; record?: CatalogRecord; defaultProjectId?: string }
 type Project = Catalog['projects'][number]
+type Task = Catalog['tasks'][number]
 
 const capitalize = (text: string) => text[0].toUpperCase() + text.slice(1)
 
@@ -52,7 +55,8 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
   const [kind, setKind] = useState<CatalogKind>('clients')
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
-  // Client groups on the Projects tab that the user folded, keyed by client ID ('' for "No client").
+  // Groups the user folded: `projects:<client ID>` on the Projects tab and `tasks:<project ID>` on the Tasks tab, with
+  // an empty ID for "No client" and "No project".
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
   // The editor stays mounted while it closes, so the drawer can animate out; a new key starts a fresh form.
   const [editor, setEditor] = useState<EditorState>({ key: 0, open: false })
@@ -69,17 +73,24 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     () => new Map((catalog?.clients ?? []).map((client) => [client.id, client.name])),
     [catalog],
   )
-  const { visible, total } = filterCatalogRecords(
-    records,
-    { query, showArchived },
-    kind === 'projects' ? (record) => projectSearchText(record as Project, clientNames) : undefined,
-  )
-  const projectGroups = kind === 'projects' ? groupProjectsByClient(visible as Project[], catalog?.clients ?? []) : []
-  const projectCounts = useMemo(() => activeProjectCounts(catalog?.projects ?? []), [catalog])
   const projectNames = useMemo(
     () => new Map((catalog?.projects ?? []).map((project) => [project.id, project.name])),
     [catalog],
   )
+  const { visible, total } = filterCatalogRecords(
+    records,
+    { query, showArchived },
+    kind === 'projects'
+      ? (record) => projectSearchText(record as Project, clientNames)
+      : kind === 'tasks'
+        ? (record) => taskSearchText(record as Task, projectNames)
+        : undefined,
+  )
+  const searching = query.trim() !== ''
+  const projectGroups = kind === 'projects' ? groupProjectsByClient(visible as Project[], catalog?.clients ?? []) : []
+  // Without a search, empty active projects are listed too, so their first task can be added from the group.
+  const taskGroups = kind === 'tasks' && catalog ? groupTasksByProject(visible as Task[], catalog, !searching) : []
+  const projectCounts = useMemo(() => activeProjectCounts(catalog?.projects ?? []), [catalog])
 
   function changeKind(next: CatalogKind | null) {
     if (!next || next === kind) return
@@ -88,7 +99,8 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     setNotice('')
   }
 
-  function toggleGroup(key: string) {
+  function toggleGroup(id: string | null) {
+    const key = `${kind}:${id ?? ''}`
     setCollapsed((current) => {
       const next = new Set(current)
       if (!next.delete(key)) next.add(key)
@@ -96,10 +108,10 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     })
   }
 
-  function openEditor(record?: CatalogRecord) {
+  function openEditor(record?: CatalogRecord, defaultProjectId?: string) {
     setError('')
     setNotice('')
-    setEditor((current) => ({ key: current.key + 1, open: true, record }))
+    setEditor((current) => ({ key: current.key + 1, open: true, record, defaultProjectId }))
   }
 
   function closeEditor() {
@@ -136,8 +148,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
       const count = projectCounts.get(record.id) ?? 0
       return count === 0 ? 'No active projects' : `${count} active ${count === 1 ? 'project' : 'projects'}`
     }
-    if (kind === 'projects') return (record as Project).description
-    return projectNames.get((record as Catalog['tasks'][number]).projectId) ?? ''
+    return (record as Project).description
   }
 
   const archivedCount = records.filter((record) => record.archived).length
@@ -226,64 +237,74 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
                 No {nouns.many} match “{query.trim()}”.
               </EmptyText>
             ) : kind === 'projects' ? (
-              projectGroups.map((group) => {
-                const groupKey = group.clientId ?? ''
-                const expanded = !collapsed.has(groupKey)
-                const listId = `catalog-group-${groupKey || 'none'}`
-                const count = group.projects.length
-                return (
-                  <Box key={groupKey} component="section" aria-label={group.name} sx={{ mt: 1 }}>
-                    <ButtonBase
-                      onClick={() => toggleGroup(groupKey)}
-                      aria-expanded={expanded}
-                      aria-controls={listId}
-                      sx={{
-                        width: '100%',
-                        justifyContent: 'flex-start',
-                        gap: 1,
-                        py: 1,
-                        px: 0.5,
-                        borderRadius: 1,
-                        textAlign: 'left',
-                        '&:hover': { bgcolor: 'action.hover' },
-                      }}
-                    >
-                      <Box component="span" aria-hidden sx={{ width: 12, color: 'text.secondary' }}>
-                        {expanded ? '▾' : '▸'}
-                      </Box>
-                      <Typography component="span" variant="body2" sx={{ fontWeight: 650, overflowWrap: 'anywhere' }}>
-                        {group.name}
-                        {group.clientArchived && ' (archived)'}
-                      </Typography>
-                      <Typography
-                        component="span"
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ whiteSpace: 'nowrap' }}
+              projectGroups.map((group) => (
+                <CatalogGroup
+                  key={group.clientId ?? ''}
+                  id={`projects-${group.clientId ?? 'none'}`}
+                  name={group.name}
+                  archived={group.clientArchived}
+                  count={group.projects.length}
+                  noun={nouns}
+                  expanded={!collapsed.has(`projects:${group.clientId ?? ''}`)}
+                  onToggle={() => toggleGroup(group.clientId)}
+                >
+                  {group.projects.map((project) => (
+                    <CatalogRow
+                      key={project.id}
+                      record={project}
+                      noun={nouns.one}
+                      detail={project.description}
+                      singleLineDetail
+                      color={project.color}
+                      estimateMinutes={project.estimateMinutes}
+                      onOpen={() => openEditor(project)}
+                      onMenu={(anchor) => setMenu({ anchor, record: project })}
+                    />
+                  ))}
+                </CatalogGroup>
+              ))
+            ) : kind === 'tasks' ? (
+              taskGroups.map(({ projectId, ...group }) => (
+                <CatalogGroup
+                  key={projectId ?? ''}
+                  id={`tasks-${projectId ?? 'none'}`}
+                  name={group.name}
+                  detail={group.clientName ?? undefined}
+                  color={group.color ?? undefined}
+                  archived={group.projectArchived}
+                  count={group.tasks.length}
+                  noun={nouns}
+                  expanded={!collapsed.has(`tasks:${projectId ?? ''}`)}
+                  onToggle={() => toggleGroup(projectId)}
+                  action={
+                    projectId && !group.projectArchived ? (
+                      <Button
+                        size="small"
+                        aria-label={`Add task to ${group.name}`}
+                        onClick={() => openEditor(undefined, projectId)}
+                        sx={{ flexShrink: 0 }}
                       >
-                        {count} {count === 1 ? 'project' : 'projects'}
-                      </Typography>
-                    </ButtonBase>
-                    {expanded && (
-                      <Box component="ul" id={listId} sx={{ listStyle: 'none', m: 0, p: 0 }}>
-                        {group.projects.map((project) => (
-                          <CatalogRow
-                            key={project.id}
-                            record={project}
-                            noun={nouns.one}
-                            detail={project.description}
-                            singleLineDetail
-                            color={project.color}
-                            estimateMinutes={project.estimateMinutes}
-                            onOpen={() => openEditor(project)}
-                            onMenu={(anchor) => setMenu({ anchor, record: project })}
-                          />
-                        ))}
-                      </Box>
-                    )}
-                  </Box>
-                )
-              })
+                        Add task
+                      </Button>
+                    ) : undefined
+                  }
+                  emptyText="No tasks yet."
+                  indent
+                >
+                  {group.tasks.map((task) => (
+                    <CatalogRow
+                      key={task.id}
+                      record={task}
+                      noun={nouns.one}
+                      detail=""
+                      billable={task.billable}
+                      estimateMinutes={task.estimateMinutes}
+                      onOpen={() => openEditor(task)}
+                      onMenu={(anchor) => setMenu({ anchor, record: task })}
+                    />
+                  ))}
+                </CatalogGroup>
+              ))
             ) : (
               <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
                 {visible.map((record) => (
@@ -292,7 +313,6 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
                     record={record}
                     noun={nouns.one}
                     detail={detailFor(record)}
-                    billable={kind === 'tasks' && (record as Catalog['tasks'][number]).billable}
                     onOpen={() => openEditor(record)}
                     onMenu={(anchor) => setMenu({ anchor, record })}
                   />
@@ -316,6 +336,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
           open={editor.open}
           kind={kind}
           record={editor.record}
+          defaultProjectId={editor.defaultProjectId}
           workspaceId={workspaceId}
           catalog={catalog}
           onClose={closeEditor}
@@ -326,6 +347,117 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
         />
       )}
     </SectionCard>
+  )
+}
+
+/** A collapsible group of catalog rows, such as the projects of one client or the tasks of one project. */
+function CatalogGroup({
+  id,
+  name,
+  detail,
+  color,
+  archived,
+  count,
+  noun,
+  expanded,
+  onToggle,
+  action,
+  emptyText,
+  indent = false,
+  children,
+}: {
+  /** Unique within the page, for the list's element ID. */
+  id: string
+  name: string
+  /** A muted line under the name, such as the project's client. */
+  detail?: string
+  /** Shows a color dot before the name. */
+  color?: string
+  archived: boolean
+  count: number
+  noun: { one: string; many: string }
+  expanded: boolean
+  onToggle: () => void
+  /** A control beside the group header, such as "Add task". */
+  action?: ReactNode
+  /** Shown in an expanded group without rows. */
+  emptyText?: string
+  /** Indents the rows under the header. */
+  indent?: boolean
+  children: ReactNode
+}) {
+  const listId = `catalog-group-${id}`
+  return (
+    <Box component="section" aria-label={name} sx={{ mt: 1 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+        <ButtonBase
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls={listId}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+            gap: 1,
+            py: 1,
+            px: 0.5,
+            borderRadius: 1,
+            textAlign: 'left',
+            '&:hover': { bgcolor: 'action.hover' },
+          }}
+        >
+          <Box component="span" aria-hidden sx={{ width: 12, flexShrink: 0, color: 'text.secondary' }}>
+            {expanded ? '▾' : '▸'}
+          </Box>
+          {color && (
+            <Box
+              component="span"
+              aria-hidden
+              sx={{ width: 10, height: 10, flexShrink: 0, mt: '5px', borderRadius: '50%', bgcolor: color }}
+            />
+          )}
+          <Box component="span" sx={{ display: 'block', minWidth: 0 }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1 }}>
+              <Typography component="span" variant="body2" sx={{ fontWeight: 650, overflowWrap: 'anywhere' }}>
+                {name}
+                {archived && ' (archived)'}
+              </Typography>
+              <Typography component="span" variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                {count} {count === 1 ? noun.one : noun.many}
+              </Typography>
+            </Box>
+            {detail && (
+              <Typography
+                component="span"
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', overflowWrap: 'anywhere' }}
+              >
+                {detail}
+              </Typography>
+            )}
+          </Box>
+        </ButtonBase>
+        {action}
+      </Stack>
+      {expanded && (
+        <Box component="ul" id={listId} sx={{ listStyle: 'none', m: 0, p: 0, pl: indent ? 2 : 0 }}>
+          {count === 0 && emptyText ? (
+            <Typography
+              component="li"
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', py: 1.25, px: 1 }}
+            >
+              {emptyText}
+            </Typography>
+          ) : (
+            children
+          )}
+        </Box>
+      )}
+    </Box>
   )
 }
 

@@ -4,8 +4,10 @@ import {
   activeProjectCounts,
   filterCatalogRecords,
   groupProjectsByClient,
+  groupTasksByProject,
   projectSearchText,
   selectableRecords,
+  taskSearchText,
 } from '../../src/lib/catalogList'
 import { PROJECT_COLORS, presetProjectColor } from '../../src/lib/projectColors'
 
@@ -99,6 +101,62 @@ describe('groupProjectsByClient', () => {
   it('leaves out clients without projects', () => {
     expect(groupProjectsByClient([project('p1', 'c1')], clients).map((group) => group.name)).toEqual(['Northwind'])
     expect(groupProjectsByClient([], clients)).toEqual([])
+  })
+})
+
+function task(id: string, projectId: string, archived = false): Catalog['tasks'][number] {
+  return { id, name: `Task ${id}`, projectId, estimateMinutes: null, billable: false, archived }
+}
+
+describe('taskSearchText', () => {
+  it('lets a task search match its project name', () => {
+    const names = new Map([['p1', 'Website']])
+    expect(taskSearchText(task('t1', 'p1'), names)).toContain('Website')
+    expect(taskSearchText(task('t2', 'gone'), names).trim()).toBe('Task t2')
+  })
+})
+
+describe('groupTasksByProject', () => {
+  const projects = [
+    { ...project('p1', 'c1'), name: 'Site', color: '#1565c0' },
+    { ...project('p2', null), name: 'Internal' },
+    { ...project('p3', 'c2'), name: 'Brochure' },
+    { ...project('p4', 'c1'), name: 'App' },
+    { ...project('p5', 'c1', true), name: 'Legacy' },
+  ]
+  const groupsOf = (tasks: Catalog['tasks'], includeEmpty = false) =>
+    groupTasksByProject(tasks, { clients, projects }, includeEmpty).map((group) => [
+      group.projectId,
+      group.name,
+      group.clientName,
+      ids(group.tasks),
+    ])
+
+  it('orders groups by client then project name, with No project last', () => {
+    const groups = groupTasksByProject(
+      [task('t1', 'p1'), task('t2', 'gone'), task('t3', 'p2'), task('t4', 'p3'), task('t5', 'p1'), task('t6', 'p5')],
+      { clients, projects },
+    )
+    expect(groups.map((group) => [group.projectId, group.name, group.clientName, ids(group.tasks)])).toEqual([
+      ['p3', 'Brochure', 'acme Corp', ['t4']],
+      ['p5', 'Legacy', 'Northwind', ['t6']],
+      ['p1', 'Site', 'Northwind', ['t1', 't5']],
+      ['p2', 'Internal', null, ['t3']],
+      [null, 'No project', null, ['t2']],
+    ])
+    expect(groups[1].projectArchived).toBe(true)
+    expect(groups[2].color).toBe('#1565c0')
+    expect(groups[4].color).toBeNull()
+  })
+
+  it('adds empty groups for active projects only when asked', () => {
+    expect(groupsOf([task('t1', 'p1')])).toEqual([['p1', 'Site', 'Northwind', ['t1']]])
+    expect(groupsOf([task('t1', 'p1')], true)).toEqual([
+      ['p3', 'Brochure', 'acme Corp', []],
+      ['p4', 'App', 'Northwind', []],
+      ['p1', 'Site', 'Northwind', ['t1']],
+      ['p2', 'Internal', null, []],
+    ])
   })
 })
 
