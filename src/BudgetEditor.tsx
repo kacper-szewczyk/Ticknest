@@ -19,8 +19,6 @@ import {
   budgetTargetKey,
   buildBudgetTargetOptions,
   detectHoursPreset,
-  formatHoursInput,
-  parseHoursInput,
   presetWeekdayMinutes,
   totalBudgetMinutes,
   weeklyMinutes,
@@ -29,6 +27,7 @@ import { type BudgetField, BudgetFieldError, WEEKDAYS } from './lib/budgetValida
 import type { Catalog } from './lib/catalog'
 import { dayDate } from './lib/dates'
 import { readableError } from './lib/errors'
+import { formatHoursInput, parseHoursInput } from './lib/hours'
 import { formatBudgetMinutes } from './lib/memberBudgets'
 import { FormMessage, SelectField } from './ui'
 

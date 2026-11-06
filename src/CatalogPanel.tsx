@@ -20,10 +20,13 @@ import {
   CATALOG_NOUNS,
   activeProjectCounts,
   filterCatalogRecords,
+  groupProjectsByClient,
+  projectSearchText,
   type CatalogKind,
   type CatalogRecord,
 } from './lib/catalogList'
 import { readableError } from './lib/errors'
+import { formatHoursInput } from './lib/hours'
 import { BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
 
 const EMPTY_HINTS: Record<CatalogKind, string> = {
@@ -32,7 +35,14 @@ const EMPTY_HINTS: Record<CatalogKind, string> = {
   tasks: 'Tasks split a project into smaller pieces of work.',
 }
 
+const SEARCH_PLACEHOLDERS: Record<CatalogKind, string> = {
+  clients: 'Client name',
+  projects: 'Project, client or description',
+  tasks: 'Task name',
+}
+
 type EditorState = { key: number; open: boolean; record?: CatalogRecord }
+type Project = Catalog['projects'][number]
 
 const capitalize = (text: string) => text[0].toUpperCase() + text.slice(1)
 
@@ -42,6 +52,8 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
   const [kind, setKind] = useState<CatalogKind>('clients')
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  // Client groups on the Projects tab that the user folded, keyed by client ID ('' for "No client").
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
   // The editor stays mounted while it closes, so the drawer can animate out; a new key starts a fresh form.
   const [editor, setEditor] = useState<EditorState>({ key: 0, open: false })
   const [menu, setMenu] = useState<{ anchor: HTMLElement; record: CatalogRecord } | null>(null)
@@ -53,7 +65,16 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
 
   const nouns = CATALOG_NOUNS[kind]
   const records: readonly CatalogRecord[] = catalog?.[kind] ?? []
-  const { visible, total } = filterCatalogRecords(records, { query, showArchived })
+  const clientNames = useMemo(
+    () => new Map((catalog?.clients ?? []).map((client) => [client.id, client.name])),
+    [catalog],
+  )
+  const { visible, total } = filterCatalogRecords(
+    records,
+    { query, showArchived },
+    kind === 'projects' ? (record) => projectSearchText(record as Project, clientNames) : undefined,
+  )
+  const projectGroups = kind === 'projects' ? groupProjectsByClient(visible as Project[], catalog?.clients ?? []) : []
   const projectCounts = useMemo(() => activeProjectCounts(catalog?.projects ?? []), [catalog])
   const projectNames = useMemo(
     () => new Map((catalog?.projects ?? []).map((project) => [project.id, project.name])),
@@ -65,6 +86,14 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     setKind(next)
     setQuery('')
     setNotice('')
+  }
+
+  function toggleGroup(key: string) {
+    setCollapsed((current) => {
+      const next = new Set(current)
+      if (!next.delete(key)) next.add(key)
+      return next
+    })
   }
 
   function openEditor(record?: CatalogRecord) {
@@ -107,7 +136,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
       const count = projectCounts.get(record.id) ?? 0
       return count === 0 ? 'No active projects' : `${count} active ${count === 1 ? 'project' : 'projects'}`
     }
-    if (kind === 'projects') return (record as Catalog['projects'][number]).description
+    if (kind === 'projects') return (record as Project).description
     return projectNames.get((record as Catalog['tasks'][number]).projectId) ?? ''
   }
 
@@ -152,7 +181,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
             size="small"
             type="search"
             label="Search"
-            placeholder={`${capitalize(nouns.one)} name`}
+            placeholder={SEARCH_PLACEHOLDERS[kind]}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             slotProps={{ inputLabel: { shrink: true } }}
@@ -196,6 +225,65 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
               <EmptyText>
                 No {nouns.many} match “{query.trim()}”.
               </EmptyText>
+            ) : kind === 'projects' ? (
+              projectGroups.map((group) => {
+                const groupKey = group.clientId ?? ''
+                const expanded = !collapsed.has(groupKey)
+                const listId = `catalog-group-${groupKey || 'none'}`
+                const count = group.projects.length
+                return (
+                  <Box key={groupKey} component="section" aria-label={group.name} sx={{ mt: 1 }}>
+                    <ButtonBase
+                      onClick={() => toggleGroup(groupKey)}
+                      aria-expanded={expanded}
+                      aria-controls={listId}
+                      sx={{
+                        width: '100%',
+                        justifyContent: 'flex-start',
+                        gap: 1,
+                        py: 1,
+                        px: 0.5,
+                        borderRadius: 1,
+                        textAlign: 'left',
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Box component="span" aria-hidden sx={{ width: 12, color: 'text.secondary' }}>
+                        {expanded ? '▾' : '▸'}
+                      </Box>
+                      <Typography component="span" variant="body2" sx={{ fontWeight: 650, overflowWrap: 'anywhere' }}>
+                        {group.name}
+                        {group.clientArchived && ' (archived)'}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ whiteSpace: 'nowrap' }}
+                      >
+                        {count} {count === 1 ? 'project' : 'projects'}
+                      </Typography>
+                    </ButtonBase>
+                    {expanded && (
+                      <Box component="ul" id={listId} sx={{ listStyle: 'none', m: 0, p: 0 }}>
+                        {group.projects.map((project) => (
+                          <CatalogRow
+                            key={project.id}
+                            record={project}
+                            noun={nouns.one}
+                            detail={project.description}
+                            singleLineDetail
+                            color={project.color}
+                            estimateMinutes={project.estimateMinutes}
+                            onOpen={() => openEditor(project)}
+                            onMenu={(anchor) => setMenu({ anchor, record: project })}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                )
+              })
             ) : (
               <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
                 {visible.map((record) => (
@@ -245,17 +333,26 @@ function CatalogRow({
   record,
   noun,
   detail,
-  billable,
+  singleLineDetail = false,
+  billable = false,
+  color,
+  estimateMinutes,
   onOpen,
   onMenu,
 }: {
   record: CatalogRecord
   noun: string
   detail: string
-  billable: boolean
+  /** Cuts the detail to one line, for long text such as a project description. */
+  singleLineDetail?: boolean
+  billable?: boolean
+  /** Shows a color dot before the name. */
+  color?: string
+  estimateMinutes?: number | null
   onOpen: () => void
   onMenu: (anchor: HTMLElement) => void
 }) {
+  const estimate = estimateMinutes ? formatHoursInput(estimateMinutes) : ''
   return (
     <Box
       component="li"
@@ -275,7 +372,10 @@ function CatalogRow({
         sx={{
           flex: 1,
           minWidth: 0,
-          display: 'block',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'flex-start',
+          gap: 1.25,
           textAlign: 'left',
           py: 1.25,
           px: 1,
@@ -283,21 +383,41 @@ function CatalogRow({
           '&:hover': { bgcolor: 'action.hover' },
         }}
       >
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5, minWidth: 0 }}>
-          <Typography component="span" variant="body2" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
-            {record.name}
-          </Typography>
-          {billable && <BillableChip />}
-          {record.archived && <Chip size="small" variant="outlined" label="Archived" />}
-        </Stack>
-        {detail && (
+        {color && (
+          <Box
+            component="span"
+            aria-hidden
+            sx={{ width: 10, height: 10, flexShrink: 0, mt: '5px', borderRadius: '50%', bgcolor: color }}
+          />
+        )}
+        <Box component="span" sx={{ display: 'block', flex: 1, minWidth: 0 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5, minWidth: 0 }}>
+            <Typography component="span" variant="body2" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
+              {record.name}
+            </Typography>
+            {billable && <BillableChip />}
+            {record.archived && <Chip size="small" variant="outlined" label="Archived" />}
+          </Stack>
+          {detail && (
+            <Typography
+              component="span"
+              variant="caption"
+              color="text.secondary"
+              noWrap={singleLineDetail}
+              sx={{ display: 'block', overflowWrap: singleLineDetail ? undefined : 'anywhere' }}
+            >
+              {detail}
+            </Typography>
+          )}
+        </Box>
+        {estimate && (
           <Typography
             component="span"
             variant="caption"
             color="text.secondary"
-            sx={{ display: 'block', overflowWrap: 'anywhere' }}
+            sx={{ flexShrink: 0, whiteSpace: 'nowrap', mt: '2px', fontVariantNumeric: 'tabular-nums' }}
           >
-            {detail}
+            Est. {estimate}
           </Typography>
         )}
       </ButtonBase>

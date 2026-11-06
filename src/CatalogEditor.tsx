@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
@@ -11,9 +12,13 @@ import Typography from '@mui/material/Typography'
 import { saveCatalogRecord, type Catalog, type CatalogInput } from './lib/catalog'
 import { CATALOG_NOUNS, selectableRecords, type CatalogKind, type CatalogRecord } from './lib/catalogList'
 import { readableError } from './lib/errors'
+import { ESTIMATE_HOURS, formatHoursInput, parseHoursInput } from './lib/hours'
+import { DEFAULT_PROJECT_COLOR } from './lib/projectColors'
+import { ProjectColorField } from './ProjectColorField'
 import { FormMessage, SelectField } from './ui'
 
-const DEFAULT_COLOR = '#668a6b'
+type ClientOption = { id: string; label: string }
+const NO_CLIENT: ClientOption = { id: '', label: 'No client' }
 
 type Draft = {
   name: string
@@ -33,7 +38,7 @@ function initialDraft(kind: CatalogKind, catalog: Catalog, record: CatalogRecord
     clientId: '',
     projectId: '',
     description: '',
-    color: DEFAULT_COLOR,
+    color: DEFAULT_PROJECT_COLOR,
     estimate: '',
     billable: false,
   }
@@ -44,8 +49,8 @@ function initialDraft(kind: CatalogKind, catalog: Catalog, record: CatalogRecord
       ...draft,
       clientId: project?.clientId ?? '',
       description: project?.description ?? '',
-      color: project?.color ?? DEFAULT_COLOR,
-      estimate: project?.estimateMinutes?.toString() ?? '',
+      color: project?.color ?? DEFAULT_PROJECT_COLOR,
+      estimate: formatHoursInput(project?.estimateMinutes ?? 0),
     }
   }
   if (kind === 'tasks') {
@@ -53,19 +58,18 @@ function initialDraft(kind: CatalogKind, catalog: Catalog, record: CatalogRecord
     return {
       ...draft,
       projectId: task?.projectId ?? '',
-      estimate: task?.estimateMinutes?.toString() ?? '',
+      estimate: formatHoursInput(task?.estimateMinutes ?? 0),
       billable: task?.billable ?? false,
     }
   }
   return draft
 }
 
-/** Reads the estimate in whole minutes: null when blank, undefined when it isn't a whole, non-negative number. */
+/** Reads the estimate in hours as whole minutes: null when blank or zero, undefined when it isn't hours. */
 function parseEstimate(text: string): number | null | undefined {
-  const value = text.trim()
-  if (!value) return null
-  const minutes = Number(value)
-  return Number.isInteger(minutes) && minutes >= 0 ? minutes : undefined
+  const minutes = parseHoursInput(text, ESTIMATE_HOURS)
+  if (minutes === null) return undefined
+  return minutes === 0 ? null : minutes
 }
 
 /**
@@ -98,7 +102,8 @@ export function CatalogEditor({
   const noun = CATALOG_NOUNS[kind].one
   const Noun = noun[0].toUpperCase() + noun.slice(1)
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
-  const clientOptions = selectableRecords(catalog.clients, initial.clientId)
+  const clientOptions: ClientOption[] = [NO_CLIENT, ...selectableRecords(catalog.clients, initial.clientId)]
+  const client = clientOptions.find((option) => option.id === draft.clientId) ?? NO_CLIENT
   const projectOptions = selectableRecords(catalog.projects, initial.projectId)
   const headingId = 'catalog-editor-heading'
 
@@ -122,7 +127,7 @@ export function CatalogEditor({
     const errors: FieldErrors = {}
     if (!draft.name.trim()) errors.name = `Enter a name for this ${noun}.`
     if (kind === 'tasks' && !draft.projectId) errors.projectId = 'Choose the project this task belongs to.'
-    if (estimateMinutes === undefined) errors.estimate = 'Enter the estimate as whole minutes, like 90.'
+    if (estimateMinutes === undefined) errors.estimate = 'Enter hours like 7.5 or 7:30.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
@@ -210,31 +215,27 @@ export function CatalogEditor({
           />
           {kind === 'projects' && (
             <>
-              <SelectField
-                label="Client"
-                value={draft.clientId}
-                onChange={(event) => update({ clientId: event.target.value })}
-              >
-                <option value="">No client</option>
-                {clientOptions.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.label}
-                  </option>
-                ))}
-              </SelectField>
+              <Autocomplete<ClientOption, false, true>
+                options={clientOptions}
+                value={client}
+                onChange={(_, option) => update({ clientId: option.id })}
+                getOptionLabel={(option) => option.label}
+                isOptionEqualToValue={(option, current) => option.id === current.id}
+                disableClearable
+                autoHighlight
+                noOptionsText="No matching clients"
+                renderInput={(params) => <TextField {...params} label="Client" />}
+              />
               <TextField
                 label="Description"
                 value={draft.description}
                 onChange={(event) => update({ description: event.target.value })}
+                multiline
+                minRows={2}
+                maxRows={6}
                 slotProps={{ htmlInput: { maxLength: 1000 } }}
               />
-              <TextField
-                label="Color"
-                type="color"
-                value={draft.color}
-                onChange={(event) => update({ color: event.target.value })}
-                sx={{ width: 96 }}
-              />
+              <ProjectColorField value={draft.color} onChange={(color) => update({ color })} />
             </>
           )}
           {kind === 'tasks' && (
@@ -256,14 +257,18 @@ export function CatalogEditor({
           )}
           {kind !== 'clients' && (
             <TextField
-              label="Estimate (minutes)"
-              type="number"
+              label="Estimate (hours)"
               value={draft.estimate}
               onChange={(event) => update({ estimate: event.target.value }, 'estimate')}
-              placeholder="Optional"
+              onBlur={() => {
+                const minutes = parseHoursInput(draft.estimate, ESTIMATE_HOURS)
+                if (minutes !== null) setDraft((current) => ({ ...current, estimate: formatHoursInput(minutes) }))
+              }}
+              placeholder="0:00"
               error={!!fieldErrors.estimate}
-              helperText={fieldErrors.estimate}
-              slotProps={{ htmlInput: { min: 0, step: 1 }, inputLabel: { shrink: true } }}
+              helperText={fieldErrors.estimate ?? 'Optional. Decimal hours (7.5) or H:MM (7:30).'}
+              slotProps={{ htmlInput: { inputMode: 'decimal' }, inputLabel: { shrink: true } }}
+              sx={{ maxWidth: 220 }}
             />
           )}
           {kind === 'tasks' && (
