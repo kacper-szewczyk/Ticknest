@@ -15,6 +15,7 @@
       }
     ],
     "react/react-in-jsx-scope": "off",
+    "typescript/no-explicit-any": "error",
     "no-underscore-dangle": "off"
   }
 }
