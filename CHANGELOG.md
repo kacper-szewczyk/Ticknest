@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.30.0...ticknest-v1.31.0) (2026-11-06)
+
+
+### Features
+
+* group projects by client and edit estimates in hours ([#178](https://github.com/kacper-szewczyk/Ticknest/issues/178)) ([9683d63](https://github.com/kacper-szewczyk/Ticknest/commit/9683d633e7e914b9316d3ff4e986747782761e65)), closes [#161](https://github.com/kacper-szewczyk/Ticknest/issues/161)
+
 ## [1.30.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.29.0...ticknest-v1.30.0) (2026-11-06)
 
 
