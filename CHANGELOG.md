@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.29.0...ticknest-v1.30.0) (2026-11-06)
+
+
+### Features
+
+* edit clients, projects and tasks in a side drawer with search ([#174](https://github.com/kacper-szewczyk/Ticknest/issues/174)) ([3dcf935](https://github.com/kacper-szewczyk/Ticknest/commit/3dcf93589934e6fb047884fc38bdf1e628f8188f)), closes [#160](https://github.com/kacper-szewczyk/Ticknest/issues/160)
+
 ## [1.29.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.28.0...ticknest-v1.29.0) (2026-11-04)
 
 
