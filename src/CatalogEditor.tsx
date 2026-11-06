@@ -1,24 +1,48 @@
 import { useState, type FormEvent } from 'react'
-import Autocomplete from '@mui/material/Autocomplete'
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Checkbox from '@mui/material/Checkbox'
 import Drawer from '@mui/material/Drawer'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
+import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { saveCatalogRecord, type Catalog, type CatalogInput } from './lib/catalog'
-import { CATALOG_NOUNS, selectableRecords, type CatalogKind, type CatalogRecord } from './lib/catalogList'
+import {
+  CATALOG_NOUNS,
+  groupProjectsByClient,
+  selectableRecords,
+  type CatalogKind,
+  type CatalogRecord,
+} from './lib/catalogList'
 import { readableError } from './lib/errors'
 import { ESTIMATE_HOURS, formatHoursInput, parseHoursInput } from './lib/hours'
 import { DEFAULT_PROJECT_COLOR } from './lib/projectColors'
 import { ProjectColorField } from './ProjectColorField'
-import { FormMessage, SelectField } from './ui'
+import { FormMessage } from './ui'
 
 type ClientOption = { id: string; label: string }
 const NO_CLIENT: ClientOption = { id: '', label: 'No client' }
+
+type ProjectOption = { id: string; label: string; color: string; group: string }
+// Typing in the project picker also finds projects by their client's name.
+const filterProjectOptions = createFilterOptions<ProjectOption>({
+  stringify: (option) => `${option.label} ${option.group}`,
+})
+
+/** Active projects (plus the one the task already has) grouped by client in the time-entry picker's order. */
+function projectOptionsFor(catalog: Catalog, currentId: string): ProjectOption[] {
+  return groupProjectsByClient(selectableRecords(catalog.projects, currentId), catalog.clients).flatMap((group) =>
+    group.projects.map((project) => ({
+      id: project.id,
+      label: project.label,
+      color: project.color,
+      group: group.clientArchived ? `${group.name} (archived)` : group.name,
+    })),
+  )
+}
 
 type Draft = {
   name: string
@@ -32,11 +56,16 @@ type Draft = {
 type Field = 'name' | 'projectId' | 'estimate'
 type FieldErrors = Partial<Record<Field, string>>
 
-function initialDraft(kind: CatalogKind, catalog: Catalog, record: CatalogRecord | undefined): Draft {
+function initialDraft(
+  kind: CatalogKind,
+  catalog: Catalog,
+  record: CatalogRecord | undefined,
+  defaultProjectId: string,
+): Draft {
   const draft: Draft = {
     name: record?.name ?? '',
     clientId: '',
-    projectId: '',
+    projectId: record ? '' : defaultProjectId,
     description: '',
     color: DEFAULT_PROJECT_COLOR,
     estimate: '',
@@ -74,12 +103,14 @@ function parseEstimate(text: string): number | null | undefined {
 
 /**
  * The create and edit form for one client, project, or task, in a side drawer so the list stays in place. Pass
- * `record` to edit it; the parent remounts this component for each opening, so the form starts from that record.
+ * `record` to edit it, or `defaultProjectId` to start a new task in that project; the parent remounts this component
+ * for each opening, so the form starts from that record.
  */
 export function CatalogEditor({
   open,
   kind,
   record,
+  defaultProjectId = '',
   workspaceId,
   catalog,
   onClose,
@@ -88,12 +119,13 @@ export function CatalogEditor({
   open: boolean
   kind: CatalogKind
   record?: CatalogRecord
+  defaultProjectId?: string
   workspaceId: string
   catalog: Catalog
   onClose: () => void
   onSaved: (message: string) => void
 }) {
-  const [initial] = useState(() => initialDraft(kind, catalog, record))
+  const [initial] = useState(() => initialDraft(kind, catalog, record, defaultProjectId))
   const [draft, setDraft] = useState(initial)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState('')
@@ -104,7 +136,8 @@ export function CatalogEditor({
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
   const clientOptions: ClientOption[] = [NO_CLIENT, ...selectableRecords(catalog.clients, initial.clientId)]
   const client = clientOptions.find((option) => option.id === draft.clientId) ?? NO_CLIENT
-  const projectOptions = selectableRecords(catalog.projects, initial.projectId)
+  const projectOptions = kind === 'tasks' ? projectOptionsFor(catalog, initial.projectId) : []
+  const project = projectOptions.find((option) => option.id === draft.projectId) ?? null
   const headingId = 'catalog-editor-heading'
 
   function update(changes: Partial<Draft>, ...cleared: Field[]) {
@@ -239,21 +272,43 @@ export function CatalogEditor({
             </>
           )}
           {kind === 'tasks' && (
-            <SelectField
-              label="Project"
-              value={draft.projectId}
-              onChange={(event) => update({ projectId: event.target.value }, 'projectId')}
-              required
-              error={!!fieldErrors.projectId}
-              helperText={fieldErrors.projectId}
-            >
-              <option value="">Select a project</option>
-              {projectOptions.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.label}
-                </option>
-              ))}
-            </SelectField>
+            <Autocomplete<ProjectOption>
+              options={projectOptions}
+              value={project}
+              onChange={(_, option) => update({ projectId: option?.id ?? '' }, 'projectId')}
+              groupBy={(option) => option.group}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, current) => option.id === current.id}
+              filterOptions={filterProjectOptions}
+              autoHighlight
+              noOptionsText="No matching projects"
+              renderOption={({ key, ...props }, option) => (
+                <Box component="li" key={key} {...props} sx={{ gap: 1.25 }}>
+                  <ColorDot color={option.color} />
+                  {option.label}
+                </Box>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Project"
+                  required
+                  error={!!fieldErrors.projectId}
+                  helperText={fieldErrors.projectId}
+                  slotProps={{
+                    ...params.slotProps,
+                    input: {
+                      ...params.slotProps.input,
+                      startAdornment: project ? (
+                        <Box component="span" sx={{ display: 'flex', pl: 0.75 }}>
+                          <ColorDot color={project.color} />
+                        </Box>
+                      ) : undefined,
+                    },
+                  }}
+                />
+              )}
+            />
           )}
           {kind !== 'clients' && (
             <TextField
@@ -274,9 +329,10 @@ export function CatalogEditor({
           {kind === 'tasks' && (
             <FormControlLabel
               control={
-                <Checkbox checked={draft.billable} onChange={(event) => update({ billable: event.target.checked })} />
+                <Switch checked={draft.billable} onChange={(event) => update({ billable: event.target.checked })} />
               }
               label="Billable"
+              sx={{ justifySelf: 'start' }}
             />
           )}
         </Box>
@@ -295,5 +351,15 @@ export function CatalogEditor({
         </Stack>
       </Box>
     </Drawer>
+  )
+}
+
+function ColorDot({ color }: { color: string }) {
+  return (
+    <Box
+      component="span"
+      aria-hidden
+      sx={{ width: 10, height: 10, flexShrink: 0, borderRadius: '50%', bgcolor: color }}
+    />
   )
 }

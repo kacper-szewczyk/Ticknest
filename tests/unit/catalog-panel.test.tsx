@@ -262,6 +262,143 @@ describe('CatalogPanel', () => {
     )
   })
 
+  describe('Tasks tab', () => {
+    function task(id: string, name: string, projectId: string, extra: Partial<Catalog['tasks'][number]> = {}) {
+      return { id, name, projectId, estimateMinutes: null, billable: false, archived: false, ...extra }
+    }
+
+    beforeEach(() => {
+      catalog.projects.push({ ...project('p3', 'Brochure', 'c2'), color: '#1565c0' }, project('p4', 'Old site', 'c3'))
+      catalog.projects[1] = { ...catalog.projects[1], archived: true }
+      catalog.tasks = [
+        task('t1', 'Design', 'p1', { billable: true, estimateMinutes: 450 }),
+        task('t2', 'Build', 'p1'),
+        task('t3', 'Copy', 'p3'),
+        task('t4', 'Migrate', 'p2'),
+        task('t5', 'Stray', 'gone'),
+      ]
+    })
+
+    const groups = () =>
+      within(screen.getByRole('region', { name: 'All tasks' }))
+        .getAllByRole('region')
+        .map((group) => [
+          group.getAttribute('aria-label'),
+          within(group)
+            .queryAllByRole('listitem')
+            .map((row) => row.querySelector('.MuiTypography-body2')?.textContent ?? row.textContent),
+        ])
+
+    async function openTasks() {
+      const user = userEvent.setup()
+      renderPanel()
+      await user.click(screen.getByRole('button', { name: 'Tasks' }))
+      return user
+    }
+
+    it('groups tasks by project in client order, with empty projects and No project last', async () => {
+      const user = await openTasks()
+      expect(groups()).toEqual([
+        ['Brochure', ['Copy']],
+        ['Old site', ['No tasks yet.']],
+        ['App', ['Migrate']],
+        ['Site', ['Build', 'Design']],
+        ['No project', ['Stray']],
+      ])
+      const site = screen.getByRole('button', { name: /^Site/ })
+      expect(site.textContent).toContain('Northwind')
+      expect(site.textContent).toContain('2 tasks')
+      expect(screen.getByRole('button', { name: /^App \(archived\)/ })).toBeTruthy()
+      const design = screen.getByRole('button', { name: 'Edit task Design' })
+      expect(design.textContent).toContain('Billable')
+      expect(design.textContent).toContain('Est. 7:30')
+
+      expect(screen.getByRole('button', { name: 'Add task to Site' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Add task to App' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Add task to No project' })).toBeNull()
+
+      expect(site.getAttribute('aria-expanded')).toBe('true')
+      await user.click(site)
+      expect(site.getAttribute('aria-expanded')).toBe('false')
+      expect(screen.queryByRole('button', { name: 'Edit task Design' })).toBeNull()
+      await user.click(site)
+
+      await user.type(searchBox(), 'brochure')
+      expect(groups()).toEqual([['Brochure', ['Copy']]])
+      await user.clear(searchBox())
+      await user.type(searchBox(), 'design')
+      expect(groups()).toEqual([['Site', ['Design']]])
+      expect(screen.getByRole('status').textContent).toBe('1 of 5 tasks')
+    })
+
+    it('adds a task from a project group with that project selected, and keeps folded groups', async () => {
+      const user = await openTasks()
+      await user.click(screen.getByRole('button', { name: /^Brochure/ }))
+      await user.click(screen.getByRole('button', { name: 'Add task to Old site' }))
+      const drawer = screen.getByRole('dialog', { name: 'New task' })
+      expect((within(drawer).getByRole('combobox', { name: /Project/ }) as HTMLInputElement).value).toBe('Old site')
+
+      await user.type(within(drawer).getByRole('textbox', { name: /Name/ }), 'Redirects')
+      await user.type(within(drawer).getByRole('textbox', { name: 'Estimate (hours)' }), '1:15')
+      await user.click(within(drawer).getByRole('switch', { name: 'Billable' }))
+      await user.click(within(drawer).getByRole('button', { name: 'Add task' }))
+      expect(saveCatalogRecord).toHaveBeenCalledWith(
+        'w1',
+        'tasks',
+        expect.objectContaining({ name: 'Redirects', projectId: 'p4', estimateMinutes: 75, billable: true }),
+        undefined,
+      )
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(screen.getByRole('button', { name: /^Brochure/ }).getAttribute('aria-expanded')).toBe('false')
+    })
+
+    it('picks the project from a list grouped by client and asks for one', async () => {
+      const user = await openTasks()
+      await user.click(screen.getByRole('button', { name: 'Add task' }))
+      const drawer = screen.getByRole('dialog', { name: 'New task' })
+      await user.type(within(drawer).getByRole('textbox', { name: /Name/ }), 'Review')
+      await user.click(within(drawer).getByRole('button', { name: 'Add task' }))
+      expect(within(drawer).getByText('Choose the project this task belongs to.')).toBeTruthy()
+
+      await user.click(within(drawer).getByRole('combobox', { name: /Project/ }))
+      const listbox = screen.getByRole('listbox')
+      expect(listbox.textContent).toBe('AcmeBrochureGlobex (archived)Old siteNorthwindSite')
+      await user.keyboard('acme')
+      expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Brochure'])
+      await user.click(screen.getByRole('option', { name: 'Brochure' }))
+      await user.click(within(drawer).getByRole('button', { name: 'Add task' }))
+      expect(saveCatalogRecord).toHaveBeenCalledWith(
+        'w1',
+        'tasks',
+        expect.objectContaining({ name: 'Review', projectId: 'p3', billable: false }),
+        undefined,
+      )
+    })
+
+    it('keeps an archived project selectable when editing a task that uses it', async () => {
+      const user = await openTasks()
+      await user.click(screen.getByRole('button', { name: 'Edit task Migrate' }))
+      const drawer = screen.getByRole('dialog', { name: 'Edit task' })
+      expect((within(drawer).getByRole('combobox', { name: /Project/ }) as HTMLInputElement).value).toBe(
+        'App (archived)',
+      )
+      await user.click(within(drawer).getByRole('button', { name: 'Save changes' }))
+      expect(saveCatalogRecord).toHaveBeenCalledWith(
+        'w1',
+        'tasks',
+        expect.objectContaining({ projectId: 'p2' }),
+        expect.objectContaining({ id: 't4' }),
+      )
+    })
+
+    it('archives a task from its row menu', async () => {
+      const user = await openTasks()
+      await user.click(screen.getByRole('button', { name: 'More actions for Copy' }))
+      await user.click(screen.getByRole('menuitem', { name: 'Archive' }))
+      expect(setCatalogArchived).toHaveBeenCalledWith('w1', 'tasks', 't3', true)
+    })
+  })
+
   it('invites adding the first record when a tab is empty', async () => {
     const user = userEvent.setup()
     renderPanel()

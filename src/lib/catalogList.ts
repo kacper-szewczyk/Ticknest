@@ -68,21 +68,27 @@ export function projectSearchText(project: Catalog['projects'][number], clientNa
   return [project.name, project.clientId ? clientNames.get(project.clientId) : '', project.description].join(' ')
 }
 
-export type ProjectGroup = {
+type Project = Catalog['projects'][number]
+type Task = Catalog['tasks'][number]
+
+export type ProjectGroup<P extends Project = Project> = {
   /** The client ID, or null for projects without a client (or whose client no longer exists). */
   clientId: string | null
   name: string
   clientArchived: boolean
-  projects: Catalog['projects']
+  projects: P[]
 }
 
 /**
  * Groups projects under their client, clients sorted by name with "No client" last, like the budget target
  * picker. Projects keep their order, and clients without any of the given projects are left out.
  */
-export function groupProjectsByClient(projects: Catalog['projects'], clients: Catalog['clients']): ProjectGroup[] {
+export function groupProjectsByClient<P extends Project>(
+  projects: readonly P[],
+  clients: Catalog['clients'],
+): ProjectGroup<P>[] {
   const clientsById = new Map(clients.map((client) => [client.id, client]))
-  const groups = new Map<string | null, ProjectGroup>()
+  const groups = new Map<string | null, ProjectGroup<P>>()
   for (const project of projects) {
     const client = project.clientId ? clientsById.get(project.clientId) : undefined
     const clientId = client?.id ?? null
@@ -102,4 +108,71 @@ export function groupProjectsByClient(projects: Catalog['projects'], clients: Ca
   groups.delete(null)
   const sorted = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
   return noClient ? [...sorted, noClient] : sorted
+}
+
+export const NO_PROJECT_GROUP = 'No project'
+
+/** The text a task search matches: its name and its project's name. */
+export function taskSearchText(task: Task, projectNames: ReadonlyMap<string, string>) {
+  return [task.name, projectNames.get(task.projectId)].join(' ')
+}
+
+export type TaskGroup = {
+  /** The project ID, or null for tasks whose project no longer exists. */
+  projectId: string | null
+  name: string
+  color: string | null
+  /** The project's client, or null when it has none. */
+  clientName: string | null
+  projectArchived: boolean
+  tasks: Task[]
+}
+
+/**
+ * Groups tasks under their project, in the order of the time-entry picker: by client (sorted by name, "No client"
+ * last), then by project name. Tasks keep their order, and tasks whose project no longer exists come last under
+ * "No project". With `includeEmptyProjects`, active projects without any of the given tasks get an empty group, so
+ * the list can offer adding their first task.
+ */
+export function groupTasksByProject(
+  tasks: readonly Task[],
+  catalog: Pick<Catalog, 'clients' | 'projects'>,
+  includeEmptyProjects = false,
+): TaskGroup[] {
+  const projectIds = new Set(catalog.projects.map((project) => project.id))
+  const tasksByProject = new Map<string, Task[]>()
+  const orphans: Task[] = []
+  for (const task of tasks) {
+    if (!projectIds.has(task.projectId)) {
+      orphans.push(task)
+      continue
+    }
+    const list = tasksByProject.get(task.projectId)
+    if (list) list.push(task)
+    else tasksByProject.set(task.projectId, [task])
+  }
+  const projects = catalog.projects
+    .filter((project) => tasksByProject.has(project.id) || (includeEmptyProjects && !project.archived))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+  const groups: TaskGroup[] = groupProjectsByClient(projects, catalog.clients).flatMap((clientGroup) =>
+    clientGroup.projects.map((project) => ({
+      projectId: project.id,
+      name: project.name,
+      color: project.color,
+      clientName: clientGroup.clientId ? clientGroup.name : null,
+      projectArchived: project.archived,
+      tasks: tasksByProject.get(project.id) ?? [],
+    })),
+  )
+  if (orphans.length > 0) {
+    groups.push({
+      projectId: null,
+      name: NO_PROJECT_GROUP,
+      color: null,
+      clientName: null,
+      projectArchived: false,
+      tasks: orphans,
+    })
+  }
+  return groups
 }
