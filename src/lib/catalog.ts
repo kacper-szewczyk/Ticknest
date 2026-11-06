@@ -1,5 +1,6 @@
 import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Unsubscribe } from 'firebase/firestore'
 import { db } from './firebase'
+import { DEFAULT_PROJECT_COLOR } from './projectColors'
 
 export type Client = { id: string; name: string; archived: boolean }
 export type Project = {
@@ -78,7 +79,7 @@ export async function saveCatalogRecord(
             name,
             clientId: input.clientId || null,
             description: (input.description ?? '').trim(),
-            color: input.color || '#668a6b',
+            color: input.color || DEFAULT_PROJECT_COLOR,
             estimateMinutes: input.estimateMinutes ?? null,
           }
         : {

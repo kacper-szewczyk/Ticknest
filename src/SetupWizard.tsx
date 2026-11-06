@@ -14,9 +14,8 @@ import { InviteTeamStep } from './InviteTeamStep'
 import { type Catalog, saveCatalogRecord } from './lib/catalog'
 import { readableError } from './lib/errors'
 import { SETUP_STEPS, type SetupStep, nextSetupStep } from './lib/onboarding'
+import { DEFAULT_PROJECT_COLOR } from './lib/projectColors'
 import { FormMessage, SelectField } from './ui'
-
-const DEFAULT_PROJECT_COLOR = '#668a6b'
 
 type CatalogStep = Exclude<SetupStep, 'invite'>
 

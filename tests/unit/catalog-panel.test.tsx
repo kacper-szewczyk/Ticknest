@@ -142,9 +142,124 @@ describe('CatalogPanel', () => {
     renderPanel()
     await user.click(screen.getByRole('button', { name: 'Projects' }))
     await user.click(screen.getByRole('button', { name: 'Edit project Legacy' }))
-    const client = within(screen.getByRole('dialog')).getByRole('combobox', { name: 'Client' }) as HTMLSelectElement
-    expect(client.value).toBe('c3')
-    expect(client.selectedOptions[0].textContent).toBe('Globex (archived)')
+    const drawer = screen.getByRole('dialog')
+    const client = within(drawer).getByRole('combobox', { name: 'Client' }) as HTMLInputElement
+    expect(client.value).toBe('Globex (archived)')
+
+    await user.click(within(drawer).getByRole('button', { name: 'Save changes' }))
+    expect(saveCatalogRecord).toHaveBeenCalledWith(
+      'w1',
+      'projects',
+      expect.objectContaining({ clientId: 'c3' }),
+      expect.objectContaining({ id: 'p3' }),
+    )
+  })
+
+  it('groups projects by client with No client last, folds groups, and searches client and description', async () => {
+    catalog.projects.push(
+      { ...project('p3', 'Brochure', 'c2'), description: 'Print run for the spring fair', estimateMinutes: 450 },
+      project('p4', 'Internal', null),
+      project('p5', 'Legacy', 'c3'),
+    )
+    const user = userEvent.setup()
+    renderPanel()
+    await user.click(screen.getByRole('button', { name: 'Projects' }))
+    const groups = () =>
+      within(screen.getByRole('region', { name: 'All projects' }))
+        .getAllByRole('region')
+        .map((group) => [
+          group.getAttribute('aria-label'),
+          within(group)
+            .queryAllByRole('listitem')
+            .map((row) => row.querySelector('.MuiTypography-body2')?.textContent),
+        ])
+    expect(groups()).toEqual([
+      ['Acme', ['Brochure']],
+      ['Globex', ['Legacy']],
+      ['Northwind', ['App', 'Site']],
+      ['No client', ['Internal']],
+    ])
+    expect(screen.getByRole('button', { name: /Globex \(archived\)/ })).toBeTruthy()
+    const brochure = screen.getByRole('button', { name: 'Edit project Brochure' })
+    expect(brochure.textContent).toContain('Print run for the spring fair')
+    expect(brochure.textContent).toContain('Est. 7:30')
+
+    const northwind = screen.getByRole('button', { name: /^Northwind/ })
+    expect(northwind.getAttribute('aria-expanded')).toBe('true')
+    await user.click(northwind)
+    expect(northwind.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('button', { name: 'Edit project Site' })).toBeNull()
+    await user.click(northwind)
+
+    await user.type(searchBox(), 'northwind')
+    expect(groups()).toEqual([['Northwind', ['App', 'Site']]])
+    await user.clear(searchBox())
+    await user.type(searchBox(), 'SPRING')
+    expect(groups()).toEqual([['Acme', ['Brochure']]])
+    expect(screen.getByRole('status').textContent).toBe('1 of 5 projects')
+  })
+
+  it('saves a project with a client, a preset color, and an estimate in hours', async () => {
+    const user = userEvent.setup()
+    renderPanel()
+    await user.click(screen.getByRole('button', { name: 'Projects' }))
+    await user.click(screen.getByRole('button', { name: 'Add project' }))
+    const drawer = screen.getByRole('dialog', { name: 'New project' })
+    await user.type(within(drawer).getByRole('textbox', { name: /Name/ }), 'Launch')
+
+    await user.click(within(drawer).getByRole('combobox', { name: 'Client' }))
+    const options = screen.getAllByRole('option').map((option) => option.textContent)
+    expect(options).toEqual(['No client', 'Acme', 'Northwind'])
+    await user.keyboard('acm')
+    await user.click(screen.getByRole('option', { name: 'Acme' }))
+
+    const colors = within(drawer).getByRole('group', { name: 'Color' })
+    expect((within(colors).getByRole('radio', { name: 'Sage' }) as HTMLInputElement).checked).toBe(true)
+    await user.click(within(colors).getByRole('radio', { name: 'Blue' }))
+    expect((within(colors).getByRole('radio', { name: 'Blue' }) as HTMLInputElement).checked).toBe(true)
+
+    const estimate = within(drawer).getByRole('textbox', { name: 'Estimate (hours)' }) as HTMLInputElement
+    await user.type(estimate, 'abc')
+    await user.click(within(drawer).getByRole('button', { name: 'Add project' }))
+    expect(within(drawer).getByText('Enter hours like 7.5 or 7:30.')).toBeTruthy()
+    expect(saveCatalogRecord).not.toHaveBeenCalled()
+
+    await user.clear(estimate)
+    await user.type(estimate, '7.5')
+    await user.tab()
+    expect(estimate.value).toBe('7:30')
+    await user.click(within(drawer).getByRole('button', { name: 'Add project' }))
+    expect(saveCatalogRecord).toHaveBeenCalledWith(
+      'w1',
+      'projects',
+      expect.objectContaining({ name: 'Launch', clientId: 'c2', color: '#1565c0', estimateMinutes: 450 }),
+      undefined,
+    )
+  })
+
+  it('accepts estimates over 99 hours and picks a custom color', async () => {
+    catalog.projects[0] = { ...catalog.projects[0], color: '#123456', estimateMinutes: 450 }
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderPanel()
+    await user.click(screen.getByRole('button', { name: 'Projects' }))
+    await user.click(screen.getByRole('button', { name: 'Edit project Site' }))
+    const drawer = screen.getByRole('dialog', { name: 'Edit project' })
+    const estimate = within(drawer).getByRole('textbox', { name: 'Estimate (hours)' }) as HTMLInputElement
+    expect(estimate.value).toBe('7:30')
+    const colors = within(drawer).getByRole('group', { name: 'Color' })
+    expect((within(colors).getByRole('radio', { name: 'Custom color' }) as HTMLInputElement).checked).toBe(true)
+    expect((within(drawer).getByLabelText('Custom color value') as HTMLInputElement).value).toBe('#123456')
+
+    await user.clear(estimate)
+    await user.type(estimate, '120:30')
+    await user.click(within(drawer).getByRole('button', { name: 'Save changes' }))
+    expect(saveCatalogRecord).toHaveBeenCalledWith(
+      'w1',
+      'projects',
+      expect.objectContaining({ color: '#123456', estimateMinutes: 7230 }),
+      expect.objectContaining({ id: 'p1' }),
+    )
   })
 
   it('invites adding the first record when a tab is empty', async () => {
