@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.33.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.32.0...ticknest-v1.33.0) (2026-11-08)
+
+
+### Features
+
+* sign in directly from demo account buttons ([#184](https://github.com/kacper-szewczyk/Ticknest/issues/184)) ([37498b3](https://github.com/kacper-szewczyk/Ticknest/commit/37498b3036a213d8b89e20a1e9e26a622fc02ed9))
+
 ## [1.32.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.31.0...ticknest-v1.32.0) (2026-11-06)
 
 
