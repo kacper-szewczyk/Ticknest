@@ -9,6 +9,7 @@ import type { User } from 'firebase/auth'
 import { type FormEvent, useState } from 'react'
 import { registerWithEmail, sendPasswordReset, signInWithEmail, signInWithGoogle } from './lib/auth'
 import { isGoogleSignInEnabled } from './lib/authOptions'
+import type { DemoAccount } from './lib/demo'
 import { readableError } from './lib/errors'
 import { Brand } from './Brand'
 import { DemoAccountsPanel } from './DemoMode'
@@ -41,6 +42,23 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
         const user = await signInWithEmail(email, password)
         onAuthenticated(user)
       }
+    } catch (requestError) {
+      setError(readableError(requestError))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleDemoSignIn(account: DemoAccount) {
+    setError('')
+    setNotice('')
+    setMode('sign-in')
+    // Keep the fields in step, so a failed sign-in can be retried from the form.
+    setEmail(account.email)
+    setPassword(account.password)
+    setPending(true)
+    try {
+      onAuthenticated(await signInWithEmail(account.email, account.password))
     } catch (requestError) {
       setError(readableError(requestError))
     } finally {
@@ -134,15 +152,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
           </Typography>
           {mode !== 'reset' && (
             <>
-              <DemoAccountsPanel
-                onUse={(account) => {
-                  setError('')
-                  setNotice('')
-                  setMode('sign-in')
-                  setEmail(account.email)
-                  setPassword(account.password)
-                }}
-              />
+              <DemoAccountsPanel onUse={(account) => void handleDemoSignIn(account)} disabled={pending} />
               {isGoogleSignInEnabled() && (
                 <>
                   <Button

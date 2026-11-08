@@ -121,7 +121,7 @@ describe('DemoAccountsPanel', () => {
     expect(render(<DemoAccountsPanel onUse={() => {}} />)).toBe('')
   })
 
-  it('lists every seeded account with a fill button described by its row', () => {
+  it('lists every seeded account with a sign-in button described by its row', () => {
     vi.stubEnv('VITE_DEMO_MODE', 'true')
     const html = render(<DemoAccountsPanel onUse={() => {}} />)
     expect(html).toContain('Try the demo')

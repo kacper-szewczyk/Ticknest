@@ -30,10 +30,12 @@ export function DemoResetBanner() {
   return <ResetBanner />
 }
 
-/** The seeded demo accounts, each with a button that fills the sign-in form. */
-export function DemoAccountsPanel({ onUse }: { onUse: (account: DemoAccount) => void }) {
+type AccountsPanelProps = { onUse: (account: DemoAccount) => void; disabled?: boolean }
+
+/** The seeded demo accounts, each with a button that signs in as that account. */
+export function DemoAccountsPanel({ onUse, disabled }: AccountsPanelProps) {
   if (import.meta.env.VITE_DEMO_MODE !== 'true') return null
-  return <AccountsPanel onUse={onUse} />
+  return <AccountsPanel onUse={onUse} disabled={disabled} />
 }
 
 function ResetBanner() {
@@ -82,7 +84,7 @@ function ExternalLink({ href, children, color, sx }: ExternalLinkProps) {
   )
 }
 
-function AccountsPanel({ onUse }: { onUse: (account: DemoAccount) => void }) {
+function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
   const headingId = useId()
   const rowIdPrefix = useId()
   const [announcement, setAnnouncement] = useState('')
@@ -128,9 +130,12 @@ function AccountsPanel({ onUse }: { onUse: (account: DemoAccount) => void }) {
                 size="small"
                 variant="outlined"
                 aria-describedby={rowId}
+                disabled={disabled}
                 onClick={() => {
                   onUse(account)
-                  setAnnouncement(`Filled in the ${ROLE_LABELS[account.role].toLowerCase()} account ${account.email}.`)
+                  setAnnouncement(
+                    `Signing in with the ${ROLE_LABELS[account.role].toLowerCase()} account ${account.email}.`,
+                  )
                 }}
                 sx={{ flexShrink: 0 }}
               >
