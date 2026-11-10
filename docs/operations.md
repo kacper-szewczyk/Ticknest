@@ -248,7 +248,7 @@ Ticknest stores or processes the following application data in Firebase:
 - Time entries, including descriptions, user display snapshots, date/time timestamps, duration, billable state, and optional client/project/task labels.
 - Operational metadata such as document IDs and creation/update timestamps.
 
-The browser stores the selected workspace ID in local storage, keyed by the signed-in user ID. The app does not include analytics or telemetry. Report CSV export downloads completed time-entry details matching the selected filters and date range; treat downloaded reports as sensitive data and store/share them accordingly. A CSV is not a full database backup.
+The browser stores the selected workspace ID in local storage, keyed by the signed-in user ID, and remembers whether the desktop sidebar is collapsed (`ticknest.sidebarCollapsed`, no user data). The app does not include analytics or telemetry. Report CSV export downloads completed time-entry details matching the selected filters and date range; treat downloaded reports as sensitive data and store/share them accordingly. A CSV is not a full database backup.
 
 Firestore rules deny access by default and scope workspace data to active members. Workspace owners can manage workspace records and members; review membership and revoke unused invitations. See the [data model](firestore-data-model.md) and [rules test matrix](firestore-rules-test-matrix.md).
 

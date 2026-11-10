@@ -1,7 +1,8 @@
 import Box from '@mui/material/Box'
 import Link from '@mui/material/Link'
 
-export function Brand({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
+/** `compact` shows only the logo mark, for the collapsed sidebar rail. */
+export function Brand({ tone = 'dark', compact = false }: { tone?: 'dark' | 'light'; compact?: boolean }) {
   return (
     <Link
       href="/"
@@ -44,7 +45,7 @@ export function Brand({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
           <path d="M5 13.5 9.2 18 19 6" />
         </Box>
       </Box>
-      <span>ticknest</span>
+      {!compact && <span>ticknest</span>}
     </Link>
   )
 }
