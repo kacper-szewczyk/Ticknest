@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ThemeProvider } from '@mui/material/styles'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { User } from 'firebase/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '../../src/lib/catalog'
@@ -46,6 +46,9 @@ vi.mock('../../src/lib/reports', () => ({
   streamReportCsv: vi.fn(),
 }))
 
+const renderReportPdf = vi.fn(async (_model: unknown) => new Blob(['%PDF-'], { type: 'application/pdf' }))
+vi.mock('../../src/lib/renderReportPdf', () => ({ renderReportPdf }))
+
 vi.mock('../../src/lib/workspaces', () => ({
   subscribeToWorkspaceMembers: (_workspaceId: string, onChange: (members: WorkspaceMember[]) => void) => {
     onChange(MEMBERS)
@@ -59,6 +62,7 @@ function renderPanel(canSeeAllEntries: boolean, user: Partial<User>) {
       <ReportsPanel
         user={user as User}
         workspaceId="w1"
+        workspaceName="Northwind Studio"
         canSeeAllEntries={canSeeAllEntries}
         catalog={{ clients: [], projects: [], tasks: [] } as unknown as Catalog}
       />
@@ -158,5 +162,30 @@ describe('ReportsPanel group-by tabs', () => {
     window.history.replaceState(null, '', '/#reports?group=user')
     renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
     expect((await screen.findByRole('tab', { name: 'Day' })).getAttribute('aria-selected')).toBe('true')
+  })
+})
+
+describe('ReportsPanel PDF export', () => {
+  it('downloads the filtered report as a PDF named like the CSV', async () => {
+    const createObjectURL = vi.fn(() => 'blob:report')
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }))
+    const downloads: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download)
+    })
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    const button = await screen.findByRole('button', { name: 'Export PDF' })
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false))
+    fireEvent.click(button)
+
+    expect(await screen.findByText('Exported 1 entry to PDF.')).toBeTruthy()
+    expect(downloads).toHaveLength(1)
+    expect(downloads[0]).toMatch(/^ticknest-report-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.pdf$/)
+    const model = renderReportPdf.mock.calls[0][0] as { title: string; entriesHead: string[]; entriesBody: string[][] }
+    expect(model.title).toBe('Northwind Studio')
+    expect(model.entriesHead).toContain('User')
+    expect(model.entriesBody[0]).toContain('Ada Lovelace')
+    expect(JSON.stringify(model)).not.toContain(UID)
+    click.mockRestore()
   })
 })

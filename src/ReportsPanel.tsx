@@ -24,6 +24,12 @@ import type { Catalog } from './lib/catalog'
 import { formatElapsed, localDayString } from './lib/dates'
 import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportPage, loadReportSummary, streamReportCsv } from './lib/reports'
 import { reportUserName, UNKNOWN_USER, type ReportFilters, type ReportMember } from './lib/reportFormat'
+import {
+  buildReportPdfModel,
+  describeReportFilters,
+  PDF_EXPORT_ROW_LIMIT,
+  PDF_ROW_LIMIT_MESSAGE,
+} from './lib/reportPdf'
 import type { TimeEntry } from './lib/timeEntries'
 import {
   entrySeconds,
@@ -86,14 +92,27 @@ function filterKey(filters: ReportFilters) {
   ].join('|')
 }
 
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.append(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 export function ReportsPanel({
   user,
   workspaceId,
+  workspaceName,
   canSeeAllEntries,
   catalog,
 }: {
   user: User
   workspaceId: string
+  workspaceName: string
   canSeeAllEntries: boolean
   catalog: Catalog
 }) {
@@ -110,6 +129,7 @@ export function ReportsPanel({
   const [loadingMore, setLoadingMore] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
+  const [exportingPdf, setExportingPdf] = useState(false)
   const [exportNotice, setExportNotice] = useState('')
   const [errorState, setErrorState] = useState<{ key: string; message: string }>({ key: '', message: '' })
   const key = filterKey(filters)
@@ -246,15 +266,7 @@ export function ReportsPanel({
       if (writable) {
         await writable.close()
       } else {
-        const blob = new Blob(fileParts, { type: 'text/csv;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = suggestedName
-        document.body.append(link)
-        link.click()
-        link.remove()
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+        downloadBlob(new Blob(fileParts, { type: 'text/csv;charset=utf-8' }), suggestedName)
         fileParts = []
       }
       setExportNotice(`Exported ${exportedRows.toLocaleString()} ${exportedRows === 1 ? 'entry' : 'entries'}.`)
@@ -271,7 +283,43 @@ export function ReportsPanel({
     }
   }
 
+  // The summary already holds every matching entry, so the PDF is built from it without reading Firestore again.
+  async function exportPdf() {
+    setExportNotice('')
+    if (summaryEntries.length > PDF_EXPORT_ROW_LIMIT) {
+      setErrorState({ key, message: PDF_ROW_LIMIT_MESSAGE })
+      return
+    }
+    setExportingPdf(true)
+    setErrorState({ key, message: '' })
+    try {
+      const model = buildReportPdfModel({
+        workspaceName,
+        filters,
+        filterLabels: describeReportFilters(filters, catalog, reportMembers, canSeeAllEntries),
+        timeZone: new Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        groupBy,
+        groups,
+        entries: summaryEntries,
+        userName: (entry) => reportUserName(entry, reportMembers),
+        showUser: canSeeAllEntries,
+      })
+      const { renderReportPdf } = await import('./lib/renderReportPdf')
+      downloadBlob(await renderReportPdf(model), model.fileName)
+      const count = summaryEntries.length
+      setExportNotice(`Exported ${count.toLocaleString()} ${count === 1 ? 'entry' : 'entries'} to PDF.`)
+    } catch (exportError) {
+      setErrorState({
+        key,
+        message: exportError instanceof Error ? exportError.message : 'Could not export this report as a PDF.',
+      })
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
   const timezone = new Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'
+  const exportBusy = exporting || exportingPdf
   const filterCount = canSeeAllEntries ? 7 : 6
   return (
     <SectionCard labelledBy="reports-heading" sx={{ maxWidth: 'none' }}>
@@ -452,12 +500,20 @@ export function ReportsPanel({
         sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 2 }}
       >
         <Typography variant="h3">Detailed entries</Typography>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+        <Stack direction="row" useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
             Newest first
           </Typography>
-          <Button variant="outlined" onClick={() => void exportCsv()} disabled={invalidRange || exporting}>
+          <Button variant="outlined" onClick={() => void exportCsv()} disabled={invalidRange || exportBusy}>
             {exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => void exportPdf()}
+            // The PDF is built from the summary, so it waits until every matching entry has loaded.
+            disabled={invalidRange || summaryLoading || exportBusy}
+          >
+            {exportingPdf ? 'Preparing PDF…' : summaryLoading && !invalidRange ? 'Loading entries…' : 'Export PDF'}
           </Button>
         </Stack>
       </Stack>
