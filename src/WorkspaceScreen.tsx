@@ -1,12 +1,15 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
 import Chip from '@mui/material/Chip'
+import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { type Theme, alpha } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
@@ -36,6 +39,7 @@ import {
   subscribeToTeamSize,
 } from './lib/workspaces'
 import { AppShell, NavIcon, type NavItem } from './AppShell'
+import { useSidebarControls } from './sidebarControls'
 import { AppearancePanel } from './AppearancePanel'
 import { Brand } from './Brand'
 import { CatalogPanel } from './CatalogPanel'
@@ -471,26 +475,57 @@ export function WorkspaceScreen({ user }: { user: User }) {
       </Box>
     ) : null
 
+  const compactWorkspaceSwitcher =
+    workspaces && workspaces.length > 0 ? <CompactWorkspaceButton name={activeWorkspace?.name} /> : null
+
+  const userAvatar = (
+    <Box
+      aria-hidden="true"
+      sx={{
+        display: 'grid',
+        placeItems: 'center',
+        width: 36,
+        height: 36,
+        flexShrink: 0,
+        borderRadius: '50%',
+        bgcolor: 'app.sidebar.avatarBg',
+        color: 'app.sidebar.avatarText',
+        fontSize: 13,
+        fontWeight: 700,
+      }}
+    >
+      {initialOf(user.displayName || user.email)}
+    </Box>
+  )
+
+  const compactSidebarFooter = (
+    <>
+      <Tooltip title={user.email ?? user.displayName ?? 'Your account'} placement="right">
+        <Box role="img" aria-label={`Signed in as ${user.email ?? user.displayName ?? 'your account'}`}>
+          {userAvatar}
+        </Box>
+      </Tooltip>
+      <Tooltip title="Sign out" placement="right">
+        <IconButton
+          aria-label="Sign out"
+          onClick={() => void signOutUser()}
+          sx={{
+            color: 'app.sidebar.text',
+            '&:hover': { bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.09) },
+          }}
+        >
+          <NavIcon>
+            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" />
+          </NavIcon>
+        </IconButton>
+      </Tooltip>
+    </>
+  )
+
   const sidebarFooter = (
     <Stack spacing={1.25}>
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', px: 1, py: 0.5, minWidth: 0 }}>
-        <Box
-          aria-hidden="true"
-          sx={{
-            display: 'grid',
-            placeItems: 'center',
-            width: 36,
-            height: 36,
-            flexShrink: 0,
-            borderRadius: '50%',
-            bgcolor: 'app.sidebar.avatarBg',
-            color: 'app.sidebar.avatarText',
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          {(user.displayName || user.email || '?').trim().charAt(0).toUpperCase()}
-        </Box>
+        {userAvatar}
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="body2" noWrap sx={{ color: 'app.sidebar.strong', fontWeight: 600 }}>
             {user.displayName || 'Your account'}
@@ -532,6 +567,9 @@ export function WorkspaceScreen({ user }: { user: User }) {
       active={activeWorkspace && setupWorkspaceId !== activeWorkspace.id ? currentView : null}
       onNavigate={navigate}
       footer={sidebarFooter}
+      compactBrand={<Brand tone="light" compact />}
+      compactHeader={compactWorkspaceSwitcher}
+      compactFooter={compactSidebarFooter}
     >
       <Box
         component="main"
@@ -767,6 +805,38 @@ export function WorkspaceScreen({ user }: { user: User }) {
         )}
       </Box>
     </AppShell>
+  )
+}
+
+function initialOf(name: string | null | undefined): string {
+  return (name || '?').trim().charAt(0).toUpperCase() || '?'
+}
+
+/** Collapsed-rail stand-in for the workspace switcher: expands the sidebar to reveal the select. */
+function CompactWorkspaceButton({ name }: { name: string | undefined }) {
+  const { expand } = useSidebarControls()
+  const label = `Switch workspace (current: ${name ?? 'none'})`
+  return (
+    <Tooltip title={label} placement="right">
+      <ButtonBase
+        aria-label={label}
+        onClick={expand}
+        sx={{
+          width: 40,
+          height: 40,
+          borderRadius: '10px',
+          border: '1px solid',
+          borderColor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.16),
+          bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.06),
+          color: 'app.sidebar.strong',
+          fontSize: 15,
+          fontWeight: 700,
+          '&:hover': { bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.12) },
+        }}
+      >
+        {initialOf(name)}
+      </ButtonBase>
+    </Tooltip>
   )
 }
 
