@@ -21,6 +21,10 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+# Playwright
+playwright-report/
+test-results/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

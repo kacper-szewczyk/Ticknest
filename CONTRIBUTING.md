@@ -17,6 +17,26 @@ npm run test:emulators
 
 `npm test` needs no emulators. `npm run test:emulators` builds the Functions, starts the Auth, Firestore, and Functions emulators, runs the emulator tests (including `functions/test`), and stops the emulators. It needs Java and free ports from `firebase.json`, so stop `npm run emulators` first. Both run on every pull request. When you change `firestore.rules` or a callable, add or update a test and keep [the rules test matrix](docs/firestore-rules-test-matrix.md) in step.
 
+### End-to-end tests
+
+`tests/e2e` holds a small [Playwright](https://playwright.dev) suite that drives the real app in Chromium against the emulators, signing in with the demo account buttons. Install the browser once, then run the suite:
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+`npm run test:e2e` builds the Functions, starts the Auth, Firestore, and Functions emulators, and runs Playwright, which starts its own Vite dev server on port 5174 with emulator and demo mode settings (your `.env.local` does not apply). Each spec file wipes and reseeds the emulators with the demo data first, so do not point it at emulators holding data you want to keep. Like `npm run test:emulators`, it needs Java and the emulator ports free. Specs tagged `@mobile` also run on a phone-sized viewport.
+
+To debug, keep the emulators running in one terminal with `npm run emulators`, then in another run:
+
+```sh
+npx playwright test --ui
+npx playwright test --headed --project chromium
+```
+
+On CI, a failing run uploads the HTML report and traces as the `playwright-report` artifact. Open a downloaded trace with `npx playwright show-trace <path>/trace.zip`.
+
 ## Propose a change
 
 1. Check existing issues and pull requests, then open an issue for a substantial feature or bug that has not been discussed.
