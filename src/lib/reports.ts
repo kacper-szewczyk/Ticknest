@@ -12,7 +12,15 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { TimeEntry } from './timeEntries'
-import { csvHeader, csvRow, matchesFilters, reportRange, type ReportFilters } from './reportFormat'
+import {
+  csvHeader,
+  csvRow,
+  matchesFilters,
+  reportRange,
+  reportUserName,
+  type ReportFilters,
+  type ReportMember,
+} from './reportFormat'
 
 const PAGE_SIZE = 25
 const SUMMARY_BATCH_SIZE = 250
@@ -49,6 +57,7 @@ export async function streamReportCsv(
   currentUserId: string,
   filters: ReportFilters,
   timeZone: string,
+  members: readonly ReportMember[],
   onChunk: (chunk: string, rowCount: number) => Promise<void>,
   onProgress: (rows: number) => void,
 ): Promise<number> {
@@ -65,7 +74,7 @@ export async function streamReportCsv(
     for (const document of snapshot.docs) {
       const entry = toEntry(document)
       if (entry.endAt === null || !matchesFilters(entry, filters)) continue
-      lines.push(csvRow({ ...entry, endAt: entry.endAt }, timezone))
+      lines.push(csvRow({ ...entry, endAt: entry.endAt }, timezone, reportUserName(entry, members)))
     }
     if (lines.length > 0) {
       totalRows += lines.length

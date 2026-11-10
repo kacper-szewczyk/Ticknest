@@ -86,6 +86,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 - Provide a date-range summary of total duration, with grouping by day, user, client, project, or task.
 - Provide a detailed entry list with filters for date, user, client, project, task, and billable status.
 - Members can report on their own entries; owners and managers can report on all workspace entries.
+- Users are shown by display name, then email, then the entry's name snapshot, then "Unknown user" — never by raw user ID. Members' detailed entry rows omit the user; their CSV keeps the User column with their own name.
 - Export filtered detailed entries as CSV. Escape commas, quotes, and newlines correctly. No PDF or spreadsheet formatting requirement in v1.
 
 ### 5.7 Settings and privacy
