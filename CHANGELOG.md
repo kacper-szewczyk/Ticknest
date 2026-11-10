@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.35.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.34.1...ticknest-v1.35.0) (2026-11-10)
+
+
+### Features
+
+* seed budgets for all demo users ([#205](https://github.com/kacper-szewczyk/Ticknest/issues/205)) ([7d81f50](https://github.com/kacper-szewczyk/Ticknest/commit/7d81f5020b05c2973f2f98b9fd6b46752a6840a9)), closes [#187](https://github.com/kacper-szewczyk/Ticknest/issues/187)
+
 ## [1.34.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.34.0...ticknest-v1.34.1) (2026-11-10)
 
 
