@@ -37,11 +37,13 @@ export function SectionHeading({
   id,
   kicker,
   title,
+  description,
   action,
 }: {
   id: string
   kicker: string
   title: string
+  description?: ReactNode
   action?: ReactNode
 }) {
   return (
@@ -56,6 +58,11 @@ export function SectionHeading({
         <Typography variant="h2" id={id}>
           {title}
         </Typography>
+        {description && (
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
+            {description}
+          </Typography>
+        )}
       </div>
       {action}
     </Stack>
