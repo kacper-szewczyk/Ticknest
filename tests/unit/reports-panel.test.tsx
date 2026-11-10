@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ThemeProvider } from '@mui/material/styles'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { User } from 'firebase/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -48,6 +48,9 @@ vi.mock('../../src/lib/reports', () => ({
   streamReportCsv: vi.fn(),
 }))
 
+const renderReportPdf = vi.fn(async (_model: unknown) => new Blob(['%PDF-'], { type: 'application/pdf' }))
+vi.mock('../../src/lib/renderReportPdf', () => ({ renderReportPdf }))
+
 vi.mock('../../src/lib/workspaces', () => ({
   subscribeToWorkspaceMembers: (_workspaceId: string, onChange: (members: WorkspaceMember[]) => void) => {
     onChange(MEMBERS)
@@ -61,6 +64,7 @@ function renderPanel(canSeeAllEntries: boolean, user: Partial<User>) {
       <ReportsPanel
         user={user as User}
         workspaceId="w1"
+        workspaceName="Northwind Studio"
         canSeeAllEntries={canSeeAllEntries}
         catalog={{ clients: [], projects: [], tasks: [] } as unknown as Catalog}
       />
@@ -173,6 +177,11 @@ describe('ReportsPanel export', () => {
     const button = screen.getByRole('button', { name: 'Export CSV' })
     const heading = screen.getByRole('heading', { name: 'Reports' })
     expect(heading.closest('div')?.parentElement?.contains(button)).toBe(true)
+    expect(
+      heading
+        .closest('div')
+        ?.parentElement?.contains(await screen.findByRole('button', { name: /PDF|Loading entries/ })),
+    ).toBe(true)
     expect(precedes(button, screen.getByLabelText('From'))).toBe(true)
     expect(precedes(button, await screen.findByRole('heading', { name: 'Detailed entries' }))).toBe(true)
     expect(screen.getByText(/^Dates in /)).toBeTruthy()
@@ -206,5 +215,31 @@ describe('ReportsPanel export', () => {
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-12-31' } })
     fireEvent.change(screen.getByLabelText('Through'), { target: { value: '2026-01-01' } })
     expect(screen.getByRole('button', { name: 'Export CSV' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Export PDF' }).hasAttribute('disabled')).toBe(true)
+  })
+})
+
+describe('ReportsPanel PDF export', () => {
+  it('downloads the filtered report as a PDF named like the CSV', async () => {
+    const createObjectURL = vi.fn(() => 'blob:report')
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }))
+    const downloads: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download)
+    })
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    const button = await screen.findByRole('button', { name: 'Export PDF' })
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false))
+    fireEvent.click(button)
+
+    expect(await screen.findByText('Exported 1 entry to PDF.')).toBeTruthy()
+    expect(downloads).toHaveLength(1)
+    expect(downloads[0]).toMatch(/^ticknest-report-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.pdf$/)
+    const model = renderReportPdf.mock.calls[0][0] as { title: string; entriesHead: string[]; entriesBody: string[][] }
+    expect(model.title).toBe('Northwind Studio')
+    expect(model.entriesHead).toContain('User')
+    expect(model.entriesBody[0]).toContain('Ada Lovelace')
+    expect(JSON.stringify(model)).not.toContain(UID)
+    click.mockRestore()
   })
 })

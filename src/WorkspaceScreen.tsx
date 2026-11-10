@@ -644,6 +644,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 <ReportsPanel
                   user={user}
                   workspaceId={activeWorkspace.id}
+                  workspaceName={activeWorkspace.name}
                   canSeeAllEntries={seesAllEntries}
                   catalog={catalog}
                 />

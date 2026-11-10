@@ -121,3 +121,10 @@ export function csvRow(
     .map(csvField)
     .join(',')
 }
+
+/** Formats the time of day (24-hour, minutes) in the report's time zone. */
+export function localTime(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
+    date,
+  )
+}
