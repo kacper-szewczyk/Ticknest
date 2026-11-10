@@ -15,7 +15,6 @@ export class ManualEntryFieldError extends Error {
 
 export function validateManualEntryFields(input: Pick<ManualEntryInput, 'description' | 'startAt' | 'endAt'>): void {
   const description = input.description.trim()
-  if (!description) throw new ManualEntryFieldError('description', 'Add a description for this entry.')
   if (description.length > 500)
     throw new ManualEntryFieldError('description', 'Descriptions must be 500 characters or fewer.')
   if (!Number.isFinite(input.startAt.getTime()))

@@ -287,6 +287,17 @@ export async function updateRunningTimer(workspaceId: string, entryId: string, d
   })
 }
 
+export async function updateRunningTimerDescription(
+  workspaceId: string,
+  entryId: string,
+  description: string,
+): Promise<void> {
+  await updateDoc(doc(entriesPath(workspaceId), entryId), {
+    description: description.trim(),
+    updatedAt: serverTimestamp(),
+  })
+}
+
 export async function stopTimer(user: User, workspaceId: string, entryId: string): Promise<void> {
   const entryRef = doc(entriesPath(workspaceId), entryId)
   const activeRef = doc(db, 'workspaces', workspaceId, 'activeTimers', user.uid)

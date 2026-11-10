@@ -21,10 +21,10 @@ describe('validateManualEntryFields', () => {
     ).not.toThrow()
   })
 
-  it('requires a description', () => {
-    const error = fieldError(() => validateManualEntryFields({ description: '   ', startAt: START, endAt: END }))
-    expect(error.field).toBe('description')
-    expect(error.message).toBe('Add a description for this entry.')
+  it('allows an empty or whitespace-only description', () => {
+    for (const description of ['', '   ']) {
+      expect(() => validateManualEntryFields({ description, startAt: START, endAt: END })).not.toThrow()
+    }
   })
 
   it('limits trimmed descriptions to 500 characters', () => {

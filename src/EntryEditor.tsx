@@ -103,7 +103,6 @@ export function EntryEditor({
               setDescription(event.target.value)
               clearFieldError('description')
             }}
-            required
             autoFocus
             {...fieldProps('description')}
             slotProps={{ htmlInput: { maxLength: 500 } }}

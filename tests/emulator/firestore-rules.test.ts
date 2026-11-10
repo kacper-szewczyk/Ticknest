@@ -619,11 +619,26 @@ describe('running timers', () => {
     )
   })
 
+  it.each(['Named later', ''])('lets a member set their running timer description to %j', async (description) => {
+    const db = firestoreFor(MEMBER)
+    await seedRunningTimer(MEMBER.uid, 'running')
+    await assertSucceeds(
+      updateDoc(doc(db, WS, 'timeEntries', 'running'), { description, updatedAt: serverTimestamp() }),
+    )
+  })
+
+  it('lets a member stop a running timer that has no description', async () => {
+    const db = firestoreFor(MEMBER)
+    await startTimer(db, MEMBER.uid, 'untitled', { description: '' })
+    await assertSucceeds(stopTimer(db, MEMBER.uid, 'untitled'))
+  })
+
   it.each<[string, Record<string, unknown>]>([
+    ['an oversized description', { description: 'a'.repeat(501) }],
+    ['a description that is not a string', { description: null }],
     ['a task from another project', { taskId: TASK_ID, taskName: 'Build', projectId: null, projectName: null }],
     ['a name that does not match the reference', { taskName: 'Renamed' }],
     ['a reference to a missing task', { taskId: 'task-missing' }],
-    ['a description change', { description: 'Changed' }],
     ['a start time change', { startAt: PAST }],
     ['a start time zone change', { startTimeZone: 'Pacific/Auckland' }],
     ['an auto-stopped marker', { autoStopped: true }],
@@ -668,13 +683,16 @@ describe('boundary validation', () => {
       await assertSucceeds(createEntry({}))
     })
 
+    it('accepts an empty description', async () => {
+      await assertSucceeds(createEntry({ description: '' }))
+    })
+
     it('accepts the time zone the timer was started in', async () => {
       await assertSucceeds(createEntry({ startTimeZone: 'Europe/Warsaw' }))
     })
 
     it.each<[string, Record<string, unknown>]>([
       ['an unknown field', { invoiced: true }],
-      ['an empty description', { description: '' }],
       ['an oversized description', { description: 'a'.repeat(501) }],
       ['an oversized display name', { userDisplayName: 'a'.repeat(321) }],
       ['a non-boolean billable value', { billable: 'yes' }],
