@@ -201,6 +201,21 @@ test('invalid durations are rejected', async () => {
   assert.equal(result.status, 'INVALID_ARGUMENT')
 })
 
+test('descriptions are optional, trimmed, and limited to 500 characters', async () => {
+  const untitled = await save(member, entry(700, 701, { description: '   ' }))
+  assert.ok(untitled.ok, JSON.stringify(untitled))
+  const stored = await db.doc(`workspaces/${workspaceId}/timeEntries/${untitled.entryId}`).get()
+  assert.equal(stored.data().description, '')
+
+  const named = await save(member, { ...entry(700, 701), entryId: untitled.entryId, description: ' Named later ' })
+  assert.ok(named.ok, JSON.stringify(named))
+  const renamed = await db.doc(`workspaces/${workspaceId}/timeEntries/${untitled.entryId}`).get()
+  assert.equal(renamed.data().description, 'Named later')
+
+  const oversized = await save(member, entry(702, 703, { description: 'a'.repeat(501) }))
+  assert.equal(oversized.status, 'INVALID_ARGUMENT')
+})
+
 test('editing the end of an auto-stopped entry clears the auto-stopped marker', async () => {
   const created = await save(member, entry(600, 601))
   assert.ok(created.ok, JSON.stringify(created))

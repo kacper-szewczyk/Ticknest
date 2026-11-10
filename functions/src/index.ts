@@ -51,6 +51,19 @@ function getRequiredText(data: CallableData, field: string, maxLength: number): 
   return normalizedValue
 }
 
+// Like getRequiredText, but an empty value is allowed.
+function getOptionalText(data: CallableData, field: string, maxLength: number): string {
+  const value = data[field]
+  if (typeof value !== 'string') {
+    throw new HttpsError('invalid-argument', `Enter a valid ${field}.`)
+  }
+  const normalizedValue = value.trim()
+  if (normalizedValue.length > maxLength) {
+    throw new HttpsError('invalid-argument', `Enter a valid ${field}.`)
+  }
+  return normalizedValue
+}
+
 function getTimeZone(data: CallableData): string {
   const timezone = data.timezone
   if (typeof timezone !== 'string' || timezone.length > 100) {
@@ -387,7 +400,7 @@ export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
   const data = getData(request.data)
   const workspaceId = getDocumentId(data, 'workspaceId')
   const entryId = getOptionalDocumentId(data, 'entryId')
-  const description = getRequiredText(data, 'description', 500)
+  const description = getOptionalText(data, 'description', 500)
   const clientId = getOptionalDocumentId(data, 'clientId')
   const projectId = getOptionalDocumentId(data, 'projectId')
   const taskId = getOptionalDocumentId(data, 'taskId')

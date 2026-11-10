@@ -10,7 +10,14 @@ import { autoStopNoticeEntry, markAutoStopNoticeSeen, readSeenAutoStopNotice } f
 import type { Catalog } from './lib/catalog'
 import { formatElapsed } from './lib/dates'
 import { readableError } from './lib/errors'
-import { type TimeEntry, startTimer, stopTimer, subscribeToTimeEntries, updateRunningTimer } from './lib/timeEntries'
+import {
+  type TimeEntry,
+  startTimer,
+  stopTimer,
+  subscribeToTimeEntries,
+  updateRunningTimer,
+  updateRunningTimerDescription,
+} from './lib/timeEntries'
 import { type WorkDetails, workDetails } from './lib/workOptions'
 import { BillableChip, FormMessage } from './ui'
 import { WorkPicker } from './WorkPicker'
@@ -70,6 +77,16 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
       setError(readableError(requestError))
     } finally {
       setPending(false)
+    }
+  }
+
+  async function handleRunningDescriptionChange(entryId: string, nextDescription: string) {
+    setError('')
+    try {
+      await updateRunningTimerDescription(workspaceId, entryId, nextDescription)
+    } catch (requestError) {
+      setError(readableError(requestError))
+      throw requestError
     }
   }
 
@@ -137,9 +154,11 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
             minHeight: 48,
           }}
         >
-          <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-            {runningEntry.description || 'Untitled entry'}
-          </Typography>
+          <RunningDescriptionField
+            key={runningEntry.id}
+            savedDescription={runningEntry.description}
+            onSave={(nextDescription) => handleRunningDescriptionChange(runningEntry.id, nextDescription)}
+          />
           <Box sx={{ gridColumn: { xs: '1 / -1', lg: 'auto' }, gridRow: { xs: 2, lg: 'auto' }, minWidth: 0 }}>
             <WorkPicker
               size="small"
@@ -186,7 +205,6 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="What are you working on?"
-            required
             slotProps={{ htmlInput: { maxLength: 500, 'aria-label': 'What are you working on?' } }}
           />
           <Box sx={{ gridColumn: { xs: '1 / -1', lg: 'auto' }, gridRow: { xs: 2, lg: 'auto' }, minWidth: 0 }}>
@@ -200,5 +218,65 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
         </Box>
       )}
     </Box>
+  )
+}
+
+// The running timer's description, edited in place. It saves when the field loses focus or Enter is pressed;
+// Escape puts back the saved description.
+function RunningDescriptionField({
+  savedDescription,
+  onSave,
+}: {
+  savedDescription: string
+  onSave: (description: string) => Promise<void>
+}) {
+  const [draft, setDraft] = useState(savedDescription)
+  const [lastSaved, setLastSaved] = useState(savedDescription)
+  const [saving, setSaving] = useState(false)
+
+  // Follow changes saved elsewhere (another tab or device) unless the user has unsaved edits.
+  if (savedDescription !== lastSaved) {
+    setLastSaved(savedDescription)
+    if (draft.trim() === lastSaved.trim()) setDraft(savedDescription)
+  }
+
+  async function save() {
+    const nextDescription = draft.trim()
+    setDraft(nextDescription)
+    if (nextDescription === savedDescription.trim() || saving) return
+    setSaving(true)
+    try {
+      await onSave(nextDescription)
+    } catch {
+      setDraft(savedDescription)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <TextField
+      size="small"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => void save()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          event.currentTarget.querySelector('input')?.blur()
+        } else if (event.key === 'Escape') {
+          setDraft(savedDescription)
+          // Blur after the revert has rendered so the blur handler sees the saved value.
+          const input = event.currentTarget.querySelector('input')
+          window.setTimeout(() => input?.blur())
+        }
+      }}
+      placeholder="Untitled entry"
+      disabled={saving}
+      slotProps={{
+        htmlInput: { maxLength: 500, 'aria-label': 'Description of the running timer' },
+      }}
+      sx={{ '& .MuiInputBase-input': { fontWeight: 600 } }}
+    />
   )
 }

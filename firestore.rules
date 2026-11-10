@@ -235,7 +235,6 @@ service cloud.firestore {
             && data.userId is string
             && (data.get('userDisplayName', null) == null || (data.get('userDisplayName', null) is string && data.get('userDisplayName', null).size() <= 320))
             && data.description is string
-            && data.description.size() > 0
             && data.description.size() <= 500
             && (data.clientName == null || (data.clientName is string && data.clientName.size() <= 100))
             && (data.projectName == null || (data.projectName is string && data.projectName.size() <= 100))
@@ -295,7 +294,8 @@ service cloud.firestore {
           && request.resource.data.endAt == null
           && request.resource.data.startAt == request.time
           && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)).data.entryId == entryId;
-        // Clients may stop their own running timer or change its client, project, task, and billable state;
+        // Clients may stop their own running timer or change its description, client, project, task, and
+        // billable state;
         // edits to completed entries go through the callable.
         allow update: if isMember(workspaceId)
           && resource.data.endAt == null
@@ -307,7 +307,7 @@ service cloud.firestore {
               && request.resource.data.endAt > resource.data.startAt
               && !existsAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/activeTimers/$(request.auth.uid)))
             || (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'clientId', 'clientName', 'projectId', 'projectName', 'taskId', 'taskName', 'billable', 'updatedAt'
+                'description', 'clientId', 'clientName', 'projectId', 'projectName', 'taskId', 'taskName', 'billable', 'updatedAt'
               ])
               && validEntry(request.resource.data)
               && validEntryReferences(request.resource.data))
