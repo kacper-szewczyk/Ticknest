@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { ThemeProvider } from '@mui/material/styles'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { User } from 'firebase/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '../../src/lib/catalog'
 import type { TimeEntry } from '../../src/lib/timeEntries'
 import type { WorkspaceMember } from '../../src/lib/workspaces'
 import { PALETTES } from '../../src/palettes'
+import { streamReportCsv } from '../../src/lib/reports'
 import { ReportsPanel } from '../../src/ReportsPanel'
 import { createAppTheme } from '../../src/theme'
 
@@ -158,5 +160,51 @@ describe('ReportsPanel group-by tabs', () => {
     window.history.replaceState(null, '', '/#reports?group=user')
     renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
     expect((await screen.findByRole('tab', { name: 'Day' })).getAttribute('aria-selected')).toBe('true')
+  })
+})
+
+describe('ReportsPanel export', () => {
+  function precedes(first: Node, second: Node): boolean {
+    return Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+  }
+
+  it('shows Export CSV in the page header, above the filters and the report', async () => {
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    const button = screen.getByRole('button', { name: 'Export CSV' })
+    const heading = screen.getByRole('heading', { name: 'Reports' })
+    expect(heading.closest('div')?.parentElement?.contains(button)).toBe(true)
+    expect(precedes(button, screen.getByLabelText('From'))).toBe(true)
+    expect(precedes(button, await screen.findByRole('heading', { name: 'Detailed entries' }))).toBe(true)
+    expect(screen.getByText(/^Dates in /)).toBeTruthy()
+  })
+
+  it('shows progress while exporting and the notice next to the button when done', async () => {
+    const events = userEvent.setup()
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:report', revokeObjectURL: () => {} }))
+    let finish: (rows: number) => void = () => {}
+    vi.mocked(streamReportCsv).mockImplementation(async (...args) => {
+      const onProgress = args.at(-1) as (rows: number) => void
+      onProgress(5)
+      return new Promise<number>((resolve) => {
+        finish = resolve
+      })
+    })
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    await events.click(screen.getByRole('button', { name: 'Export CSV' }))
+    const progress = await screen.findByRole('button', { name: 'Exporting… 5' })
+    expect(progress.hasAttribute('disabled')).toBe(true)
+
+    finish(3)
+    const notice = await screen.findByRole('status')
+    expect(notice.textContent).toBe('Exported 3 entries.')
+    expect(precedes(notice, screen.getByLabelText('From'))).toBe(true)
+    expect(screen.getByRole('button', { name: 'Export CSV' }).hasAttribute('disabled')).toBe(false)
+  })
+
+  it('disables Export CSV when the date range is invalid', () => {
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-12-31' } })
+    fireEvent.change(screen.getByLabelText('Through'), { target: { value: '2026-01-01' } })
+    expect(screen.getByRole('button', { name: 'Export CSV' }).hasAttribute('disabled')).toBe(true)
   })
 })

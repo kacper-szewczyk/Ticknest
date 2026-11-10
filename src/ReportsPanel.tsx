@@ -279,12 +279,19 @@ export function ReportsPanel({
         id="reports-heading"
         kicker="WORKSPACE INSIGHTS"
         title="Reports"
+        description={`Dates in ${timezone}`}
         action={
-          <Typography variant="caption" color="text.secondary">
-            Dates in {timezone}
-          </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => void exportCsv()}
+            disabled={invalidRange || exporting}
+            sx={{ flexShrink: 0 }}
+          >
+            {exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}
+          </Button>
         }
       />
+      {exportNotice && <FormMessage severity="success">{exportNotice}</FormMessage>}
       <Box
         sx={{
           display: 'grid',
@@ -452,16 +459,10 @@ export function ReportsPanel({
         sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 2 }}
       >
         <Typography variant="h3">Detailed entries</Typography>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <Typography variant="caption" color="text.secondary">
-            Newest first
-          </Typography>
-          <Button variant="outlined" onClick={() => void exportCsv()} disabled={invalidRange || exporting}>
-            {exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}
-          </Button>
-        </Stack>
+        <Typography variant="caption" color="text.secondary">
+          Newest first
+        </Typography>
       </Stack>
-      {exportNotice && <FormMessage severity="success">{exportNotice}</FormMessage>}
       <Box sx={{ mt: 1 }}>
         {wide
           ? entries.length > 0 && <EntriesTable entries={entries} members={members} showUser={canSeeAllEntries} />
