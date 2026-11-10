@@ -327,12 +327,24 @@ export function ReportsPanel({
         id="reports-heading"
         kicker="WORKSPACE INSIGHTS"
         title="Reports"
+        description={`Dates in ${timezone}`}
         action={
-          <Typography variant="caption" color="text.secondary">
-            Dates in {timezone}
-          </Typography>
+          <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', gap: 1.5, flexShrink: 0 }}>
+            <Button variant="outlined" onClick={() => void exportCsv()} disabled={invalidRange || exportBusy}>
+              {exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => void exportPdf()}
+              // The PDF is built from the summary, so it waits until every matching entry has loaded.
+              disabled={invalidRange || summaryLoading || exportBusy}
+            >
+              {exportingPdf ? 'Preparing PDF…' : summaryLoading && !invalidRange ? 'Loading entries…' : 'Export PDF'}
+            </Button>
+          </Stack>
         }
       />
+      {exportNotice && <FormMessage severity="success">{exportNotice}</FormMessage>}
       <Box
         sx={{
           display: 'grid',
@@ -500,24 +512,10 @@ export function ReportsPanel({
         sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 2 }}
       >
         <Typography variant="h3">Detailed entries</Typography>
-        <Stack direction="row" useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">
-            Newest first
-          </Typography>
-          <Button variant="outlined" onClick={() => void exportCsv()} disabled={invalidRange || exportBusy}>
-            {exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => void exportPdf()}
-            // The PDF is built from the summary, so it waits until every matching entry has loaded.
-            disabled={invalidRange || summaryLoading || exportBusy}
-          >
-            {exportingPdf ? 'Preparing PDF…' : summaryLoading && !invalidRange ? 'Loading entries…' : 'Export PDF'}
-          </Button>
-        </Stack>
+        <Typography variant="caption" color="text.secondary">
+          Newest first
+        </Typography>
       </Stack>
-      {exportNotice && <FormMessage severity="success">{exportNotice}</FormMessage>}
       <Box sx={{ mt: 1 }}>
         {wide
           ? entries.length > 0 && <EntriesTable entries={entries} members={members} showUser={canSeeAllEntries} />
