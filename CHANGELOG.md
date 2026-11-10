@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.40.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.39.0...ticknest-v1.40.0) (2026-11-10)
+
+
+### Features
+
+* export reports as PDF ([#218](https://github.com/kacper-szewczyk/Ticknest/issues/218)) ([7f14357](https://github.com/kacper-szewczyk/Ticknest/commit/7f14357d0a3954da5eebfb862041a5af6c04a1c4)), closes [#198](https://github.com/kacper-szewczyk/Ticknest/issues/198)
+
 ## [1.39.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.38.0...ticknest-v1.39.0) (2026-11-10)
 
 
