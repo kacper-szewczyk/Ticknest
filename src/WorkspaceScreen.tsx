@@ -84,7 +84,6 @@ const OWNER_VIEWS: WorkspaceView[] = ['catalog', 'members']
 // Owners and managers manage budgets and follow everyone's progress on them.
 const MANAGER_VIEWS: WorkspaceView[] = ['team-budgets', 'budgets']
 
-// The current page lives in the URL hash so refreshes and the back button keep it.
 // Reports holds wide filter rows and an entries table, so it gets the most room; the cap keeps
 // rows readable on ultra-wide monitors.
 function mainMaxWidth(view: WorkspaceView | null): number {
@@ -93,8 +92,10 @@ function mainMaxWidth(view: WorkspaceView | null): number {
   return 960
 }
 
+// The current page lives in the URL hash so refreshes and the back button keep it.
+// A view may carry its own state after a '?', e.g. #reports?group=client.
 function viewFromHash(): WorkspaceView | null {
-  const hash = window.location.hash.slice(1)
+  const hash = window.location.hash.slice(1).split('?')[0]
   return (WORKSPACE_VIEWS as string[]).includes(hash) ? (hash as WorkspaceView) : null
 }
 
