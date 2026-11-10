@@ -85,6 +85,14 @@ const OWNER_VIEWS: WorkspaceView[] = ['catalog', 'members']
 const MANAGER_VIEWS: WorkspaceView[] = ['team-budgets', 'budgets']
 
 // The current page lives in the URL hash so refreshes and the back button keep it.
+// Reports holds wide filter rows and an entries table, so it gets the most room; the cap keeps
+// rows readable on ultra-wide monitors.
+function mainMaxWidth(view: WorkspaceView | null): number {
+  if (view === 'reports') return 1440
+  if (view === 'dashboard' || view === 'team-budgets') return 1120
+  return 960
+}
+
 function viewFromHash(): WorkspaceView | null {
   const hash = window.location.hash.slice(1)
   return (WORKSPACE_VIEWS as string[]).includes(hash) ? (hash as WorkspaceView) : null
@@ -575,7 +583,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
         component="main"
         sx={{
           width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'calc(100% - 64px)' },
-          maxWidth: activeWorkspace && (currentView === 'dashboard' || currentView === 'team-budgets') ? 1120 : 960,
+          maxWidth: mainMaxWidth(activeWorkspace ? currentView : null),
           mx: 'auto',
           pt: { xs: 3, md: 5 },
           pb: 5,

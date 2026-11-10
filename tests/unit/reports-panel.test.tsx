@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ThemeProvider } from '@mui/material/styles'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import type { User } from 'firebase/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '../../src/lib/catalog'
@@ -66,7 +66,21 @@ function renderPanel(canSeeAllEntries: boolean, user: Partial<User>) {
   )
 }
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
+
+function stubWideScreen() {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: true,
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+  }))
+}
 
 describe('ReportsPanel user names', () => {
   it('shows managers and owners the member name instead of the user ID', async () => {
@@ -82,5 +96,26 @@ describe('ReportsPanel user names', () => {
     expect(row.textContent).not.toContain('Ada Lovelace')
     expect(row.textContent).toMatch(/ · Maple Health Clinic$/)
     expect(document.body.textContent).not.toContain(UID)
+  })
+})
+
+describe('ReportsPanel wide layout', () => {
+  it('shows detailed entries as a table with one column per field on large screens', async () => {
+    stubWideScreen()
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    const table = await screen.findByRole('table', { name: 'Detailed entries' })
+    const headers = within(table)
+      .getAllByRole('columnheader')
+      .map((cell) => cell.textContent)
+    expect(headers).toEqual(['Description', 'Date & time', 'User', 'Client', 'Project', 'Task', 'Billable', 'Duration'])
+    expect(within(table).getByRole('cell', { name: 'Maple Health Clinic' })).toBeTruthy()
+    expect(within(table).getByRole('cell', { name: 'Ada Lovelace' })).toBeTruthy()
+  })
+
+  it('omits the user column for regular members', async () => {
+    stubWideScreen()
+    renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
+    const table = await screen.findByRole('table', { name: 'Detailed entries' })
+    expect(within(table).queryByRole('columnheader', { name: 'User' })).toBeNull()
   })
 })
