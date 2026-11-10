@@ -4,8 +4,15 @@ import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
+import { useTheme } from '@mui/material/styles'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import type { User } from 'firebase/auth'
 import type { QueryDocumentSnapshot } from 'firebase/firestore'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
@@ -79,6 +86,7 @@ export function ReportsPanel({
 }) {
   const [filters, setFilters] = useState<ReportFilters>(initialFilters)
   const [groupBy, setGroupBy] = useState<GroupBy>('day')
+  const wide = useMediaQuery(useTheme().breakpoints.up('lg'))
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [summaryState, setSummaryState] = useState<{ key: string; entries: TimeEntry[] }>({ key: '', entries: [] })
   const [pageState, setPageState] = useState<{ key: string; entries: TimeEntry[]; cursor?: QueryDocumentSnapshot }>({
@@ -254,8 +262,9 @@ export function ReportsPanel({
   }
 
   const timezone = new Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'
+  const filterCount = canSeeAllEntries ? 7 : 6
   return (
-    <SectionCard labelledBy="reports-heading">
+    <SectionCard labelledBy="reports-heading" sx={{ maxWidth: 'none' }}>
       <SectionHeading
         id="reports-heading"
         kicker="WORKSPACE INSIGHTS"
@@ -269,7 +278,12 @@ export function ReportsPanel({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, minmax(0, 1fr))',
+            md: 'repeat(4, minmax(0, 1fr))',
+            lg: `repeat(${filterCount}, minmax(0, 1fr))`,
+          },
           gap: 1.5,
           mt: 2.75,
         }}
@@ -450,32 +464,34 @@ export function ReportsPanel({
       </Stack>
       {exportNotice && <FormMessage severity="success">{exportNotice}</FormMessage>}
       <Box sx={{ mt: 1 }}>
-        {entries.map((entry) => (
-          <ListRow key={entry.id} sx={{ alignItems: { xs: 'flex-start', sm: 'center' } }}>
-            <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
-              <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                {entry.description || 'Untitled entry'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {[
-                  entry.startAt.toDate().toLocaleString(),
-                  // Every entry a regular member sees is their own, so the user segment would be noise.
-                  canSeeAllEntries ? reportUserName(entry, members) : null,
-                  [entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
-                    'No client, project, or task',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Typography>
-            </Box>
-            <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flex: '0 0 auto' }}>
-              <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                {formatElapsed(duration(entry))}
-              </Typography>
-              {entry.billable && <BillableChip />}
-            </Stack>
-          </ListRow>
-        ))}
+        {wide
+          ? entries.length > 0 && <EntriesTable entries={entries} members={members} showUser={canSeeAllEntries} />
+          : entries.map((entry) => (
+              <ListRow key={entry.id} sx={{ alignItems: { xs: 'flex-start', sm: 'center' } }}>
+                <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
+                  <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                    {entry.description || UNTITLED_ENTRY}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {[
+                      entry.startAt.toDate().toLocaleString(),
+                      // Every entry a regular member sees is their own, so the user segment would be noise.
+                      canSeeAllEntries ? reportUserName(entry, members) : null,
+                      [entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
+                        'No client, project, or task',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Typography>
+                </Box>
+                <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flex: '0 0 auto' }}>
+                  <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                    {formatElapsed(duration(entry))}
+                  </Typography>
+                  {entry.billable && <BillableChip />}
+                </Stack>
+              </ListRow>
+            ))}
         {entries.length === 0 && !pageLoading && <EmptyText>No completed entries match these filters.</EmptyText>}
       </Box>
       {hasMore && (
@@ -490,5 +506,60 @@ export function ReportsPanel({
         </Button>
       )}
     </SectionCard>
+  )
+}
+
+const UNTITLED_ENTRY = 'Untitled entry'
+const EMPTY_CELL = '—'
+
+/** Wide-screen layout for detailed entries: one column per field so nothing gets truncated. */
+function EntriesTable({
+  entries,
+  members,
+  showUser,
+}: {
+  entries: TimeEntry[]
+  members: ReportMember[]
+  showUser: boolean
+}) {
+  const headers = ['Description', 'Date & time', ...(showUser ? ['User'] : []), 'Client', 'Project', 'Task', 'Billable']
+  return (
+    // The scroll box is a safety net for narrow lg viewports with long names; it should rarely engage.
+    <Box sx={{ overflowX: 'auto' }}>
+      <Table size="small" aria-label="Detailed entries">
+        <TableHead>
+          <TableRow>
+            {headers.map((header) => (
+              <TableCell key={header}>{header}</TableCell>
+            ))}
+            <TableCell align="right">Duration</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {entries.map((entry) => (
+            <TableRow key={entry.id}>
+              <TableCell sx={{ fontWeight: 600 }}>{entry.description || UNTITLED_ENTRY}</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                {entry.startAt.toDate().toLocaleDateString()}
+                <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  {entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Typography>
+              </TableCell>
+              {showUser && <TableCell>{reportUserName(entry, members)}</TableCell>}
+              <TableCell>{entry.clientName || EMPTY_CELL}</TableCell>
+              <TableCell>{entry.projectName || EMPTY_CELL}</TableCell>
+              <TableCell>{entry.taskName || EMPTY_CELL}</TableCell>
+              <TableCell>{entry.billable ? <BillableChip /> : EMPTY_CELL}</TableCell>
+              <TableCell
+                align="right"
+                sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, whiteSpace: 'nowrap' }}
+              >
+                {formatElapsed(duration(entry))}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
   )
 }
