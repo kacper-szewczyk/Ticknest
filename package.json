@@ -1,7 +1,7 @@
 {
   "name": "ticknest",
   "private": true,
-  "version": "1.34.0",
+  "version": "1.34.1",
   "engines": {
     "node": "^22.12.0 || ^24.0.0 || ^26.0.0"
   },

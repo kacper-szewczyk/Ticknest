@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.34.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.34.0...ticknest-v1.34.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* show member names instead of user IDs in reports ([#199](https://github.com/kacper-szewczyk/Ticknest/issues/199)) ([ecede33](https://github.com/kacper-szewczyk/Ticknest/commit/ecede332c28239884415a0627ca492b6f41809dc)), closes [#197](https://github.com/kacper-szewczyk/Ticknest/issues/197)
+
 ## [1.34.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.33.0...ticknest-v1.34.0) (2026-11-10)
 
 
