@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.39.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.38.0...ticknest-v1.39.0) (2026-11-10)
+
+
+### Features
+
+* move Export CSV to the top of the Reports page ([#213](https://github.com/kacper-szewczyk/Ticknest/issues/213)) ([7bfbcef](https://github.com/kacper-szewczyk/Ticknest/commit/7bfbcef4244c93a6191bddbe4ebe9309664d127f)), closes [#195](https://github.com/kacper-szewczyk/Ticknest/issues/195)
+
 ## [1.38.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.37.0...ticknest-v1.38.0) (2026-11-10)
 
 
