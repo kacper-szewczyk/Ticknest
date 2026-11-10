@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.37.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.36.0...ticknest-v1.37.0) (2026-11-10)
+
+
+### Features
+
+* show members their personal timeline on the dashboard ([#211](https://github.com/kacper-szewczyk/Ticknest/issues/211)) ([a5f1e53](https://github.com/kacper-szewczyk/Ticknest/commit/a5f1e5311ea4b711035e17d73d8ca4774874a04c)), closes [#201](https://github.com/kacper-szewczyk/Ticknest/issues/201)
+* use the full page width for reports on wider screens ([#210](https://github.com/kacper-szewczyk/Ticknest/issues/210)) ([29f1a7d](https://github.com/kacper-szewczyk/Ticknest/commit/29f1a7dfd679bface3467efc370e8b8c098ae683)), closes [#193](https://github.com/kacper-szewczyk/Ticknest/issues/193)
+
 ## [1.36.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.35.0...ticknest-v1.36.0) (2026-11-10)
 
 
