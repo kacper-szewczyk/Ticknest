@@ -10,7 +10,15 @@ import { DEMO_ACCOUNTS, DEMO_INVITEE_EMAIL, type DemoAccount } from './accounts'
 /** Stands in for FieldValue.serverTimestamp() so buildDemoData stays free of Firestore values. */
 export const SERVER_TIMESTAMP = Symbol('serverTimestamp')
 
-export type DemoFieldValue = string | number | boolean | null | Date | typeof SERVER_TIMESTAMP
+export type DemoFieldValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Date
+  | typeof SERVER_TIMESTAMP
+  | DemoFieldValue[]
+  | { [field: string]: DemoFieldValue }
 export type DemoDocument = { path: string; data: Record<string, DemoFieldValue> }
 export type DemoAuthUser = {
   uid: string
@@ -359,6 +367,141 @@ function buildEntries(
   return entries
 }
 
+type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+const WEEKDAYS: readonly Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+type BudgetSeed = {
+  target: { type: 'project'; key: ProjectKey } | { type: 'client'; key: keyof typeof CLIENTS }
+  /** Offsets in days from the user's local today. */
+  startOffset: number
+  endOffset: number
+  weekdayMinutes: Partial<Record<Weekday, number>>
+  /** Offsets in days from the user's local today, moved to the Monday on or after them. */
+  exceptionOffsets?: number[]
+  archived?: boolean
+}
+
+// Targets sit well above or below each account's share of PROJECT_WEIGHTS (about 410 logged minutes per
+// weekday), so progress shows a clear spread of behind and over on every reset.
+const BUDGETS: Record<string, BudgetSeed[]> = {
+  // Maple Health Clinic is the portal, about 2/7 of the day (~120 min): behind.
+  'owner@demo.ticknest.app': [
+    {
+      target: { type: 'client', key: 'maple' },
+      startOffset: -60,
+      endOffset: 30,
+      weekdayMinutes: { mon: 180, tue: 180, wed: 180, thu: 180, fri: 180 },
+      exceptionOffsets: [-28],
+    },
+    // Past: ended a month ago.
+    {
+      target: { type: 'project', key: 'internal' },
+      startOffset: -90,
+      endOffset: -31,
+      weekdayMinutes: { mon: 120, tue: 120, wed: 120, thu: 120, fri: 120 },
+    },
+  ],
+  // Fleet is about 2/7 of the day (~120 min) against a four-day 60-minute target: over.
+  'manager@demo.ticknest.app': [
+    {
+      target: { type: 'project', key: 'fleet' },
+      startOffset: -40,
+      endOffset: 50,
+      weekdayMinutes: { mon: 60, tue: 60, wed: 60, thu: 60 },
+    },
+    // Upcoming: starts next week.
+    {
+      target: { type: 'project', key: 'loyalty' },
+      startOffset: 7,
+      endOffset: 97,
+      weekdayMinutes: { mon: 120, tue: 120, wed: 120, thu: 120, fri: 120 },
+    },
+  ],
+  // Website is about 5/9 of the day (~230 min): behind.
+  'alice@demo.ticknest.app': [
+    {
+      target: { type: 'project', key: 'website' },
+      startOffset: -45,
+      endOffset: 45,
+      weekdayMinutes: { mon: 330, tue: 330, wed: 330, thu: 330, fri: 330 },
+      exceptionOffsets: [-21],
+    },
+  ],
+  // Bluefin Logistics is the fleet dashboard, about 5/9 of the day (~230 min): over.
+  'ben@demo.ticknest.app': [
+    {
+      target: { type: 'client', key: 'bluefin' },
+      startOffset: -75,
+      endOffset: 15,
+      weekdayMinutes: { mon: 150, tue: 150, wed: 150, thu: 150, fri: 150 },
+    },
+    // Archived: can be restored from the Budgets screen.
+    {
+      target: { type: 'project', key: 'loyalty' },
+      startOffset: -30,
+      endOffset: 60,
+      weekdayMinutes: { mon: 120, wed: 120, fri: 120 },
+      archived: true,
+    },
+  ],
+  // Part time on the portal, Monday to Thursday, about 5/8 of the day (~260 min): behind.
+  'chloe@demo.ticknest.app': [
+    {
+      target: { type: 'project', key: 'portal' },
+      startOffset: -45,
+      endOffset: 45,
+      weekdayMinutes: { mon: 480, tue: 480, wed: 480, thu: 480 },
+      exceptionOffsets: [-14, -35],
+    },
+  ],
+}
+
+function calendarDay(dayMs: number): string {
+  return new Date(dayMs).toISOString().slice(0, 10)
+}
+
+/** The Monday on or after `dayMs`. */
+function mondayFrom(dayMs: number): number {
+  return dayMs + ((8 - new Date(dayMs).getUTCDay()) % 7) * DAY_MS
+}
+
+function buildBudgets(
+  random: Random,
+  now: Date,
+  workspacePath: string,
+  user: DemoAuthUser,
+  account: DemoAccount,
+  createdBy: string,
+  catalog: Catalog,
+): DemoDocument[] {
+  const today = localDayMs(now.getTime(), account.timezone)
+  return (BUDGETS[account.email] ?? []).map((budget) => {
+    const target =
+      budget.target.type === 'project'
+        ? { type: 'project', id: catalog.projectIds[budget.target.key], name: PROJECTS[budget.target.key].name }
+        : { type: 'client', id: catalog.clientIds[budget.target.key], name: CLIENTS[budget.target.key] }
+    const exceptions = [
+      ...new Set((budget.exceptionOffsets ?? []).map((offset) => calendarDay(mondayFrom(today + offset * DAY_MS)))),
+    ].sort()
+    return {
+      path: `${workspacePath}/budgets/${createId(random)}`,
+      data: {
+        userId: user.uid,
+        userDisplayName: user.displayName,
+        target,
+        startDay: calendarDay(today + budget.startOffset * DAY_MS),
+        endDay: calendarDay(today + budget.endOffset * DAY_MS),
+        weekdayMinutes: Object.fromEntries(WEEKDAYS.map((weekday) => [weekday, budget.weekdayMinutes[weekday] ?? 0])),
+        exceptions,
+        archived: budget.archived ?? false,
+        createdBy,
+        createdAt: SERVER_TIMESTAMP,
+        updatedAt: SERVER_TIMESTAMP,
+      },
+    }
+  })
+}
+
 /** Builds the demo Auth users and Firestore documents. Deterministic for a given `now`. */
 export function buildDemoData(now: Date): DemoData {
   const random = createRandom(seedFor(now))
@@ -473,21 +616,24 @@ export function buildDemoData(now: Date): DemoData {
   users.forEach((user, index) => {
     documents.push(...buildEntries(random, now, workspacePath, user, DEMO_ACCOUNTS[index], catalog))
   })
+  // Budgets come last so adding them leaves the IDs and entries above unchanged.
+  users.forEach((user, index) => {
+    documents.push(...buildBudgets(random, now, workspacePath, user, DEMO_ACCOUNTS[index], owner.uid, catalog))
+  })
 
   return { workspaceId, users, documents }
 }
 
-function toFirestoreData(data: DemoDocument['data']): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(data).map(([field, value]) => [
-      field,
-      value === SERVER_TIMESTAMP
-        ? FieldValue.serverTimestamp()
-        : value instanceof Date
-          ? Timestamp.fromDate(value)
-          : value,
-    ]),
-  )
+function toFirestoreValue(value: DemoFieldValue): unknown {
+  if (value === SERVER_TIMESTAMP) return FieldValue.serverTimestamp()
+  if (value instanceof Date) return Timestamp.fromDate(value)
+  if (Array.isArray(value)) return value.map(toFirestoreValue)
+  if (value !== null && typeof value === 'object') return toFirestoreData(value)
+  return value
+}
+
+function toFirestoreData(data: Record<string, DemoFieldValue>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(data).map(([field, value]) => [field, toFirestoreValue(value)]))
 }
 
 /** Creates the Auth users and writes the documents. Expects an empty project: run it after the wipe. */

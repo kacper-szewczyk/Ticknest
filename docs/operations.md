@@ -139,7 +139,7 @@ To run the deployment as a public demo that resets every day, see [Demo mode](#d
 
 ### Demo mode (optional)
 
-Demo mode turns a deployment into a public, self-resetting demo, like the one at <https://ticknest-pi.vercel.app>. Every day the scheduled `resetDemo` Function wipes the project and seeds it with sample data: the demo accounts listed in `functions/src/demo/accounts.ts` (an owner, a manager, and three members in different timezones, all with the password `ticknest-demo`), clients, projects, tasks, a pending invitation, and about three months of weekday time entries ending on the reset day. The web app shows a banner with the next reset time, the demo accounts with one-click sign-in on the sign-in screen, and links to this repository, the author's Buy Me a Coffee page, and contact details. The links and contact details are in `src/lib/demo.ts`; change them if you run your own demo. Sign-up stays enabled; accounts that visitors create are removed at the next reset.
+Demo mode turns a deployment into a public, self-resetting demo, like the one at <https://ticknest-pi.vercel.app>. Every day the scheduled `resetDemo` Function wipes the project and seeds it with sample data: the demo accounts listed in `functions/src/demo/accounts.ts` (an owner, a manager, and three members in different timezones, all with the password `ticknest-demo`), clients, projects, tasks, a pending invitation, about three months of weekday time entries ending on the reset day, and budgets for every account (active, upcoming, past, and archived, some behind and some over target). The web app shows a banner with the next reset time, the demo accounts with one-click sign-in on the sign-in screen, and links to this repository, the author's Buy Me a Coffee page, and contact details. The links and contact details are in `src/lib/demo.ts`; change them if you run your own demo. Sign-up stays enabled; accounts that visitors create are removed at the next reset.
 
 Demo mode is off by default. With the flags unset or `false`, `resetDemo` still deploys but does nothing, and the web app shows no demo UI.
 
@@ -232,7 +232,7 @@ npm run emulators
 
 In a second terminal run `npm run dev`. The app is at <http://127.0.0.1:5173>, Emulator Suite UI at <http://127.0.0.1:4000>, and Hosting emulator at <http://127.0.0.1:5000>.
 
-To try the app with sample data, run `npm run demo:seed` while the emulators are running. It clears the local Auth and Firestore emulators, then seeds the demo workspace: an owner, a manager, and three members (all with the password `ticknest-demo`, listed in `functions/src/demo/accounts.ts`), clients, projects, tasks, a pending invitation, and about three months of weekday time entries ending now. It only connects to emulators on `127.0.0.1` or `localhost` under the `demo-ticknest` project.
+To try the app with sample data, run `npm run demo:seed` while the emulators are running. It clears the local Auth and Firestore emulators, then seeds the demo workspace: an owner, a manager, and three members (all with the password `ticknest-demo`, listed in `functions/src/demo/accounts.ts`), clients, projects, tasks, a pending invitation, about three months of weekday time entries ending now, and budgets for every account. It only connects to emulators on `127.0.0.1` or `localhost` under the `demo-ticknest` project.
 
 Run `npm run test:emulators` to build the functions, start the Auth, Firestore, and Functions emulators, and run the emulator tests in `functions/test`. Stop `npm run emulators` first, since both use the same ports.
 

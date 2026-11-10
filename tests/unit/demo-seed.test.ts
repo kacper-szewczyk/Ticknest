@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { DEMO_ACCOUNTS, DEMO_INVITEE_EMAIL } from '../../functions/src/demo/accounts'
 import { buildDemoData, SERVER_TIMESTAMP, type DemoDocument } from '../../functions/src/demo/seed'
+import { budgetPhase } from '../../src/lib/budgetForm'
+import { calculateBudgetProgress, groupBudgets, zonedDayString } from '../../src/lib/budgetProgress'
+import type { Budget } from '../../src/lib/budgets'
+import { calendarDayMillis, MAX_BUDGET_DAYS, WEEKDAYS } from '../../src/lib/budgetValidation'
+import { teamBudgetStatus } from '../../src/lib/teamBudgets'
 
 const NOW = new Date('2026-11-04T02:00:00Z')
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -213,5 +218,101 @@ describe('buildDemoData', () => {
       .documents.filter((document) => document.path.includes('/timeEntries/'))
       .map((document) => (document.data.endAt as Date).getTime())
     expect(Math.max(...ends)).toBeLessThanOrEqual(midday.getTime())
+  })
+
+  describe('budgets', () => {
+    const budgets: Budget[] = collection('budgets').map(
+      (document) => ({ id: docId(document), ...document.data }) as Budget,
+    )
+    const timezoneOf = (userId: string) => DEMO_ACCOUNTS[data.users.findIndex((user) => user.uid === userId)].timezone
+    const todayOf = (budget: Budget) => zonedDayString(NOW.getTime(), timezoneOf(budget.userId))
+
+    it('gives every account an active budget', () => {
+      for (const user of data.users) {
+        expect(
+          budgets.some((budget) => budget.userId === user.uid && budgetPhase(budget, todayOf(budget)) === 'active'),
+        ).toBe(true)
+      }
+    })
+
+    it('has results for every phase filter', () => {
+      const phases = new Set(budgets.map((budget) => budgetPhase(budget, todayOf(budget))))
+      expect(phases).toEqual(new Set(['active', 'upcoming', 'past', 'archived']))
+    })
+
+    it('writes the fields and snapshots saveBudget writes', () => {
+      const owner = data.users[DEMO_ACCOUNTS.findIndex((account) => account.role === 'owner')]
+      const members = new Map(data.users.map((user) => [user.uid, user]))
+      const catalog = new Map([...collection('clients'), ...collection('projects')].map((item) => [docId(item), item]))
+      const targetTypes = new Set<string>()
+      for (const document of collection('budgets')) {
+        expect(Object.keys(document.data).sort()).toEqual(
+          [
+            'archived',
+            'createdAt',
+            'createdBy',
+            'endDay',
+            'exceptions',
+            'startDay',
+            'target',
+            'updatedAt',
+            'userDisplayName',
+            'userId',
+            'weekdayMinutes',
+          ].sort(),
+        )
+        const budget = budgets.find((item) => item.id === docId(document))!
+        expect(budget.userDisplayName).toBe(members.get(budget.userId)?.displayName)
+        expect(Object.keys(budget.target).sort()).toEqual(['id', 'name', 'type'])
+        const target = catalog.get(budget.target.id)!
+        expect(target.path).toContain(budget.target.type === 'project' ? '/projects/' : '/clients/')
+        expect(budget.target.name).toBe(target.data.name)
+        expect(typeof budget.archived).toBe('boolean')
+        expect(budget.createdBy).toBe(owner.uid)
+        expect(document.data.createdAt).toBe(SERVER_TIMESTAMP)
+        expect(document.data.updatedAt).toBe(SERVER_TIMESTAMP)
+        targetTypes.add(budget.target.type)
+      }
+      expect(targetTypes).toEqual(new Set(['project', 'client']))
+    })
+
+    it('follows the saveBudget validation rules', () => {
+      for (const budget of budgets) {
+        const start = calendarDayMillis(budget.startDay)!
+        const end = calendarDayMillis(budget.endDay)!
+        expect(start).not.toBeNull()
+        expect(end).not.toBeNull()
+        expect(end).toBeGreaterThanOrEqual(start)
+        expect((end - start) / DAY_MS + 1).toBeLessThanOrEqual(MAX_BUDGET_DAYS)
+        expect(Object.keys(budget.weekdayMinutes).sort()).toEqual([...WEEKDAYS].sort())
+        for (const weekday of WEEKDAYS) {
+          const minutes = budget.weekdayMinutes[weekday]
+          expect(Number.isInteger(minutes) && minutes >= 0 && minutes <= 1440).toBe(true)
+        }
+        expect(WEEKDAYS.some((weekday) => budget.weekdayMinutes[weekday] > 0)).toBe(true)
+        expect(budget.exceptions).toEqual([...new Set(budget.exceptions)].sort())
+        for (const exception of budget.exceptions) {
+          expect(calendarDayMillis(exception)).not.toBeNull()
+          expect(exception >= budget.startDay && exception <= budget.endDay).toBe(true)
+        }
+      }
+      expect(budgets.some((budget) => budget.exceptions.length > 0)).toBe(true)
+    })
+
+    it('shows more than one status in budget progress', () => {
+      const progressEntries = entries.map((entry) => ({
+        userId: entry.data.userId as string,
+        projectId: entry.data.projectId as string,
+        clientId: entry.data.clientId as string | null,
+        startAt: { toMillis: () => (entry.data.startAt as Date).getTime() },
+        endAt: { toMillis: () => (entry.data.endAt as Date).getTime() },
+      }))
+      const statuses = groupBudgets(budgets)
+        .filter((group) => group.some((budget) => budgetPhase(budget, todayOf(budget)) === 'active'))
+        .map((group) =>
+          teamBudgetStatus(calculateBudgetProgress(group, progressEntries, timezoneOf(group[0].userId), NOW)),
+        )
+      expect(new Set(statuses)).toEqual(new Set(['behind', 'over']))
+    })
   })
 })
