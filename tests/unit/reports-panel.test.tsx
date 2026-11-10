@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ThemeProvider } from '@mui/material/styles'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { User } from 'firebase/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '../../src/lib/catalog'
@@ -117,5 +117,46 @@ describe('ReportsPanel wide layout', () => {
     renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
     const table = await screen.findByRole('table', { name: 'Detailed entries' })
     expect(within(table).queryByRole('columnheader', { name: 'User' })).toBeNull()
+  })
+})
+
+describe('ReportsPanel group-by tabs', () => {
+  afterEach(() => window.history.replaceState(null, '', '/'))
+
+  it('shows the User tab to managers but not to regular members', async () => {
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    expect((await screen.findAllByRole('tab')).map((tab) => tab.textContent)).toEqual([
+      'Day',
+      'Client',
+      'Project',
+      'Task',
+      'User',
+    ])
+    cleanup()
+    renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
+    await screen.findByRole('tab', { name: 'Day' })
+    expect(screen.queryByRole('tab', { name: 'User' })).toBeNull()
+  })
+
+  it('shows client swimlanes and keeps the tab in the URL', async () => {
+    window.history.replaceState(null, '', '/#reports')
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    fireEvent.click(await screen.findByRole('tab', { name: 'Client' }))
+    expect(screen.getByRole('tab', { name: 'Client' }).getAttribute('aria-selected')).toBe('true')
+    expect(window.location.hash).toBe('#reports?group=client')
+    const lane = await screen.findByRole('region', { name: 'Maple Health Clinic' })
+    expect(within(lane).getByText('No project')).toBeTruthy()
+    const toggle = within(lane).getByRole('button', { name: 'Collapse Maple Health Clinic' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('restores the tab from the URL and ignores tabs the viewer may not use', async () => {
+    window.history.replaceState(null, '', '/#reports?group=project')
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    expect((await screen.findByRole('tab', { name: 'Project' })).getAttribute('aria-selected')).toBe('true')
+    cleanup()
+    window.history.replaceState(null, '', '/#reports?group=user')
+    renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
+    expect((await screen.findByRole('tab', { name: 'Day' })).getAttribute('aria-selected')).toBe('true')
   })
 })

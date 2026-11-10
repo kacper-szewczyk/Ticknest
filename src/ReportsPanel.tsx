@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Collapse from '@mui/material/Collapse'
 import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import { useTheme } from '@mui/material/styles'
@@ -10,6 +12,8 @@ import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -21,9 +25,16 @@ import { formatElapsed, localDayString } from './lib/dates'
 import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportPage, loadReportSummary, streamReportCsv } from './lib/reports'
 import { reportUserName, UNKNOWN_USER, type ReportFilters, type ReportMember } from './lib/reportFormat'
 import type { TimeEntry } from './lib/timeEntries'
+import {
+  entrySeconds,
+  groupByOptions,
+  parseGroupBy,
+  summarizeReport,
+  type GroupBy,
+  type ReportGroup,
+} from './lib/reportGroups'
 import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 
-type GroupBy = 'day' | 'user' | 'client' | 'project' | 'task'
 type CsvWritable = {
   write(data: string): Promise<void>
   close(): Promise<void>
@@ -49,16 +60,18 @@ function initialFilters(): ReportFilters {
   }
 }
 
-function duration(entry: TimeEntry) {
-  return entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : 0
+const duration = entrySeconds
+
+// The selected tab lives in the hash query (#reports?group=client) so reloads and shared links keep it.
+function groupFromHash(canSeeAllEntries: boolean): GroupBy {
+  const query = window.location.hash.split('?')[1] ?? ''
+  return parseGroupBy(new URLSearchParams(query).get('group'), canSeeAllEntries)
 }
 
-function groupValue(entry: TimeEntry, groupBy: GroupBy, members: readonly ReportMember[]) {
-  if (groupBy === 'day') return localDayString(entry.startAt.toDate())
-  if (groupBy === 'user') return reportUserName(entry, members)
-  if (groupBy === 'client') return entry.clientName || 'No client'
-  if (groupBy === 'project') return entry.projectName || 'No project'
-  return entry.taskName || 'No task'
+function saveGroupToHash(groupBy: GroupBy) {
+  const [view] = window.location.hash.split('?')
+  const next = groupBy === 'day' ? view : `${view}?group=${groupBy}`
+  window.history.replaceState(window.history.state, '', next || '#reports')
 }
 
 function filterKey(filters: ReportFilters) {
@@ -85,7 +98,7 @@ export function ReportsPanel({
   catalog: Catalog
 }) {
   const [filters, setFilters] = useState<ReportFilters>(initialFilters)
-  const [groupBy, setGroupBy] = useState<GroupBy>('day')
+  const [groupBy, setGroupBy] = useState<GroupBy>(() => groupFromHash(canSeeAllEntries))
   const wide = useMediaQuery(useTheme().breakpoints.up('lg'))
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [summaryState, setSummaryState] = useState<{ key: string; entries: TimeEntry[] }>({ key: '', entries: [] })
@@ -158,17 +171,14 @@ export function ReportsPanel({
     }
   }, [workspaceId, user.uid, canSeeAllEntries, filters, key, invalidRange])
 
-  const totals = new Map<string, { seconds: number; count: number }>()
-  summaryEntries.forEach((entry) => {
-    const label = groupValue(entry, groupBy, reportMembers)
-    const current = totals.get(label) ?? { seconds: 0, count: 0 }
-    current.seconds += duration(entry)
-    current.count += 1
-    totals.set(label, current)
-  })
-  const groups = [...totals.entries()].sort((left, right) => right[1].seconds - left[1].seconds)
+  const groups = summarizeReport(summaryEntries, groupBy, (entry) => reportUserName(entry, reportMembers))
   const totalSeconds = summaryEntries.reduce((total, entry) => total + duration(entry), 0)
   const billableSeconds = summaryEntries.reduce((total, entry) => total + (entry.billable ? duration(entry) : 0), 0)
+
+  function selectGroup(next: GroupBy) {
+    setGroupBy(next)
+    saveGroupToHash(next)
+  }
 
   function updateFilter<K extends keyof ReportFilters>(field: K, value: ReportFilters[K]) {
     setFilters((current) => ({ ...current, [field]: value }))
@@ -395,55 +405,44 @@ export function ReportsPanel({
           </Paper>
         ))}
       </Box>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 3 }}
+      <Typography variant="h3" sx={{ mt: 3 }}>
+        Summary
+      </Typography>
+      <Tabs
+        value={groupBy}
+        onChange={(_event, next: GroupBy) => selectGroup(next)}
+        variant="scrollable"
+        allowScrollButtonsMobile
+        aria-label="Group summary by"
+        sx={{ mt: 1, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Typography variant="h3">Summary</Typography>
-        <SelectField
-          label="Group by"
-          value={groupBy}
-          onChange={(event) => setGroupBy(event.target.value as GroupBy)}
-          sx={{ width: { sm: 160 } }}
-        >
-          <option value="day">Day</option>
-          <option value="user">User</option>
-          <option value="client">Client</option>
-          <option value="project">Project</option>
-          <option value="task">Task</option>
-        </SelectField>
-      </Stack>
-      <Box aria-live="polite" sx={{ mt: 1.25 }}>
+        {groupByOptions(canSeeAllEntries).map((option) => (
+          <Tab
+            key={option.value}
+            value={option.value}
+            label={option.label}
+            id={`report-group-tab-${option.value}`}
+            aria-controls="report-group-panel"
+          />
+        ))}
+      </Tabs>
+      <Box
+        role="tabpanel"
+        id="report-group-panel"
+        aria-labelledby={`report-group-tab-${groupBy}`}
+        aria-live="polite"
+        sx={{ mt: 0.5 }}
+      >
         {groups.length === 0 && !summaryLoading ? (
           <EmptyText>No completed entries match these filters.</EmptyText>
         ) : (
-          groups.map(([label, total]) => (
-            <Box
-              key={label}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', sm: 'minmax(0, 1fr) auto auto' },
-                alignItems: 'center',
-                columnGap: { xs: 1, sm: 2.25 },
-                py: 1.5,
-                borderBottom: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                {label}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {total.count} {total.count === 1 ? 'entry' : 'entries'}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ gridColumn: { xs: 2, sm: 'auto' }, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}
-              >
-                {formatElapsed(total.seconds)}
-              </Typography>
-            </Box>
-          ))
+          groups.map((group) =>
+            group.children ? (
+              <SummaryLane key={group.key} group={group} totalSeconds={totalSeconds} />
+            ) : (
+              <SummaryRow key={group.key} group={group} totalSeconds={totalSeconds} />
+            ),
+          )
         )}
         {summaryLoading && <EmptyText>Updating summary…</EmptyText>}
       </Box>
@@ -560,6 +559,134 @@ function EntriesTable({
           ))}
         </TableBody>
       </Table>
+    </Box>
+  )
+}
+
+function shareOfTotal(seconds: number, totalSeconds: number) {
+  return totalSeconds > 0 ? Math.round((seconds / totalSeconds) * 100) : 0
+}
+
+function ShareBar({ percent }: { percent: number }) {
+  return (
+    <Box
+      role="img"
+      aria-label={`${percent}% of total`}
+      sx={{ height: 6, borderRadius: 3, bgcolor: 'action.hover', overflow: 'hidden' }}
+    >
+      <Box sx={{ width: `${percent}%`, height: '100%', bgcolor: 'primary.main' }} />
+    </Box>
+  )
+}
+
+const SUMMARY_COLUMNS = {
+  xs: 'minmax(0, 1fr) auto',
+  sm: 'minmax(0, 1fr) 72px 88px 88px 96px',
+}
+
+/** One summary line: label, entry count, billable time, total time and share of the report total. */
+function SummaryRow({
+  group,
+  totalSeconds,
+  nested = false,
+  toggle,
+}: {
+  group: ReportGroup
+  totalSeconds: number
+  nested?: boolean
+  toggle?: ReactNode
+}) {
+  const percent = shareOfTotal(group.seconds, totalSeconds)
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: SUMMARY_COLUMNS,
+        alignItems: 'center',
+        columnGap: { xs: 1, sm: 2.25 },
+        rowGap: 0.75,
+        py: nested ? 1 : 1.5,
+        pl: nested ? { xs: 3, sm: 5 } : 0,
+        borderBottom: 1,
+        borderColor: 'divider',
+      }}
+    >
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+        {toggle}
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body2" noWrap sx={{ fontWeight: nested ? 500 : 600 }}>
+            {group.label}
+          </Typography>
+          {group.caption && (
+            <Typography variant="caption" color="text.secondary" noWrap component="p">
+              {group.caption}
+            </Typography>
+          )}
+        </Box>
+      </Stack>
+      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+        {group.count} {group.count === 1 ? 'entry' : 'entries'}
+      </Typography>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: { xs: 'none', sm: 'block' }, fontVariantNumeric: 'tabular-nums' }}
+        aria-label={`Billable ${formatElapsed(group.billableSeconds)}`}
+      >
+        {formatElapsed(group.billableSeconds)}
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: nested ? 500 : 600, textAlign: 'right' }}
+      >
+        {formatElapsed(group.seconds)}
+      </Typography>
+      <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
+        <ShareBar percent={percent} />
+      </Box>
+    </Box>
+  )
+}
+
+/** A client or project swimlane: a header row with its totals, then its projects or tasks underneath. */
+function SummaryLane({ group, totalSeconds }: { group: ReportGroup; totalSeconds: number }) {
+  const [open, setOpen] = useState(true)
+  const childrenId = `report-lane-${group.key || 'none'}`.replace(/[^\w-]/g, '-')
+  return (
+    <Box component="section" aria-label={group.label}>
+      <SummaryRow
+        group={group}
+        totalSeconds={totalSeconds}
+        toggle={
+          <IconButton
+            size="small"
+            onClick={() => setOpen((current) => !current)}
+            aria-expanded={open}
+            aria-controls={childrenId}
+            aria-label={`${open ? 'Collapse' : 'Expand'} ${group.label}`}
+            sx={{ ml: -0.75 }}
+          >
+            <Box
+              component="svg"
+              viewBox="0 0 24 24"
+              aria-hidden
+              sx={{
+                width: 18,
+                height: 18,
+                transform: open ? 'rotate(90deg)' : 'none',
+                transition: 'transform 150ms',
+              }}
+            >
+              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </Box>
+          </IconButton>
+        }
+      />
+      <Collapse in={open} id={childrenId}>
+        {group.children?.map((child) => (
+          <SummaryRow key={child.key} group={child} totalSeconds={totalSeconds} nested />
+        ))}
+      </Collapse>
     </Box>
   )
 }
