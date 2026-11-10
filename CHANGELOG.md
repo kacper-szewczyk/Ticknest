@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.34.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.33.0...ticknest-v1.34.0) (2026-11-10)
+
+
+### Features
+
+* allow starting a timer without a description ([#190](https://github.com/kacper-szewczyk/Ticknest/issues/190)) ([77031b7](https://github.com/kacper-szewczyk/Ticknest/commit/77031b7af4f7f56f923bbbc1a589fe6ecfceb37b)), closes [#186](https://github.com/kacper-szewczyk/Ticknest/issues/186)
+
 ## [1.33.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.32.0...ticknest-v1.33.0) (2026-11-08)
 
 
