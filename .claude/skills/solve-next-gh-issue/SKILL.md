@@ -7,7 +7,7 @@ description: Pick the next available GitHub issue in this repo, ask any open que
 
 Work one issue end to end: pick it, clarify it, build it in a worktree, open a PR.
 
-If `$ARGUMENTS` contains an issue number, use that issue and skip step 1.
+If `$ARGUMENTS` contains an issue number, use that issue and skip the selection in step 1 (still claim it as below).
 
 ## 1. Pick the next available issue
 
@@ -18,12 +18,18 @@ gh pr list --state open --limit 50 --json number,title,headRefName,body
 
 An issue is **available** when all of these hold:
 
-- it is open and has no assignee (or is assigned to the current user, `gh api user -q .login`);
+- it is open and has **no assignee at all** — an assigned issue (to anyone, including the current user) is already being worked on;
 - it has none of the labels `question`, `wontfix`, `duplicate`, `invalid`, `autorelease: pending`, `autorelease: tagged`;
 - no open PR references it (`#<n>` or `Closes #<n>` in the PR body/title, or a branch name containing the number);
 - no existing worktree under `.claude/worktrees/` is clearly for it (`ls .claude/worktrees`).
 
 Among available issues, take the **oldest one (lowest number)**, preferring `bug` over `enhancement` when both exist. Tell the user in one line which issue you picked and why the newer/other ones were skipped (if any were). If nothing is available, say so and stop.
+
+**Claim it immediately** so parallel sessions skip it — assign it to yourself before reading or asking anything else:
+
+```bash
+gh issue edit <n> --add-assignee @me
+```
 
 ## 2. Understand it, then ask — before any implementation
 
