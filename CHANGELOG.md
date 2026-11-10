@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.38.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.37.0...ticknest-v1.38.0) (2026-11-10)
+
+
+### Features
+
+* group report summary with tabs and client/project swimlanes ([#214](https://github.com/kacper-szewczyk/Ticknest/issues/214)) ([4798bc0](https://github.com/kacper-szewczyk/Ticknest/commit/4798bc06978c959b0d1b7bd7eba06d400e20df35)), closes [#194](https://github.com/kacper-szewczyk/Ticknest/issues/194) [#196](https://github.com/kacper-szewczyk/Ticknest/issues/196)
+
 ## [1.37.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.36.0...ticknest-v1.37.0) (2026-11-10)
 
 
