@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -166,6 +165,7 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<Status | ''>('')
   const [selectedUid, setSelectedUid] = useState<string | null>(null)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [now, setNow] = useState(() => Date.now())
   const rangeKey = `${workspaceId}|${previousWeekStart}`
@@ -254,6 +254,7 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
   function changeWeek(day: string) {
     if (!day) return
     setWeekStart(startOfWeekString(day, weekStartsOn))
+    setSelectedDay(null)
     setError('')
   }
 
@@ -284,189 +285,220 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
 
       {error && <FormMessage severity="error">{error}</FormMessage>}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(2, minmax(0, 1fr))',
-            md: 'repeat(3, minmax(0, 1fr))',
-            lg: 'repeat(6, minmax(0, 1fr))',
-          },
-          gap: 1.5,
-        }}
-      >
-        <StatTile label="Tracked" value={formatHours(total)} change={percentChange(total, previousTotal)} />
-        <StatTile
-          label="Billable"
-          value={formatHours(billable)}
-          caption={total ? `${Math.round((billable / total) * 100)}% of tracked` : 'No tracked time'}
-        />
-        <StatTile label="Entries" value={String(entryCount)} change={percentChange(entryCount, previousEntryCount)} />
-        <StatTile
-          label={canSeeAllEntries ? 'Active members' : 'Days tracked'}
-          value={
-            canSeeAllEntries ? `${activeCount} / ${stats.length}` : String(stats[0]?.byDay.filter(Boolean).length ?? 0)
-          }
-          caption={canSeeAllEntries ? 'Tracked time this week' : 'Out of 7 days'}
-        />
-        <StatTile
-          label={canSeeAllEntries ? 'Avg per member' : 'Avg per day'}
-          value={formatHours(
-            canSeeAllEntries
-              ? activeCount
-                ? total / activeCount
-                : 0
-              : total / Math.max(1, stats[0]?.byDay.filter(Boolean).length ?? 1),
+      {!canSeeAllEntries ? (
+        <>
+          {isLoading && (
+            <Typography variant="caption" color="text.secondary" aria-live="polite">
+              Loading entries…
+            </Typography>
           )}
-          caption={canSeeAllEntries ? 'Among active members' : 'On days with time'}
-        />
-        <StatTile
-          label="Long days"
-          value={String(longDays)}
-          caption="Days over 10 hours"
-          tone={longDays > 0 ? 'error' : undefined}
-        />
-      </Box>
-
-      <Paper variant="outlined" sx={{ borderRadius: '16px', overflow: 'hidden', minWidth: 0 }}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1.5}
-          sx={{ p: 2, alignItems: { sm: 'center' }, borderBottom: 1, borderColor: 'divider' }}
-        >
-          <TextField
-            type="search"
-            placeholder={canSeeAllEntries ? 'Search members…' : 'Search…'}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            slotProps={{ htmlInput: { 'aria-label': 'Search members' } }}
-            sx={{ maxWidth: { sm: 320 } }}
-          />
-          <SelectField
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as Status | '')}
-            fullWidth={false}
-            slotProps={{ htmlInput: { 'aria-label': 'Filter by status' } }}
-            sx={{ minWidth: 160 }}
+          {stats[0] && (
+            <Paper
+              variant="outlined"
+              component="section"
+              aria-labelledby="member-week-title"
+              sx={{ borderRadius: '16px', overflow: 'hidden', minWidth: 0 }}
+            >
+              <MemberWeekDetail
+                stats={stats[0]}
+                user={user}
+                isOwner={isOwner}
+                workspaceId={workspaceId}
+                catalog={catalog}
+                weekStart={weekStart}
+                today={today}
+                now={now}
+                variant="page"
+                titleId="member-week-title"
+                selectedDay={selectedDay}
+                onSelectDay={setSelectedDay}
+              />
+            </Paper>
+          )}
+        </>
+      ) : (
+        <>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(3, minmax(0, 1fr))',
+                lg: 'repeat(6, minmax(0, 1fr))',
+              },
+              gap: 1.5,
+            }}
           >
-            <option value="">All statuses</option>
-            {(Object.keys(STATUS_LABELS) as Status[]).map((status) => (
-              <option key={status} value={status}>
-                {STATUS_LABELS[status].label}
-              </option>
-            ))}
-          </SelectField>
-          <Typography variant="caption" color="text.secondary" sx={{ ml: { sm: 'auto' } }} aria-live="polite">
-            {isLoading
-              ? 'Loading entries…'
-              : `${visibleStats.length} of ${stats.length} ${stats.length === 1 ? 'member' : 'members'}`}
-          </Typography>
-        </Stack>
-        <Box sx={{ overflowX: 'auto' }}>
-          <Table size="small" sx={{ minWidth: { xs: 0, md: 860 }, '& td, & th': { borderColor: 'divider' } }}>
-            <TableHead>
-              <TableRow
-                sx={{
-                  bgcolor: 'app.surfaceMuted',
-                  '& th': { color: 'text.secondary', fontSize: 12, fontWeight: 650, py: 1.25 },
-                }}
+            <StatTile label="Tracked" value={formatHours(total)} change={percentChange(total, previousTotal)} />
+            <StatTile
+              label="Billable"
+              value={formatHours(billable)}
+              caption={total ? `${Math.round((billable / total) * 100)}% of tracked` : 'No tracked time'}
+            />
+            <StatTile
+              label="Entries"
+              value={String(entryCount)}
+              change={percentChange(entryCount, previousEntryCount)}
+            />
+            <StatTile
+              label="Active members"
+              value={`${activeCount} / ${stats.length}`}
+              caption="Tracked time this week"
+            />
+            <StatTile
+              label="Avg per member"
+              value={formatHours(activeCount ? total / activeCount : 0)}
+              caption="Among active members"
+            />
+            <StatTile
+              label="Long days"
+              value={String(longDays)}
+              caption="Days over 10 hours"
+              tone={longDays > 0 ? 'error' : undefined}
+            />
+          </Box>
+
+          <Paper variant="outlined" sx={{ borderRadius: '16px', overflow: 'hidden', minWidth: 0 }}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1.5}
+              sx={{ p: 2, alignItems: { sm: 'center' }, borderBottom: 1, borderColor: 'divider' }}
+            >
+              <TextField
+                type="search"
+                placeholder="Search members…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                slotProps={{ htmlInput: { 'aria-label': 'Search members' } }}
+                sx={{ maxWidth: { sm: 320 } }}
+              />
+              <SelectField
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as Status | '')}
+                fullWidth={false}
+                slotProps={{ htmlInput: { 'aria-label': 'Filter by status' } }}
+                sx={{ minWidth: 160 }}
               >
-                <TableCell>Member</TableCell>
-                {weekDays.map((day) => (
-                  <TableCell
-                    key={day}
-                    align="center"
+                <option value="">All statuses</option>
+                {(Object.keys(STATUS_LABELS) as Status[]).map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABELS[status].label}
+                  </option>
+                ))}
+              </SelectField>
+              <Typography variant="caption" color="text.secondary" sx={{ ml: { sm: 'auto' } }} aria-live="polite">
+                {isLoading
+                  ? 'Loading entries…'
+                  : `${visibleStats.length} of ${stats.length} ${stats.length === 1 ? 'member' : 'members'}`}
+              </Typography>
+            </Stack>
+            <Box sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: { xs: 0, md: 860 }, '& td, & th': { borderColor: 'divider' } }}>
+                <TableHead>
+                  <TableRow
                     sx={{
-                      display: { xs: 'none', md: 'table-cell' },
-                      ...(day === today && { color: 'primary.main !important' }),
+                      bgcolor: 'app.surfaceMuted',
+                      '& th': { color: 'text.secondary', fontSize: 12, fontWeight: 650, py: 1.25 },
                     }}
                   >
-                    {dayDate(day).toLocaleDateString(undefined, { weekday: 'short' })}
-                    <Box component="span" sx={{ display: 'block', fontWeight: 400 }}>
-                      {dayDate(day).getDate()}
-                    </Box>
-                  </TableCell>
-                ))}
-                <TableCell align="right">Total</TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Status</TableCell>
-                <TableCell>
-                  <Box component="span" sx={visuallyHiddenSx}>
-                    Actions
-                  </Box>
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {visibleStats.map((item) => (
-                <TableRow
-                  key={item.person.uid}
-                  hover
-                  onClick={() => setSelectedUid(item.person.uid)}
-                  sx={{ cursor: 'pointer', '& td': { py: 1.5 } }}
-                >
-                  <TableCell sx={{ minWidth: 0, maxWidth: 260 }}>
-                    <PersonLabel person={item.person} isSelf={item.person.uid === user.uid} />
-                  </TableCell>
-                  {item.byDay.map((seconds, index) => (
-                    <TableCell
-                      key={weekDays[index]}
-                      align="center"
-                      sx={{ display: { xs: 'none', md: 'table-cell' }, px: 0.75 }}
-                    >
-                      <DayCell seconds={seconds} />
+                    <TableCell>Member</TableCell>
+                    {weekDays.map((day) => (
+                      <TableCell
+                        key={day}
+                        align="center"
+                        sx={{
+                          display: { xs: 'none', md: 'table-cell' },
+                          ...(day === today && { color: 'primary.main !important' }),
+                        }}
+                      >
+                        {dayDate(day).toLocaleDateString(undefined, { weekday: 'short' })}
+                        <Box component="span" sx={{ display: 'block', fontWeight: 400 }}>
+                          {dayDate(day).getDate()}
+                        </Box>
+                      </TableCell>
+                    ))}
+                    <TableCell align="right">Total</TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Status</TableCell>
+                    <TableCell>
+                      <Box component="span" sx={visuallyHiddenSx}>
+                        Actions
+                      </Box>
                     </TableCell>
-                  ))}
-                  <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                      {formatHours(item.total)}
-                    </Typography>
-                    <WeekProgress seconds={item.total} />
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                    <StatusChip status={item.status} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      size="small"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        setSelectedUid(item.person.uid)
-                      }}
-                      aria-label={`Open timesheet for ${item.person.name}`}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {visibleStats.map((item) => (
+                    <TableRow
+                      key={item.person.uid}
+                      hover
+                      onClick={() => setSelectedUid(item.person.uid)}
+                      sx={{ cursor: 'pointer', '& td': { py: 1.5 } }}
                     >
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {!isLoading && visibleStats.length === 0 && (
-            <Box sx={{ px: 2 }}>
-              <EmptyText>No members match these filters.</EmptyText>
+                      <TableCell sx={{ minWidth: 0, maxWidth: 260 }}>
+                        <PersonLabel person={item.person} isSelf={item.person.uid === user.uid} />
+                      </TableCell>
+                      {item.byDay.map((seconds, index) => (
+                        <TableCell
+                          key={weekDays[index]}
+                          align="center"
+                          sx={{ display: { xs: 'none', md: 'table-cell' }, px: 0.75 }}
+                        >
+                          <DayCell seconds={seconds} />
+                        </TableCell>
+                      ))}
+                      <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {formatHours(item.total)}
+                        </Typography>
+                        <WeekProgress seconds={item.total} />
+                      </TableCell>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        <StatusChip status={item.status} />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setSelectedUid(item.person.uid)
+                          }}
+                          aria-label={`Open timesheet for ${item.person.name}`}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {!isLoading && visibleStats.length === 0 && (
+                <Box sx={{ px: 2 }}>
+                  <EmptyText>No members match these filters.</EmptyText>
+                </Box>
+              )}
             </Box>
-          )}
-        </Box>
-      </Paper>
+          </Paper>
 
-      {selected && (
-        <MemberDialog
-          key={selected.person.uid}
-          stats={selected}
-          user={user}
-          isOwner={isOwner}
-          workspaceId={workspaceId}
-          catalog={catalog}
-          weekStart={weekStart}
-          today={today}
-          now={now}
-          position={selectedIndex >= 0 ? { index: selectedIndex, count: visibleStats.length } : null}
-          onNavigate={(offset) => {
-            const next = visibleStats[selectedIndex + offset]
-            if (next) setSelectedUid(next.person.uid)
-          }}
-          onClose={() => setSelectedUid(null)}
-        />
+          {selected && (
+            <MemberDialog
+              key={selected.person.uid}
+              stats={selected}
+              user={user}
+              isOwner={isOwner}
+              workspaceId={workspaceId}
+              catalog={catalog}
+              weekStart={weekStart}
+              today={today}
+              now={now}
+              position={selectedIndex >= 0 ? { index: selectedIndex, count: visibleStats.length } : null}
+              onNavigate={(offset) => {
+                const next = visibleStats[selectedIndex + offset]
+                if (next) setSelectedUid(next.person.uid)
+              }}
+              onClose={() => setSelectedUid(null)}
+            />
+          )}
+        </>
       )}
     </Box>
   )
@@ -682,19 +714,11 @@ function StatusChip({ status }: { status: Status }) {
 
 type EditorState = { entry?: TimeEntry; day: string } | null
 
-function MemberDialog({
-  stats,
-  user,
-  isOwner,
-  workspaceId,
-  catalog,
-  weekStart,
-  today,
-  now,
-  position,
-  onNavigate,
-  onClose,
-}: {
+function entryDay(entry: TimeEntry): string {
+  return localDayString(entry.startAt.toDate())
+}
+
+type MemberWeekDetailProps = {
   stats: PersonStats
   user: User
   isOwner: boolean
@@ -703,12 +727,33 @@ function MemberDialog({
   weekStart: string
   today: string
   now: number
-  position: { index: number; count: number } | null
-  onNavigate: (offset: number) => void
-  onClose: () => void
-}) {
-  const theme = useTheme()
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
+  /** `dialog` sits inside the manager's member dialog; `page` is the member's own Dashboard. */
+  variant: 'dialog' | 'page'
+  titleId: string
+  /** Extra controls at the end of the header, such as the dialog's member navigation and close button. */
+  headerActions?: ReactNode
+  /** Page only: the day the member picked in the day strip, or null for the whole week. */
+  selectedDay?: string | null
+  onSelectDay?: (day: string | null) => void
+}
+
+// The timeline, stats and entry list for one person's week. Shared by the manager's member dialog and the
+// member's own Dashboard so both show the same numbers.
+function MemberWeekDetail({
+  stats,
+  user,
+  isOwner,
+  workspaceId,
+  catalog,
+  weekStart,
+  today,
+  now,
+  variant,
+  titleId,
+  headerActions,
+  selectedDay = null,
+  onSelectDay,
+}: MemberWeekDetailProps) {
   const [tab, setTab] = useState<'timeline' | 'entries'>('timeline')
   const [editor, setEditor] = useState<EditorState>(null)
   const [notice, setNotice] = useState('')
@@ -716,15 +761,20 @@ function MemberDialog({
   const [pending, setPending] = useState(false)
   const { person, entries } = stats
   const isSelf = person.uid === user.uid
+  const isPage = variant === 'page'
   const canEdit = (entry: TimeEntry) => entry.endAt !== null && (isSelf || isOwner)
-  const weekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
-    .filter((day) => day <= today || entries.some((entry) => localDayString(entry.startAt.toDate()) === day))
+  const allWeekDays = Array.from({ length: 7 }, (_, index) => shiftDayString(weekStart, index))
+  const weekDays = allWeekDays
+    .filter((day) => day <= today || entries.some((entry) => entryDay(entry) === day))
     .reverse()
+  const timelineDays = selectedDay ? [selectedDay] : weekDays
+  const visibleEntries = selectedDay ? entries.filter((entry) => entryDay(entry) === selectedDay) : entries
   const daysTracked = stats.byDay.filter(Boolean).length
   const totalBreaks = weekDays.reduce(
-    (total, day) => total + breakSeconds(entries.filter((entry) => localDayString(entry.startAt.toDate()) === day)),
+    (total, day) => total + breakSeconds(entries.filter((entry) => entryDay(entry) === day)),
     0,
   )
+  const Body = isPage ? Box : DialogContent
 
   // One shared hour axis across the week keeps the day rows visually comparable.
   const [axisStart, axisEnd] = useMemo(() => {
@@ -755,22 +805,34 @@ function MemberDialog({
     }
   }
 
+  function defaultEditorDay(): string {
+    if (selectedDay) return selectedDay
+    return today >= weekStart && today <= shiftDayString(weekStart, 6) ? today : weekStart
+  }
+
   return (
-    <Dialog
-      open
-      onClose={onClose}
-      fullScreen={fullScreen}
-      maxWidth="md"
-      fullWidth
-      aria-labelledby="member-dialog-title"
-      slotProps={{ paper: { sx: { borderRadius: fullScreen ? 0 : '18px' } } }}
-    >
-      <DialogTitle component="div" sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', pb: 1.5 }}>
+    <>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          flexWrap: 'wrap',
+          px: { xs: isPage ? 2 : 3, sm: 3 },
+          pt: isPage ? 2.5 : 2,
+          pb: 1.5,
+        }}
+      >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
           <PersonAvatar person={person} size={48} />
           <Box sx={{ minWidth: 0 }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Typography id="member-dialog-title" component="h2" sx={{ fontSize: 20, fontWeight: 650 }} noWrap>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <Typography
+                id={titleId}
+                component={isPage ? 'h3' : 'h2'}
+                sx={{ fontSize: 20, fontWeight: 650, minWidth: 0 }}
+                noWrap
+              >
                 {person.name}
               </Typography>
               <StatusChip status={stats.status} />
@@ -782,40 +844,13 @@ function MemberDialog({
             )}
           </Box>
         </Stack>
-        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          {position && position.count > 1 && (
-            <>
-              <IconButton
-                aria-label="Previous member"
-                onClick={() => onNavigate(-1)}
-                disabled={position.index === 0}
-                sx={navButtonSx}
-              >
-                ‹
-              </IconButton>
-              <IconButton
-                aria-label="Next member"
-                onClick={() => onNavigate(1)}
-                disabled={position.index >= position.count - 1}
-                sx={navButtonSx}
-              >
-                ›
-              </IconButton>
-              <Typography variant="body2" color="text.secondary" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-                {position.index + 1} of {position.count}
-              </Typography>
-            </>
-          )}
-          <IconButton aria-label="Close" onClick={onClose} sx={navButtonSx}>
-            ×
-          </IconButton>
-        </Stack>
-      </DialogTitle>
+        {headerActions}
+      </Box>
       <Tabs
         value={tab}
         onChange={(_, value: 'timeline' | 'entries') => setTab(value)}
         sx={{
-          px: 3,
+          px: { xs: isPage ? 2 : 3, sm: 3 },
           borderBottom: 1,
           borderColor: 'divider',
           minHeight: 40,
@@ -823,25 +858,36 @@ function MemberDialog({
         }}
       >
         <Tab value="timeline" label="Timeline" />
-        <Tab value="entries" label={`Entries (${entries.length})`} />
+        <Tab value="entries" label={`Entries (${visibleEntries.length})`} />
       </Tabs>
-      <DialogContent sx={{ pt: '20px !important' }}>
+      <Body sx={isPage ? { px: { xs: 2, sm: 3 }, pt: 2.5, pb: 3 } : { pt: '20px !important' }}>
         <Stack
           direction="row"
           sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 2, flexWrap: 'wrap' }}
         >
-          <Chip
-            variant="outlined"
-            label={`Week of ${formatRange(weekStart)}`}
-            sx={{ height: 34, borderRadius: '8px', fontWeight: 600 }}
-          />
+          {isPage && onSelectDay ? (
+            <DayStrip
+              days={allWeekDays}
+              byDay={stats.byDay}
+              today={today}
+              selectedDay={selectedDay}
+              onSelect={onSelectDay}
+            />
+          ) : (
+            <Chip
+              variant="outlined"
+              label={`Week of ${formatRange(weekStart)}`}
+              sx={{ height: 34, borderRadius: '8px', fontWeight: 600 }}
+            />
+          )}
           {isSelf && (
             <Button
               variant="outlined"
               onClick={() => {
-                setEditor({ day: today >= weekStart && today <= shiftDayString(weekStart, 6) ? today : weekStart })
+                setEditor({ day: defaultEditorDay() })
                 setNotice('')
               }}
+              sx={{ flexShrink: 0 }}
             >
               + Add entry
             </Button>
@@ -855,7 +901,11 @@ function MemberDialog({
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' },
+                gridTemplateColumns: {
+                  xs: 'repeat(2, minmax(0, 1fr))',
+                  sm: 'repeat(3, minmax(0, 1fr))',
+                  ...(isPage && { lg: 'repeat(6, minmax(0, 1fr))' }),
+                },
                 gap: 1.25,
               }}
             >
@@ -895,15 +945,15 @@ function MemberDialog({
               <LegendDot color={SEGMENT_COLORS.gap} label="Break" />
               <LegendDot color={SEGMENT_COLORS.running} label="Running" />
             </Stack>
-            {weekDays.length === 0 ? (
+            {timelineDays.length === 0 ? (
               <EmptyText>This week hasn’t started yet.</EmptyText>
             ) : (
-              weekDays.map((day) => (
+              timelineDays.map((day) => (
                 <DayTimeline
                   key={day}
                   day={day}
                   today={today}
-                  entries={entries.filter((entry) => localDayString(entry.startAt.toDate()) === day)}
+                  entries={entries.filter((entry) => entryDay(entry) === day)}
                   axisStart={axisStart}
                   axisEnd={axisEnd}
                   now={now}
@@ -918,18 +968,19 @@ function MemberDialog({
           </>
         ) : (
           <EntryList
-            entries={entries}
+            entries={visibleEntries}
+            emptyText={selectedDay ? 'No entries on this day.' : 'No entries this week.'}
             now={now}
             pending={pending}
             canEdit={canEdit}
             onEdit={(entry) => {
-              setEditor({ entry, day: localDayString(entry.startAt.toDate()) })
+              setEditor({ entry, day: entryDay(entry) })
               setNotice('')
             }}
             onDelete={(entry) => void handleDelete(entry)}
           />
         )}
-      </DialogContent>
+      </Body>
       {editor && (
         <EntryEditor
           workspaceId={workspaceId}
@@ -943,6 +994,131 @@ function MemberDialog({
           }}
         />
       )}
+    </>
+  )
+}
+
+function DayStrip({
+  days,
+  byDay,
+  today,
+  selectedDay,
+  onSelect,
+}: {
+  days: string[]
+  byDay: number[]
+  today: string
+  selectedDay: string | null
+  onSelect: (day: string | null) => void
+}) {
+  const chipSx = { height: 'auto', minHeight: 34, borderRadius: '8px', fontWeight: 600 }
+  return (
+    <Box
+      role="group"
+      aria-label="Show day"
+      sx={{ display: 'flex', gap: 0.75, overflowX: 'auto', minWidth: 0, maxWidth: '100%', pb: 0.25 }}
+    >
+      <Chip
+        label="All week"
+        clickable
+        color={selectedDay === null ? 'primary' : 'default'}
+        variant={selectedDay === null ? 'filled' : 'outlined'}
+        aria-pressed={selectedDay === null}
+        onClick={() => onSelect(null)}
+        sx={chipSx}
+      />
+      {days.map((day, index) => {
+        const date = dayDate(day)
+        const isSelected = selectedDay === day
+        const weekday = date.toLocaleDateString(undefined, { weekday: 'short' })
+        return (
+          <Chip
+            key={day}
+            clickable
+            color={isSelected ? 'primary' : 'default'}
+            variant={isSelected ? 'filled' : 'outlined'}
+            aria-pressed={isSelected}
+            aria-label={`${dayLabel(day, today)}, ${formatHours(byDay[index] ?? 0)} tracked`}
+            onClick={() => onSelect(isSelected ? null : day)}
+            label={
+              <Box component="span" sx={{ display: 'block', textAlign: 'center', lineHeight: 1.25, py: 0.25 }}>
+                <Box
+                  component="span"
+                  sx={{ display: 'block', ...(day === today && !isSelected && { color: 'primary.main' }) }}
+                >
+                  {weekday} {date.getDate()}
+                </Box>
+                <Box component="span" sx={{ display: 'block', fontSize: 11, fontWeight: 400, opacity: 0.8 }}>
+                  {byDay[index] ? formatHours(byDay[index]) : '–'}
+                </Box>
+              </Box>
+            }
+            sx={{ ...chipSx, flexShrink: 0 }}
+          />
+        )
+      })}
+    </Box>
+  )
+}
+
+function MemberDialog({
+  position,
+  onNavigate,
+  onClose,
+  ...detail
+}: Omit<MemberWeekDetailProps, 'variant' | 'titleId' | 'headerActions' | 'selectedDay' | 'onSelectDay'> & {
+  position: { index: number; count: number } | null
+  onNavigate: (offset: number) => void
+  onClose: () => void
+}) {
+  const theme = useTheme()
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      fullScreen={fullScreen}
+      maxWidth="md"
+      fullWidth
+      aria-labelledby="member-dialog-title"
+      slotProps={{ paper: { sx: { borderRadius: fullScreen ? 0 : '18px' } } }}
+    >
+      <MemberWeekDetail
+        {...detail}
+        variant="dialog"
+        titleId="member-dialog-title"
+        headerActions={
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+            {position && position.count > 1 && (
+              <>
+                <IconButton
+                  aria-label="Previous member"
+                  onClick={() => onNavigate(-1)}
+                  disabled={position.index === 0}
+                  sx={navButtonSx}
+                >
+                  ‹
+                </IconButton>
+                <IconButton
+                  aria-label="Next member"
+                  onClick={() => onNavigate(1)}
+                  disabled={position.index >= position.count - 1}
+                  sx={navButtonSx}
+                >
+                  ›
+                </IconButton>
+                <Typography variant="body2" color="text.secondary" sx={{ px: 1, whiteSpace: 'nowrap' }}>
+                  {position.index + 1} of {position.count}
+                </Typography>
+              </>
+            )}
+            <IconButton aria-label="Close" onClick={onClose} sx={navButtonSx}>
+              ×
+            </IconButton>
+          </Stack>
+        }
+      />
     </Dialog>
   )
 }
@@ -1153,6 +1329,7 @@ function DayTimeline({
 
 function EntryList({
   entries,
+  emptyText,
   now,
   pending,
   canEdit,
@@ -1160,13 +1337,14 @@ function EntryList({
   onDelete,
 }: {
   entries: TimeEntry[]
+  emptyText: string
   now: number
   pending: boolean
   canEdit: (entry: TimeEntry) => boolean
   onEdit: (entry: TimeEntry) => void
   onDelete: (entry: TimeEntry) => void
 }) {
-  if (entries.length === 0) return <EmptyText>No entries this week.</EmptyText>
+  if (entries.length === 0) return <EmptyText>{emptyText}</EmptyText>
   const sorted = [...entries].sort((a, b) => b.startAt.toMillis() - a.startAt.toMillis())
   return (
     <Box>
