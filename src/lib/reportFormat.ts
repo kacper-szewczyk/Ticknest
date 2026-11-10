@@ -1,4 +1,5 @@
 import type { TimeEntry } from './timeEntries'
+import type { WorkspaceMember } from './workspaces'
 import { formatElapsed, localDayBounds } from './dates'
 
 export type ReportFilters = {
@@ -25,6 +26,28 @@ export function matchesFilters(entry: TimeEntry, filters: ReportFilters): boolea
     (!filters.projectId || entry.projectId === filters.projectId) &&
     (!filters.taskId || entry.taskId === filters.taskId) &&
     (!filters.billable || entry.billable === (filters.billable === 'yes'))
+  )
+}
+
+export type ReportMember = Pick<WorkspaceMember, 'uid' | 'displayName' | 'email'>
+
+export const UNKNOWN_USER = 'Unknown user'
+
+/**
+ * Names the user who tracked an entry: the member's display name, then email, then the name snapshotted on the
+ * entry. Never returns a raw user ID.
+ */
+export function reportUserName(
+  entry: Pick<TimeEntry, 'userId' | 'userDisplayName'>,
+  members: readonly ReportMember[],
+): string {
+  const member = members.find((item) => item.uid === entry.userId)
+  const snapshot = entry.userDisplayName?.trim()
+  return (
+    member?.displayName?.trim() ||
+    member?.email?.trim() ||
+    (snapshot && snapshot !== entry.userId ? snapshot : '') ||
+    UNKNOWN_USER
   )
 }
 
@@ -75,13 +98,17 @@ export function csvHeader(timeZone: string): string {
 }
 
 /** Formats a completed entry as one CSV line, with dates in the report's time zone. */
-export function csvRow(entry: TimeEntry & { endAt: NonNullable<TimeEntry['endAt']> }, timeZone: string): string {
+export function csvRow(
+  entry: TimeEntry & { endAt: NonNullable<TimeEntry['endAt']> },
+  timeZone: string,
+  userName: string,
+): string {
   const start = entry.startAt.toDate()
   const end = entry.endAt.toDate()
   const seconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
   return [
     localDate(start, timeZone),
-    entry.userDisplayName ?? entry.userId,
+    userName,
     entry.description,
     entry.clientName,
     entry.projectName,

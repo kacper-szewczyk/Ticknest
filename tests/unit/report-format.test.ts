@@ -8,6 +8,8 @@ import {
   localDateTime,
   matchesFilters,
   reportRange,
+  reportUserName,
+  UNKNOWN_USER,
   type ReportFilters,
 } from '../../src/lib/reportFormat'
 import type { TimeEntry } from '../../src/lib/timeEntries'
@@ -125,30 +127,50 @@ describe('csvHeader', () => {
   })
 })
 
+describe('reportUserName', () => {
+  const members = [
+    { uid: 'alice', displayName: 'Alice Smith', email: 'alice@example.com' },
+    { uid: 'bob', displayName: '  ', email: 'bob@example.com' },
+  ]
+
+  it('prefers the member display name, then email', () => {
+    expect(reportUserName(entry(), members)).toBe('Alice Smith')
+    expect(reportUserName(entry({ userId: 'bob', userDisplayName: 'Bob' }), members)).toBe('bob@example.com')
+  })
+
+  it('falls back to the name snapshotted on the entry for users missing from the list', () => {
+    expect(reportUserName(entry({ userId: 'carol', userDisplayName: 'Carol' }), members)).toBe('Carol')
+  })
+
+  it('never returns a raw user ID', () => {
+    expect(reportUserName(entry({ userId: 'KXvfP50Tq', userDisplayName: undefined }), [])).toBe(UNKNOWN_USER)
+    expect(reportUserName(entry({ userId: 'KXvfP50Tq', userDisplayName: 'KXvfP50Tq' }), [])).toBe(UNKNOWN_USER)
+  })
+})
+
 describe('csvRow', () => {
   it('formats a completed entry', () => {
     const completed = entry()
-    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC')).toBe(
+    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC', 'Alice')).toBe(
       '2026-10-14,Alice,Design review,Acme,Website,Review,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,Yes',
     )
   })
 
-  it('falls back to the user ID, leaves missing names empty, and escapes text', () => {
+  it('leaves missing names empty and escapes text', () => {
     const completed = entry({
-      userDisplayName: undefined,
       description: 'Fix "login", again',
       clientName: null,
       projectName: null,
       taskName: null,
       billable: false,
     })
-    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC')).toBe(
-      '2026-10-14,alice,"Fix ""login"", again",,,,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,No',
+    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC', UNKNOWN_USER)).toBe(
+      '2026-10-14,Unknown user,"Fix ""login"", again",,,,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,No',
     )
   })
 
   it('never reports a negative duration', () => {
     const reversed = entry({ endAt: Timestamp.fromDate(new Date('2026-10-14T07:00:00Z')) })
-    expect(csvRow({ ...reversed, endAt: reversed.endAt! }, 'UTC')).toContain(',00:00:00,')
+    expect(csvRow({ ...reversed, endAt: reversed.endAt! }, 'UTC', 'Alice')).toContain(',00:00:00,')
   })
 })

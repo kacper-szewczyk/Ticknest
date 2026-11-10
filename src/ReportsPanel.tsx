@@ -12,7 +12,7 @@ import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspa
 import type { Catalog } from './lib/catalog'
 import { formatElapsed, localDayString } from './lib/dates'
 import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportPage, loadReportSummary, streamReportCsv } from './lib/reports'
-import type { ReportFilters } from './lib/reportFormat'
+import { reportUserName, UNKNOWN_USER, type ReportFilters, type ReportMember } from './lib/reportFormat'
 import type { TimeEntry } from './lib/timeEntries'
 import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
 
@@ -46,12 +46,9 @@ function duration(entry: TimeEntry) {
   return entry.endAt ? Math.max(0, Math.floor((entry.endAt.toMillis() - entry.startAt.toMillis()) / 1000)) : 0
 }
 
-function groupValue(entry: TimeEntry, groupBy: GroupBy, members: WorkspaceMember[]) {
+function groupValue(entry: TimeEntry, groupBy: GroupBy, members: readonly ReportMember[]) {
   if (groupBy === 'day') return localDayString(entry.startAt.toDate())
-  if (groupBy === 'user') {
-    const member = members.find((item) => item.uid === entry.userId)
-    return member?.displayName || member?.email || entry.userId
-  }
+  if (groupBy === 'user') return reportUserName(entry, members)
   if (groupBy === 'client') return entry.clientName || 'No client'
   if (groupBy === 'project') return entry.projectName || 'No project'
   return entry.taskName || 'No task'
@@ -95,6 +92,10 @@ export function ReportsPanel({
   const [exportNotice, setExportNotice] = useState('')
   const [errorState, setErrorState] = useState<{ key: string; message: string }>({ key: '', message: '' })
   const key = filterKey(filters)
+  // Regular members only ever see their own entries and cannot read the member list, so name them from their profile.
+  const reportMembers: readonly ReportMember[] = canSeeAllEntries
+    ? members
+    : [{ uid: user.uid, displayName: user.displayName ?? '', email: user.email ?? '' }]
   const invalidRange = !filters.startDay || !filters.endDay || filters.startDay > filters.endDay
   const summaryEntries = summaryState.key === key ? summaryState.entries : []
   const entries = pageState.key === key ? pageState.entries : []
@@ -151,7 +152,7 @@ export function ReportsPanel({
 
   const totals = new Map<string, { seconds: number; count: number }>()
   summaryEntries.forEach((entry) => {
-    const label = groupValue(entry, groupBy, members)
+    const label = groupValue(entry, groupBy, reportMembers)
     const current = totals.get(label) ?? { seconds: 0, count: 0 }
     current.seconds += duration(entry)
     current.count += 1
@@ -207,6 +208,7 @@ export function ReportsPanel({
         user.uid,
         filters,
         timezone,
+        reportMembers,
         async (chunk, rowCount) => {
           if (writable) {
             await writable.write(chunk)
@@ -297,7 +299,7 @@ export function ReportsPanel({
               .filter((member) => member.status !== 'removed')
               .map((member) => (
                 <option key={member.uid} value={member.uid}>
-                  {member.displayName || member.email || member.uid}
+                  {member.displayName || member.email || UNKNOWN_USER}
                 </option>
               ))}
           </SelectField>
@@ -455,9 +457,15 @@ export function ReportsPanel({
                 {entry.description || 'Untitled entry'}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap>
-                {entry.startAt.toDate().toLocaleString()} · {groupValue(entry, 'user', members)} ·{' '}
-                {[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
-                  'No client, project, or task'}
+                {[
+                  entry.startAt.toDate().toLocaleString(),
+                  // Every entry a regular member sees is their own, so the user segment would be noise.
+                  canSeeAllEntries ? reportUserName(entry, members) : null,
+                  [entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
+                    'No client, project, or task',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </Typography>
             </Box>
             <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flex: '0 0 auto' }}>
