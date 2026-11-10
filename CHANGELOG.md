@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.36.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.35.0...ticknest-v1.36.0) (2026-11-10)
+
+
+### Features
+
+* collapse the desktop sidebar to an icon rail ([#208](https://github.com/kacper-szewczyk/Ticknest/issues/208)) ([0927dae](https://github.com/kacper-szewczyk/Ticknest/commit/0927dae60f7b147f567c1766aa5034c843819ca5)), closes [#188](https://github.com/kacper-szewczyk/Ticknest/issues/188)
+
 ## [1.35.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.34.1...ticknest-v1.35.0) (2026-11-10)
 
 
