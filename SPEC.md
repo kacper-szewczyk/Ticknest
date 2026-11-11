@@ -84,7 +84,8 @@ This is an independent product. It must not use Clockify branding, proprietary a
 ### 5.6 Reports and export
 
 - Provide a date-range summary of total duration, with grouping by day, user, client, project, or task.
-- Provide a detailed entry list with filters for date, user, client, project, task, and billable status.
+- Provide a detailed entry list with filters for date, user, client, project, task, and billable status. The list is collapsed by default behind a "Show N entries" toggle and keeps its open/closed state while filters change. It reuses the entries already loaded for the summary, so opening it costs no extra query.
+- Search within the detailed entries by description, client, project and task (and user name for owners and managers), debounced by 300 ms. Search runs in memory over the report's entries, because Firestore has no full-text search; every whitespace-separated term must match. Results show 25 at a time with "Show more entries".
 - Members can report on their own entries; owners and managers can report on all workspace entries.
 - Users are shown by display name, then email, then the entry's name snapshot, then "Unknown user" — never by raw user ID. Members' detailed entry rows omit the user; their CSV keeps the User column with their own name.
 - Export filtered detailed entries as CSV. Escape commas, quotes, and newlines correctly.

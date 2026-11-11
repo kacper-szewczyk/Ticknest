@@ -18,12 +18,17 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { User } from 'firebase/auth'
-import type { QueryDocumentSnapshot } from 'firebase/firestore'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed, localDayString } from './lib/dates'
-import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportPage, loadReportSummary, streamReportCsv } from './lib/reports'
-import { reportUserName, UNKNOWN_USER, type ReportFilters, type ReportMember } from './lib/reportFormat'
+import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportSummary, streamReportCsv } from './lib/reports'
+import {
+  reportUserName,
+  searchReportEntries,
+  UNKNOWN_USER,
+  type ReportFilters,
+  type ReportMember,
+} from './lib/reportFormat'
 import {
   buildReportPdfModel,
   describeReportFilters,
@@ -121,12 +126,12 @@ export function ReportsPanel({
   const wide = useMediaQuery(useTheme().breakpoints.up('lg'))
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [summaryState, setSummaryState] = useState<{ key: string; entries: TimeEntry[] }>({ key: '', entries: [] })
-  const [pageState, setPageState] = useState<{ key: string; entries: TimeEntry[]; cursor?: QueryDocumentSnapshot }>({
-    key: '',
-    entries: [],
-  })
+  // Detailed entries stay collapsed until asked for, and keep their open/closed state across filter changes.
+  const [entriesOpen, setEntriesOpen] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const [visibleState, setVisibleState] = useState({ key: '', count: ENTRIES_PAGE_SIZE })
   const [loadedKey, setLoadedKey] = useState('')
-  const [loadingMore, setLoadingMore] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
   const [exportingPdf, setExportingPdf] = useState(false)
@@ -139,11 +144,7 @@ export function ReportsPanel({
     : [{ uid: user.uid, displayName: user.displayName ?? '', email: user.email ?? '' }]
   const invalidRange = !filters.startDay || !filters.endDay || filters.startDay > filters.endDay
   const summaryEntries = summaryState.key === key ? summaryState.entries : []
-  const entries = pageState.key === key ? pageState.entries : []
-  const cursor = pageState.key === key ? pageState.cursor : undefined
-  const hasMore = Boolean(cursor)
   const summaryLoading = !invalidRange && loadedKey !== key
-  const pageLoading = summaryLoading || loadingMore
   const error = invalidRange
     ? 'Choose a valid date range. The start date must be on or before the end date.'
     : errorState.key === key
@@ -163,17 +164,11 @@ export function ReportsPanel({
       return () => {
         cancelled = true
       }
-    void Promise.all([
-      loadReportSummary(workspaceId, canSeeAllEntries, user.uid, filters, (batch) => {
-        if (!cancelled)
-          setSummaryState((current) => ({ key, entries: [...(current.key === key ? current.entries : []), ...batch] }))
-      }),
-      loadReportPage(workspaceId, canSeeAllEntries, user.uid, filters).then((page) => {
-        if (!cancelled) {
-          setPageState({ key, entries: page.entries, cursor: page.cursor })
-        }
-      }),
-    ])
+    // The summary loads every matching entry; the detailed list and its search reuse them, so they need no query.
+    void loadReportSummary(workspaceId, canSeeAllEntries, user.uid, filters, (batch) => {
+      if (!cancelled)
+        setSummaryState((current) => ({ key, entries: [...(current.key === key ? current.entries : []), ...batch] }))
+    })
       .catch((loadError: unknown) => {
         if (!cancelled)
           setErrorState({
@@ -191,6 +186,27 @@ export function ReportsPanel({
     }
   }, [workspaceId, user.uid, canSeeAllEntries, filters, key, invalidRange])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
+
+  const searchPending = searchInput.trim() !== search
+  const matchingEntries = entriesOpen
+    ? searchReportEntries(
+        summaryEntries,
+        search,
+        canSeeAllEntries ? (entry) => reportUserName(entry, reportMembers) : undefined,
+      )
+    : []
+  const visibleKey = `${key}|${search}`
+  const visibleCount = visibleState.key === visibleKey ? visibleState.count : ENTRIES_PAGE_SIZE
+  const entries = matchingEntries.slice(0, visibleCount)
+  const hasMore = matchingEntries.length > visibleCount
+  const entryCountLabel = summaryLoading
+    ? 'entries'
+    : `${summaryEntries.length.toLocaleString()} ${summaryEntries.length === 1 ? 'entry' : 'entries'}`
+
   const groups = summarizeReport(summaryEntries, groupBy, (entry) => reportUserName(entry, reportMembers))
   const totalSeconds = summaryEntries.reduce((total, entry) => total + duration(entry), 0)
   const billableSeconds = summaryEntries.reduce((total, entry) => total + (entry.billable ? duration(entry) : 0), 0)
@@ -202,23 +218,6 @@ export function ReportsPanel({
 
   function updateFilter<K extends keyof ReportFilters>(field: K, value: ReportFilters[K]) {
     setFilters((current) => ({ ...current, [field]: value }))
-  }
-
-  async function loadMore() {
-    if (!cursor || pageLoading) return
-    setLoadingMore(true)
-    try {
-      const page = await loadReportPage(workspaceId, canSeeAllEntries, user.uid, filters, cursor)
-      setPageState((current) => ({
-        key,
-        entries: [...(current.key === key ? current.entries : []), ...page.entries],
-        cursor: page.cursor,
-      }))
-    } catch (loadError) {
-      setErrorState({ key, message: loadError instanceof Error ? loadError.message : 'Could not load more entries.' })
-    } finally {
-      setLoadingMore(false)
-    }
   }
 
   async function exportCsv() {
@@ -511,57 +510,96 @@ export function ReportsPanel({
         direction={{ xs: 'column', sm: 'row' }}
         sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 2 }}
       >
-        <Typography variant="h3">Detailed entries</Typography>
-        <Typography variant="caption" color="text.secondary">
-          Newest first
+        <Typography variant="h3" id="report-entries-heading">
+          Detailed entries
         </Typography>
-      </Stack>
-      <Box sx={{ mt: 1 }}>
-        {wide
-          ? entries.length > 0 && <EntriesTable entries={entries} members={members} showUser={canSeeAllEntries} />
-          : entries.map((entry) => (
-              <ListRow key={entry.id} sx={{ alignItems: { xs: 'flex-start', sm: 'center' } }}>
-                <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
-                  <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                    {entry.description || UNTITLED_ENTRY}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap>
-                    {[
-                      entry.startAt.toDate().toLocaleString(),
-                      // Every entry a regular member sees is their own, so the user segment would be noise.
-                      canSeeAllEntries ? reportUserName(entry, members) : null,
-                      [entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
-                        'No client, project, or task',
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Typography>
-                </Box>
-                <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flex: '0 0 auto' }}>
-                  <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                    {formatElapsed(duration(entry))}
-                  </Typography>
-                  {entry.billable && <BillableChip />}
-                </Stack>
-              </ListRow>
-            ))}
-        {entries.length === 0 && !pageLoading && <EmptyText>No completed entries match these filters.</EmptyText>}
-      </Box>
-      {hasMore && (
         <Button
           variant="outlined"
-          onClick={() => void loadMore()}
-          disabled={pageLoading}
-          aria-live="polite"
-          sx={{ display: 'flex', mx: 'auto', mt: 2 }}
+          onClick={() => setEntriesOpen((current) => !current)}
+          aria-expanded={entriesOpen}
+          aria-controls="report-entries"
+          disabled={invalidRange}
         >
-          {pageLoading ? 'Loading…' : 'Load more entries'}
+          {entriesOpen ? 'Hide entries' : `Show ${entryCountLabel}`}
         </Button>
+      </Stack>
+      {entriesOpen && (
+        <Box id="report-entries" role="region" aria-labelledby="report-entries-heading">
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            sx={{ alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 1.5 }}
+          >
+            <TextField
+              label="Search entries"
+              type="search"
+              size="small"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              helperText={
+                canSeeAllEntries ? 'Description, client, project, task or user' : 'Description, client, project or task'
+              }
+              sx={{ width: { xs: '100%', sm: 360 } }}
+            />
+            <Typography variant="caption" color="text.secondary" aria-live="polite">
+              {summaryLoading || searchPending
+                ? 'Loading entries…'
+                : search
+                  ? `${matchingEntries.length.toLocaleString()} of ${summaryEntries.length.toLocaleString()} entries · newest first`
+                  : 'Newest first'}
+            </Typography>
+          </Stack>
+          <Box sx={{ mt: 1 }}>
+            {wide
+              ? entries.length > 0 && <EntriesTable entries={entries} members={members} showUser={canSeeAllEntries} />
+              : entries.map((entry) => (
+                  <ListRow key={entry.id} sx={{ alignItems: { xs: 'flex-start', sm: 'center' } }}>
+                    <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
+                      <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                        {entry.description || UNTITLED_ENTRY}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {[
+                          entry.startAt.toDate().toLocaleString(),
+                          // Every entry a regular member sees is their own, so the user segment would be noise.
+                          canSeeAllEntries ? reportUserName(entry, members) : null,
+                          [entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
+                            'No client, project, or task',
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Typography>
+                    </Box>
+                    <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flex: '0 0 auto' }}>
+                      <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                        {formatElapsed(duration(entry))}
+                      </Typography>
+                      {entry.billable && <BillableChip />}
+                    </Stack>
+                  </ListRow>
+                ))}
+            {entries.length === 0 && !summaryLoading && !searchPending && (
+              <EmptyText>
+                {search ? `No entries match “${search}”.` : 'No completed entries match these filters.'}
+              </EmptyText>
+            )}
+          </Box>
+          {hasMore && (
+            <Button
+              variant="outlined"
+              onClick={() => setVisibleState({ key: visibleKey, count: visibleCount + ENTRIES_PAGE_SIZE })}
+              sx={{ display: 'flex', mx: 'auto', mt: 2 }}
+            >
+              Show more entries
+            </Button>
+          )}
+        </Box>
       )}
     </SectionCard>
   )
 }
 
+const ENTRIES_PAGE_SIZE = 25
+const SEARCH_DEBOUNCE_MS = 300
 const UNTITLED_ENTRY = 'Untitled entry'
 const EMPTY_CELL = '—'
 

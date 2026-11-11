@@ -22,7 +22,6 @@ import {
   type ReportMember,
 } from './reportFormat'
 
-const PAGE_SIZE = 25
 const SUMMARY_BATCH_SIZE = 250
 export const IN_MEMORY_EXPORT_ROW_LIMIT = 20_000
 
@@ -84,41 +83,6 @@ export async function streamReportCsv(
     cursor = snapshot.docs.length === SUMMARY_BATCH_SIZE ? snapshot.docs[snapshot.docs.length - 1] : undefined
   } while (cursor)
   return totalRows
-}
-
-export async function loadReportPage(
-  workspaceId: string,
-  canSeeAllEntries: boolean,
-  currentUserId: string,
-  filters: ReportFilters,
-  cursor?: QueryDocumentSnapshot,
-) {
-  let nextCursor = cursor
-  let exhausted = false
-  const entries: TimeEntry[] = []
-  while (entries.length < PAGE_SIZE && !exhausted) {
-    const snapshot = await getDocs(
-      constraints(workspaceId, canSeeAllEntries, currentUserId, filters, SUMMARY_BATCH_SIZE, nextCursor),
-    )
-    const docs = snapshot.docs
-    let reachedPageSize = false
-    for (const document of docs) {
-      const entry = toEntry(document)
-      if (entry.endAt !== null && matchesFilters(entry, filters)) entries.push(entry)
-      if (entries.length === PAGE_SIZE) {
-        nextCursor = document
-        reachedPageSize = true
-        break
-      }
-    }
-    if (reachedPageSize) break
-    exhausted = docs.length < SUMMARY_BATCH_SIZE
-    nextCursor = docs.length === SUMMARY_BATCH_SIZE ? docs[docs.length - 1] : undefined
-  }
-  return {
-    entries: entries.slice(0, PAGE_SIZE),
-    cursor: nextCursor,
-  }
 }
 
 export async function loadReportSummary(
