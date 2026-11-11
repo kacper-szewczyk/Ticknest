@@ -4,7 +4,17 @@ import packageJson from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      // The post-deploy smoke check (scripts/smoke-check.mjs) reads this tag to confirm the live
+      // site serves the release that was just deployed.
+      name: 'ticknest-version-meta',
+      transformIndexHtml: () => [
+        { tag: 'meta', attrs: { name: 'ticknest-version', content: packageJson.version }, injectTo: 'head' },
+      ],
+    },
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },

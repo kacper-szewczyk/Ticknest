@@ -94,6 +94,36 @@ jobs:
       # --force lets the CLI delete Functions that were removed from the source (or moved to
       # another region) and set the container image cleanup policy without prompting.
       - name: Deploy
+        id: deploy
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
         run: npx firebase deploy --only "$DEPLOY_ONLY" --project "$FIREBASE_PROJECT_ID" --non-interactive --force
+      # Fails the run unless the live site returns HTTP 200, serves this release's version, and
+      # loads its entry script. FIREBASE_SITE_URL overrides the default *.web.app URL.
+      - name: Smoke check
+        id: smoke
+        if: contains(env.DEPLOY_ONLY, 'hosting')
+        env:
+          SITE_URL: ${{ vars.FIREBASE_SITE_URL || format('https://{0}.web.app', vars.FIREBASE_PROJECT_ID) }}
+        run: node scripts/smoke-check.mjs "$SITE_URL" "$(node -p "require('./package.json').version")"
+      - name: Write job summary
+        if: always() && steps.deploy.outcome != 'skipped'
+        env:
+          SITE_URL: ${{ vars.FIREBASE_SITE_URL || format('https://{0}.web.app', vars.FIREBASE_PROJECT_ID) }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+        run: |
+          {
+            echo "### Deploy to Firebase"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Commit | \`$(git rev-parse HEAD)\` |"
+            echo "| Version | $(node -p "require('./package.json').version") |"
+            echo "| Project | \`$FIREBASE_PROJECT_ID\` |"
+            echo "| Targets | \`$DEPLOY_ONLY\` |"
+            echo "| Deploy | $DEPLOY_OUTCOME |"
+            echo "| Smoke check | ${SMOKE_OUTCOME:-skipped} |"
+            if [[ "$DEPLOY_ONLY" == *hosting* ]]; then echo "| URL | $SITE_URL |"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
