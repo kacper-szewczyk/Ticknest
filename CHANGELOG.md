@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.41.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.40.0...ticknest-v1.41.0) (2026-11-11)
+
+
+### Features
+
+* show report detailed entries on demand, with search ([#222](https://github.com/kacper-szewczyk/Ticknest/issues/222)) ([a8a4a10](https://github.com/kacper-szewczyk/Ticknest/commit/a8a4a1099550c56ccbad385d0306b4cf59d3919f))
+
 ## [1.40.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.39.0...ticknest-v1.40.0) (2026-11-10)
 
 
