@@ -527,7 +527,7 @@ export function ReportsPanel({
         <Box id="report-entries" role="region" aria-labelledby="report-entries-heading">
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
-            sx={{ alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 1.5 }}
+            sx={{ alignItems: { xs: 'stretch', sm: 'flex-start' }, justifyContent: 'space-between', gap: 1.5, mt: 1.5 }}
           >
             <TextField
               label="Search entries"
@@ -540,7 +540,8 @@ export function ReportsPanel({
               }
               sx={{ width: { xs: '100%', sm: 360 } }}
             />
-            <Typography variant="caption" color="text.secondary" aria-live="polite">
+            {/* Lines up with the input box rather than the input plus its helper text. */}
+            <Typography variant="caption" color="text.secondary" aria-live="polite" sx={{ pt: { sm: 1.25 } }}>
               {summaryLoading || searchPending
                 ? 'Loading entries…'
                 : search
