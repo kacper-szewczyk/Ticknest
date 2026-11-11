@@ -128,3 +128,24 @@ export function localTime(date: Date, timeZone: string): string {
     date,
   )
 }
+
+/**
+ * Filters report entries by free-text search over description, client, project and task, plus the user name when
+ * `userName` is given (managers and owners). Case-insensitive; every whitespace-separated term must appear in some
+ * field. Runs in memory over entries already loaded for the report, since Firestore has no full-text search.
+ */
+export function searchReportEntries<T extends TimeEntry>(
+  entries: readonly T[],
+  search: string,
+  userName?: (entry: T) => string,
+): T[] {
+  const terms = search.toLocaleLowerCase().split(/\s+/).filter(Boolean)
+  if (terms.length === 0) return [...entries]
+  return entries.filter((entry) => {
+    const haystack = [entry.description, entry.clientName, entry.projectName, entry.taskName, userName?.(entry)]
+      .filter(Boolean)
+      .join('\n')
+      .toLocaleLowerCase()
+    return terms.every((term) => haystack.includes(term))
+  })
+}

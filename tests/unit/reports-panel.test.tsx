@@ -8,7 +8,7 @@ import type { Catalog } from '../../src/lib/catalog'
 import type { TimeEntry } from '../../src/lib/timeEntries'
 import type { WorkspaceMember } from '../../src/lib/workspaces'
 import { PALETTES } from '../../src/palettes'
-import { streamReportCsv } from '../../src/lib/reports'
+import { loadReportSummary, streamReportCsv } from '../../src/lib/reports'
 import { ReportsPanel } from '../../src/ReportsPanel'
 import { createAppTheme } from '../../src/theme'
 
@@ -35,16 +35,32 @@ const MEMBERS: WorkspaceMember[] = [
   { uid: UID, email: 'ada@example.com', displayName: 'Ada Lovelace', role: 'member', joinedAt: null },
 ]
 
+const OTHER_ENTRY: TimeEntry = {
+  ...ENTRY,
+  id: 'e2',
+  userId: 'grace',
+  description: 'Invoice prep',
+  clientName: 'Acme Corp',
+  projectName: 'Website',
+  taskName: 'Billing',
+  startAt: timestamp('2026-11-08T09:00:00Z'),
+  endAt: timestamp('2026-11-08T10:00:00Z'),
+}
+
+// The entries every report load returns; tests that need more than ENTRY replace it.
+let reportEntries: TimeEntry[] = [ENTRY]
+
 vi.mock('../../src/lib/reports', () => ({
   IN_MEMORY_EXPORT_ROW_LIMIT: 20_000,
-  loadReportSummary: async (
-    _workspaceId: string,
-    _canSeeAllEntries: boolean,
-    _uid: string,
-    _filters: unknown,
-    onBatch: (entries: TimeEntry[]) => void,
-  ) => onBatch([ENTRY]),
-  loadReportPage: async () => ({ entries: [ENTRY], cursor: undefined }),
+  loadReportSummary: vi.fn(
+    async (
+      _workspaceId: string,
+      _canSeeAllEntries: boolean,
+      _uid: string,
+      _filters: unknown,
+      onBatch: (entries: TimeEntry[]) => void,
+    ) => onBatch(reportEntries),
+  ),
   streamReportCsv: vi.fn(),
 }))
 
@@ -75,7 +91,14 @@ function renderPanel(canSeeAllEntries: boolean, user: Partial<User>) {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  reportEntries = [ENTRY]
+  vi.mocked(loadReportSummary).mockClear()
 })
+
+/** Detailed entries start collapsed; open them once the summary has counted the entries. */
+async function openEntries() {
+  fireEvent.click(await screen.findByRole('button', { name: /^Show \d+ entr/ }))
+}
 
 function stubWideScreen() {
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -91,6 +114,7 @@ function stubWideScreen() {
 describe('ReportsPanel user names', () => {
   it('shows managers and owners the member name instead of the user ID', async () => {
     renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    await openEntries()
     const row = await screen.findByText(/Maple Health Clinic/)
     expect(row.textContent).toContain('Ada Lovelace')
     expect(document.body.textContent).not.toContain(UID)
@@ -98,6 +122,7 @@ describe('ReportsPanel user names', () => {
 
   it('hides the user segment on entry rows for regular members', async () => {
     renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
+    await openEntries()
     const row = await screen.findByText(/Maple Health Clinic/)
     expect(row.textContent).not.toContain('Ada Lovelace')
     expect(row.textContent).toMatch(/ · Maple Health Clinic$/)
@@ -105,10 +130,82 @@ describe('ReportsPanel user names', () => {
   })
 })
 
+describe('ReportsPanel detailed entries on demand', () => {
+  it('starts collapsed with the entry count and loads nothing beyond the summary', async () => {
+    reportEntries = [ENTRY, OTHER_ENTRY]
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    const toggle = await screen.findByRole('button', { name: 'Show 2 entries' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText(/Maple Health Clinic/)).toBeNull()
+    expect(screen.queryByLabelText('Search entries')).toBeNull()
+    expect(vi.mocked(loadReportSummary)).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(toggle)
+    expect(screen.getByRole('button', { name: 'Hide entries' }).getAttribute('aria-expanded')).toBe('true')
+    expect(await screen.findByText(/Maple Health Clinic/)).toBeTruthy()
+    expect(screen.getByText(/Acme Corp/)).toBeTruthy()
+    // Opening reuses the summary's entries rather than querying again.
+    expect(vi.mocked(loadReportSummary)).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide entries' }))
+    expect(screen.queryByText(/Maple Health Clinic/)).toBeNull()
+  })
+
+  it('stays open when the filters change', async () => {
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    await openEntries()
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-11-01' } })
+    expect(await screen.findByRole('button', { name: 'Hide entries' })).toBeTruthy()
+    expect(await screen.findByText(/Maple Health Clinic/)).toBeTruthy()
+  })
+
+  it('searches description, client, project, task and user name, with an empty state', async () => {
+    reportEntries = [ENTRY, OTHER_ENTRY]
+    renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    await openEntries()
+    const search = screen.getByLabelText('Search entries')
+
+    fireEvent.change(search, { target: { value: 'acme billing' } })
+    expect(await screen.findByText('1 of 2 entries · newest first')).toBeTruthy()
+    expect(screen.getByText(/Acme Corp/)).toBeTruthy()
+    expect(screen.queryByText(/Maple Health Clinic/)).toBeNull()
+
+    fireEvent.change(search, { target: { value: 'lovelace' } })
+    expect(await screen.findByText(/Maple Health Clinic/)).toBeTruthy()
+    expect(screen.queryByText(/Acme Corp/)).toBeNull()
+
+    fireEvent.change(search, { target: { value: 'xyz' } })
+    expect(await screen.findByText('No entries match “xyz”.')).toBeTruthy()
+  })
+
+  it('does not search by user name for regular members', async () => {
+    renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
+    await openEntries()
+    fireEvent.change(screen.getByLabelText('Search entries'), { target: { value: 'lovelace' } })
+    expect(await screen.findByText('No entries match “lovelace”.')).toBeTruthy()
+  })
+
+  it('shows 25 entries at a time', async () => {
+    reportEntries = Array.from({ length: 30 }, (_, index) => ({
+      ...ENTRY,
+      id: `e${index}`,
+      description: `Entry ${index}`,
+    }))
+    renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
+    await openEntries()
+    expect(await screen.findByText('Entry 24')).toBeTruthy()
+    expect(screen.queryByText('Entry 25')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Show more entries' }))
+    expect(screen.getByText('Entry 29')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Show more entries' })).toBeNull()
+  })
+})
+
 describe('ReportsPanel wide layout', () => {
   it('shows detailed entries as a table with one column per field on large screens', async () => {
     stubWideScreen()
     renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+    await openEntries()
     const table = await screen.findByRole('table', { name: 'Detailed entries' })
     const headers = within(table)
       .getAllByRole('columnheader')
@@ -121,6 +218,7 @@ describe('ReportsPanel wide layout', () => {
   it('omits the user column for regular members', async () => {
     stubWideScreen()
     renderPanel(false, { uid: UID, displayName: 'Ada Lovelace', email: 'ada@example.com' })
+    await openEntries()
     const table = await screen.findByRole('table', { name: 'Detailed entries' })
     expect(within(table).queryByRole('columnheader', { name: 'User' })).toBeNull()
   })

@@ -9,6 +9,7 @@ import {
   matchesFilters,
   reportRange,
   reportUserName,
+  searchReportEntries,
   UNKNOWN_USER,
   type ReportFilters,
 } from '../../src/lib/reportFormat'
@@ -42,6 +43,32 @@ function entry(overrides: Partial<TimeEntry> = {}): TimeEntry {
     ...overrides,
   }
 }
+
+describe('searchReportEntries', () => {
+  const design = entry()
+  const standup = entry({ id: 'entry-2', description: 'Standup', clientName: null, projectName: null, taskName: null })
+
+  it('returns every entry for a blank search', () => {
+    expect(searchReportEntries([design, standup], '   ')).toEqual([design, standup])
+  })
+
+  it('matches description, client, project and task case-insensitively', () => {
+    expect(searchReportEntries([design, standup], 'STANDUP')).toEqual([standup])
+    expect(searchReportEntries([design, standup], 'acme')).toEqual([design])
+    expect(searchReportEntries([design, standup], 'website')).toEqual([design])
+    expect(searchReportEntries([design, standup], 'review')).toEqual([design])
+  })
+
+  it('requires every term to match somewhere', () => {
+    expect(searchReportEntries([design, standup], 'acme review')).toEqual([design])
+    expect(searchReportEntries([design, standup], 'acme standup')).toEqual([])
+  })
+
+  it('matches the user name only when a resolver is given', () => {
+    expect(searchReportEntries([design], 'alice')).toEqual([])
+    expect(searchReportEntries([design], 'alice', (item) => item.userDisplayName ?? '')).toEqual([design])
+  })
+})
 
 describe('reportRange', () => {
   it('covers whole local days, including the last one', () => {
