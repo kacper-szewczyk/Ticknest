@@ -18,6 +18,7 @@ import { deleteCurrentAccount, getReauthMethod, sendVerificationEmail, signOutUs
 import { type Catalog, subscribeToCatalog } from './lib/catalog'
 import { localeWeekStart, type WeekStart } from './lib/dates'
 import { readableError } from './lib/errors'
+import { isFeatureEnabled } from './lib/featureFlags'
 import { clearInviteParamsFromAddressBar, hasInviteParams } from './lib/inviteLink'
 import {
   type SetupItem,
@@ -38,6 +39,7 @@ import {
   subscribeToMembershipStatus,
   subscribeToTeamSize,
 } from './lib/workspaces'
+import { type WorkspaceView, DEFAULT_VIEW, canOpenView, isWorkspaceView, resolveView } from './lib/workspaceViews'
 import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { useSidebarControls } from './sidebarControls'
 import { AppearancePanel } from './AppearancePanel'
@@ -64,26 +66,6 @@ const TeamBudgetsPanel = lazy(() =>
 // Setup runs once per workspace, right after it is created.
 const SetupWizard = lazy(() => import('./SetupWizard').then((module) => ({ default: module.SetupWizard })))
 
-type WorkspaceView =
-  'timesheet' | 'dashboard' | 'reports' | 'my-budgets' | 'team-budgets' | 'budgets' | 'catalog' | 'members' | 'settings'
-
-const WORKSPACE_VIEWS: WorkspaceView[] = [
-  'timesheet',
-  'dashboard',
-  'reports',
-  'my-budgets',
-  'team-budgets',
-  'budgets',
-  'catalog',
-  'members',
-  'settings',
-]
-
-const OWNER_VIEWS: WorkspaceView[] = ['catalog', 'members']
-
-// Owners and managers manage budgets and follow everyone's progress on them.
-const MANAGER_VIEWS: WorkspaceView[] = ['team-budgets', 'budgets']
-
 // Reports holds wide filter rows and an entries table, so it gets the most room; the cap keeps
 // rows readable on ultra-wide monitors.
 function mainMaxWidth(view: WorkspaceView | null): number {
@@ -96,7 +78,7 @@ function mainMaxWidth(view: WorkspaceView | null): number {
 // A view may carry its own state after a '?', e.g. #reports?group=client.
 function viewFromHash(): WorkspaceView | null {
   const hash = window.location.hash.slice(1).split('?')[0]
-  return (WORKSPACE_VIEWS as string[]).includes(hash) ? (hash as WorkspaceView) : null
+  return isWorkspaceView(hash) ? hash : null
 }
 
 export function WorkspaceScreen({ user }: { user: User }) {
@@ -122,10 +104,10 @@ export function WorkspaceScreen({ user }: { user: User }) {
   // The active workspace's member and invitation counts, for owners; undefined until loaded.
   const [team, setTeam] = useState<TeamSize | undefined>()
   const [dismissedReminders, setDismissedReminders] = useState<string[]>([])
-  const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : 'timesheet'))
+  const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : DEFAULT_VIEW))
 
   useEffect(() => {
-    const syncView = () => setView(viewFromHash() ?? 'timesheet')
+    const syncView = () => setView(viewFromHash() ?? DEFAULT_VIEW)
     window.addEventListener('hashchange', syncView)
     return () => window.removeEventListener('hashchange', syncView)
   }, [])
@@ -257,34 +239,26 @@ export function WorkspaceScreen({ user }: { user: User }) {
     return subscribeToTeamSize(activeId, setTeam, (loadError) => setError(readableError(loadError)))
   }, [activeId, isOwner])
   const seesAllEntries = canSeeAllEntries(activeWorkspace?.role)
-  const currentView: WorkspaceView =
-    (!isOwner && OWNER_VIEWS.includes(view)) || (!seesAllEntries && MANAGER_VIEWS.includes(view)) ? 'timesheet' : view
-  const navItems: NavItem<WorkspaceView>[] = activeWorkspace
-    ? [
-        { value: 'timesheet', label: 'Timesheet', icon: navIcons.timesheet, section: 'Track' },
-        {
-          value: 'dashboard',
-          label: seesAllEntries ? 'Team dashboard' : 'Dashboard',
-          icon: navIcons.dashboard,
-          section: 'Analyze',
-        },
-        { value: 'reports', label: 'Reports', icon: navIcons.reports, section: 'Analyze' },
-        { value: 'my-budgets', label: 'My budgets', icon: navIcons.myBudgets, section: 'Analyze' },
-        ...(seesAllEntries
-          ? ([
-              { value: 'team-budgets', label: 'Budget progress', icon: navIcons.teamBudgets, section: 'Analyze' },
-              { value: 'budgets', label: 'Budgets', icon: navIcons.budgets, section: 'Manage' },
-            ] satisfies NavItem<WorkspaceView>[])
-          : []),
-        ...(isOwner
-          ? ([
-              { value: 'catalog', label: 'Clients & projects', icon: navIcons.catalog, section: 'Manage' },
-              { value: 'members', label: 'Members', icon: navIcons.members, section: 'Manage' },
-            ] satisfies NavItem<WorkspaceView>[])
-          : []),
-        { value: 'settings', label: 'Settings', icon: navIcons.settings, section: 'Account' },
-      ]
-    : []
+  const budgetsEnabled = isFeatureEnabled('budgets')
+  const viewAccess = { isOwner, seesAllEntries, budgetsEnabled }
+  const currentView = resolveView(view, viewAccess)
+  const allNavItems: NavItem<WorkspaceView>[] = [
+    { value: 'timesheet', label: 'Timesheet', icon: navIcons.timesheet, section: 'Track' },
+    {
+      value: 'dashboard',
+      label: seesAllEntries ? 'Team dashboard' : 'Dashboard',
+      icon: navIcons.dashboard,
+      section: 'Analyze',
+    },
+    { value: 'reports', label: 'Reports', icon: navIcons.reports, section: 'Analyze' },
+    { value: 'my-budgets', label: 'My budgets', icon: navIcons.myBudgets, section: 'Analyze' },
+    { value: 'team-budgets', label: 'Budget progress', icon: navIcons.teamBudgets, section: 'Analyze' },
+    { value: 'budgets', label: 'Budgets', icon: navIcons.budgets, section: 'Manage' },
+    { value: 'catalog', label: 'Clients & projects', icon: navIcons.catalog, section: 'Manage' },
+    { value: 'members', label: 'Members', icon: navIcons.members, section: 'Manage' },
+    { value: 'settings', label: 'Settings', icon: navIcons.settings, section: 'Account' },
+  ]
+  const navItems = activeWorkspace ? allNavItems.filter((item) => canOpenView(item.value, viewAccess)) : []
 
   function navigate(next: WorkspaceView) {
     setError('')

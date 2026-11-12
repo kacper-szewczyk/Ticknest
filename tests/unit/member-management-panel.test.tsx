@@ -65,6 +65,25 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.resetAllMocks()
+  vi.unstubAllEnvs()
+})
+
+describe('MemberManagementPanel role copy and the budgets flag', () => {
+  it('mentions budgets in the manager role while budgets are on', async () => {
+    renderPanel()
+    await chooseRole('Ben Carter', 'Manager')
+    const dialog = await screen.findByRole('dialog', { name: 'Make Ben Carter a manager?' })
+    expect(dialog.textContent).toContain('manage budgets')
+  })
+
+  it('leaves budgets out of the role copy when budgets are off', async () => {
+    vi.stubEnv('VITE_FEATURE_BUDGETS_ENABLED', 'false')
+    renderPanel()
+    await chooseRole('Ben Carter', 'Manager')
+    const dialog = await screen.findByRole('dialog', { name: 'Make Ben Carter a manager?' })
+    expect(dialog.textContent).toContain('run reports on everyone')
+    expect(document.body.textContent).not.toMatch(/budget/i)
+  })
 })
 
 describe('MemberManagementPanel roles', () => {

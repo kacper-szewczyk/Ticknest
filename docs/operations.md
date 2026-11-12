@@ -102,6 +102,7 @@ The project must be on the Blaze plan, as for a manual deploy.
 | `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`             | Optional. See [App Check](#app-check-optional).                                                                                                                                                                                                  |
 | `ENFORCE_APP_CHECK`                              | Optional. `true` to enforce App Check on the callable Functions.                                                                                                                                                                                 |
 | `VITE_DEMO_MODE`, `DEMO_MODE`, `DEMO_PROJECT_ID` | Optional. See [Demo mode](#demo-mode-optional).                                                                                                                                                                                                  |
+| `VITE_FEATURE_BUDGETS_ENABLED`                   | Optional. See [Feature flags](#feature-flags-optional).                                                                                                                                                                                          |
 | `FIREBASE_DEPLOY_ONLY`                           | Optional. What `deploy.yml` deploys; defaults to `hosting,firestore:rules,firestore:indexes,functions`. Set it to `firestore:rules,firestore:indexes,functions` when the web app is [hosted on Vercel](#hosting-the-web-app-on-vercel-optional). |
 | `FIREBASE_PREVIEW_CHANNELS`                      | Optional. `false` turns off preview channels, for example when Vercel already builds a preview for each pull request.                                                                                                                            |
 
@@ -180,6 +181,16 @@ Replace `europe-west1` with your [Functions region](#functions-region). The run 
 1. Set `DEMO_MODE=false` (or remove both params) and redeploy the Functions. `resetDemo` keeps running on schedule but skips the reset. To remove the job too, run `npx firebase functions:delete resetDemo --region <region>`.
 2. Set `VITE_DEMO_MODE=false` and redeploy the web app to remove the banner and the demo accounts from sign-in.
 3. The last seeded data and the demo accounts stay in the project. Delete them, or the whole project (see [Teardown](#teardown)), if you no longer need them.
+
+### Feature flags (optional)
+
+Feature flags hide whole features from the web app. Each one is on unless its variable is set to `false`, so a deployment that sets nothing keeps every feature. Set them like the other `VITE_*` values: in `.env.local`, as Vercel environment variables, or as GitHub repository variables for the deploy and preview workflows. Flags are read at build time, so redeploy the web app after you change one.
+
+| Variable                       | Feature                                                                                                                      |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_FEATURE_BUDGETS_ENABLED` | Budgets. `false` hides the My budgets, Budget progress and Budgets pages, and budget mentions in the role and settings copy. |
+
+A flag only hides the feature in the web app. It does not delete data or change Firestore rules or Functions: existing budgets stay in Firestore and come back when the flag is turned on again. In code, read flags through `isFeatureEnabled` in `src/lib/featureFlags.ts`.
 
 ### Functions region
 

@@ -26,16 +26,22 @@ import {
   type WorkspaceMember,
   type WorkspaceRole,
 } from './lib/workspaces'
+import { isFeatureEnabled } from './lib/featureFlags'
 import { invitationUrl } from './lib/inviteLink'
 import { EmptyText, FormMessage, ListRow, SectionCard, SectionHeading } from './ui'
 
 const ROLE_LABELS: Record<WorkspaceRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
 
-// Summaries of SPEC §2, shown under each role option and in the "About roles" hint.
-const ROLE_DESCRIPTIONS: Record<WorkspaceRole, string> = {
-  owner: 'Manages the workspace, its members, clients, projects and settings.',
-  manager: 'Can see everyone’s time, run reports on all users, and manage budgets for any member.',
-  member: 'Tracks and reports on their own time only.',
+// Summaries of SPEC §2, shown under each role option and in the "About roles" hint. Budgets are left out when the
+// feature is off, so the copy never promises a page nobody can open.
+function roleDescriptions(): Record<WorkspaceRole, string> {
+  return {
+    owner: 'Manages the workspace, its members, clients, projects and settings.',
+    manager: isFeatureEnabled('budgets')
+      ? 'Can see everyone’s time, run reports on all users, and manage budgets for any member.'
+      : 'Can see everyone’s time and run reports on all users.',
+    member: 'Tracks and reports on their own time only.',
+  }
 }
 
 const ASSIGNABLE_ROLES = ['member', 'manager'] as const
@@ -53,15 +59,20 @@ function isAssignableRole(role: string): role is AssignableRole {
 
 function roleChangeConfirmation({ member, role }: RoleChange): { title: string; body: string; action: string } {
   const name = memberName(member)
+  const budgetsEnabled = isFeatureEnabled('budgets')
   if (role === 'manager')
     return {
       title: `Make ${name} a manager?`,
-      body: 'They’ll be able to see all workspace time entries, run reports on everyone and manage budgets for any member.',
+      body: budgetsEnabled
+        ? 'They’ll be able to see all workspace time entries, run reports on everyone and manage budgets for any member.'
+        : 'They’ll be able to see all workspace time entries and run reports on everyone.',
       action: 'Make manager',
     }
   return {
     title: `Make ${name} a member?`,
-    body: 'They’ll no longer be able to see other people’s time entries, run reports on everyone or manage budgets. They’ll track and report on their own time only.',
+    body: budgetsEnabled
+      ? 'They’ll no longer be able to see other people’s time entries, run reports on everyone or manage budgets. They’ll track and report on their own time only.'
+      : 'They’ll no longer be able to see other people’s time entries or run reports on everyone. They’ll track and report on their own time only.',
     action: 'Make member',
   }
 }
@@ -79,6 +90,7 @@ function RoleChip({ role }: { role: WorkspaceRole }) {
 }
 
 export function MemberManagementPanel({ workspaceId, currentUserId }: { workspaceId: string; currentUserId: string }) {
+  const descriptions = roleDescriptions()
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([])
   const [email, setEmail] = useState('')
@@ -288,7 +300,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                     {ROLE_LABELS[role]}
                   </Typography>
                   <Typography component="dd" variant="body2" color="text.secondary" sx={{ m: 0 }}>
-                    {ROLE_DESCRIPTIONS[role]}
+                    {descriptions[role]}
                   </Typography>
                 </Box>
               ))}
@@ -360,7 +372,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                       <MenuItem key={role} value={role} sx={{ whiteSpace: 'normal' }}>
                         <ListItemText
                           primary={ROLE_LABELS[role]}
-                          secondary={ROLE_DESCRIPTIONS[role]}
+                          secondary={descriptions[role]}
                           slotProps={{ primary: { sx: { fontWeight: 600 } } }}
                         />
                       </MenuItem>

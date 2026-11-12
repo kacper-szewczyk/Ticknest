@@ -12,4 +12,6 @@ interface ImportMetaEnv {
   readonly VITE_DEMO_MODE?: string
   /** `false` hides Google sign-in, for hosts that are not Firebase authorized domains. Anything else (or unset) keeps it. */
   readonly VITE_GOOGLE_SIGN_IN_ENABLED?: string
+  /** `false` hides the budgets feature (My budgets, Budget progress, Budgets). Anything else (or unset) keeps it. */
+  readonly VITE_FEATURE_BUDGETS_ENABLED?: string
 }
