@@ -179,8 +179,9 @@ function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
 
 const visuallyHiddenSx = {
   position: 'absolute',
-  width: 1,
-  height: 1,
+  // Strings, not numbers: in MUI `sx`, `width: 1` means 100%, not 1px.
+  width: '1px',
+  height: '1px',
   overflow: 'hidden',
   clip: 'rect(0 0 0 0)',
   clipPath: 'inset(50%)',

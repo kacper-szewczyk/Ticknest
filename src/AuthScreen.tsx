@@ -98,7 +98,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          minHeight: { md: '100vh' },
+          // Pin to the viewport on desktop so the hero stays centred on screen
+          // even when the form column (e.g. with the demo panel) is taller.
+          position: { md: 'sticky' },
+          top: { md: 0 },
+          alignSelf: { md: 'start' },
+          height: { md: '100vh' },
           px: { xs: 3, md: 'clamp(32px, 7vw, 96px)' },
           py: { xs: 3, md: 4.75 },
           overflow: 'hidden',
