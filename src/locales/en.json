@@ -3,7 +3,11 @@
     "loadingAccount": "Loading your Ticknest account…",
     "version": "Ticknest v{{version}}",
     "startFailedTitle": "Ticknest could not start",
-    "startFailedBody": "An unexpected error occurred while loading the app."
+    "startFailedBody": "An unexpected error occurred while loading the app.",
+    "crashTitle": "Something went wrong",
+    "crashBody": "Ticknest hit an unexpected error. Reload the page to continue.",
+    "reload": "Reload",
+    "demoBusy": "This is the public demo, so it may be busy. Try again in a few minutes, or <link>run your own copy from the GitHub repository</link>."
   },
   "language": {
     "label": "Language",
@@ -63,9 +67,10 @@
     "accountExistsWithDifferentCredential": "An account already exists with this email. Sign in with your original method, then link Google in account settings.",
     "functionsInternal": "The workspace service is not available in this Firebase project yet. Deploy the Firebase Functions, then try again.",
     "functionsNotFound": "The workspace service is not deployed in this Firebase project. Deploy the Firebase Functions, then try again.",
-    "functionsUnavailable": "The workspace service is temporarily unavailable. Try again in a moment.",
     "permissionDenied": "You do not have access to this workspace.",
-    "authFallback": "We couldn’t sign you in. Please try again. If the problem continues, check the Firebase Authentication settings."
+    "authFallback": "We couldn’t sign you in. Please try again. If the problem continues, check the Firebase Authentication settings.",
+    "busy": "Ticknest is busy or unreachable right now. Check your connection and try again in a few minutes.",
+    "busyDemo": "The public demo is busy or unreachable right now. Try again in a few minutes, or run your own copy from {{url}}."
   },
   "appearance": {
     "kicker": "APPEARANCE",
@@ -221,7 +226,10 @@
     "contactLead": "Want Ticknest set up for your team, or need a feature it doesn't have yet?",
     "contactHelp": "I'll help you get there.",
     "getInTouch": "Get in touch",
-    "linkedIn": "Message me on LinkedIn"
+    "linkedIn": "Message me on LinkedIn",
+    "pausedTitle": "The Ticknest demo is paused",
+    "pausedBody": "The public demo is getting more visitors than it can handle right now, so it is paused for a while. Please check back later.",
+    "pausedOpenSource": "Ticknest is open source. You can read the code and run your own copy on your own Firebase project."
   },
   "timeOff": {
     "unknownType": "Unknown type",

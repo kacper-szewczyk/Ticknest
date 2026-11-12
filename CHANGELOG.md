@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.45.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.44.0...ticknest-v1.45.0) (2026-11-12)
+
+
+### Features
+
+* harden the public demo for launch traffic ([#255](https://github.com/kacper-szewczyk/Ticknest/issues/255)) ([2a62859](https://github.com/kacper-szewczyk/Ticknest/commit/2a62859e6d802ab079fabec35cc1693db1666a34)), closes [#249](https://github.com/kacper-szewczyk/Ticknest/issues/249)
+
 ## [1.44.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.43.2...ticknest-v1.44.0) (2026-11-12)
 
 
