@@ -141,6 +141,9 @@ describe('DemoAccountsPanel', () => {
     expect(html).toContain(`href="${DEMO_SUPPORT_URL}"`)
     expect(html).toContain(`href="mailto:${DEMO_CONTACT_EMAIL}"`)
     expect(html).toContain(`href="${DEMO_CONTACT_LINKEDIN_URL}"`)
+    expect(html).toContain('Buy me a coffee')
+    expect(html).toContain('Star it on GitHub')
+    expect(html).toContain('Get in touch')
   })
 })
 

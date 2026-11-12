@@ -146,9 +146,29 @@ function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
         })}
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.5 }}>
-        Like Ticknest? <ExternalLink href={DEMO_SUPPORT_URL}>Buy me a coffee</ExternalLink>. Need help with setup or a
-        custom feature? Email <Link href={`mailto:${DEMO_CONTACT_EMAIL}`}>{DEMO_CONTACT_EMAIL}</Link> or message me on{' '}
-        <ExternalLink href={DEMO_CONTACT_LINKEDIN_URL}>LinkedIn</ExternalLink>.
+        <Box component="strong" sx={{ fontWeight: 650, color: 'text.primary' }}>
+          Love Ticknest? Help keep it free.
+        </Box>{' '}
+        <ExternalLink href={DEMO_SUPPORT_URL} sx={{ fontWeight: 650 }}>
+          <span aria-hidden="true">☕ </span>Buy me a coffee<span aria-hidden="true"> →</span>
+        </ExternalLink>
+        {' · '}
+        <ExternalLink href={DEMO_SOURCE_URL} sx={{ fontWeight: 650 }}>
+          <span aria-hidden="true">⭐ </span>Star it on GitHub<span aria-hidden="true"> →</span>
+        </ExternalLink>
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.5 }}>
+        <Box component="strong" sx={{ fontWeight: 650, color: 'text.primary' }}>
+          Want Ticknest set up for your team, or need a feature it doesn&apos;t have yet?
+        </Box>{' '}
+        I&apos;ll help you get there.{' '}
+        <Link href={`mailto:${DEMO_CONTACT_EMAIL}`} sx={{ fontWeight: 650, whiteSpace: 'nowrap' }}>
+          Get in touch<span aria-hidden="true"> →</span>
+        </Link>
+        {' · '}
+        <ExternalLink href={DEMO_CONTACT_LINKEDIN_URL} sx={{ fontWeight: 650 }}>
+          Message me on LinkedIn<span aria-hidden="true"> →</span>
+        </ExternalLink>
       </Typography>
       <Box role="status" sx={visuallyHiddenSx}>
         {announcement}
