@@ -29,7 +29,7 @@ In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
 
 **Need help with setup or a custom feature?** Get in touch:
 
-[![Email](https://img.shields.io/badge/kacper.szewczyk%40wp.pl-D14836?style=for-the-badge&logo=maildotru&logoColor=white)](mailto:kacper.szewczyk@wp.pl)
+[![Email](https://img.shields.io/badge/kacper.szewczyk.sp%40gmail.com-D14836?style=for-the-badge&logo=maildotru&logoColor=white)](mailto:kacper.szewczyk.sp@gmail.com)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0yMC40NDcgMjAuNDUyaC0zLjU1NHYtNS41NjljMC0xLjMyOC0uMDI3LTMuMDM3LTEuODUyLTMuMDM3LTEuODUzIDAtMi4xMzYgMS40NDUtMi4xMzYgMi45Mzl2NS42NjdIOS4zNTFWOWgzLjQxNHYxLjU2MWguMDQ2Yy40NzctLjkzNyAxLjYzNy0xLjkzMSAzLjM3LTEuOTMxIDMuNjAxIDAgNC4yNjcgMi4zNyA0LjI2NyA0Ljl2NC45MXpNNS4zMzcgNy40MzNhMi4wNjQgMi4wNjQgMCAxIDEgMC00LjEyOCAyLjA2NCAyLjA2NCAwIDAgMSAwIDQuMTI4em0xLjc4MiAxMy4wMTlIMy41NTVWOWgzLjU2NHYxMS40NTJ6TTIyLjIyNSAwSDEuNzcxQy43OTIgMCAwIC43NzQgMCAxLjcyOXYyMC41NDJDMCAyMy4yMjcuNzkyIDI0IDEuNzcxIDI0aDIwLjQ1MUMyMy4yIDI0IDI0IDIzLjIyNyAyNCAyMi4yNzFWMS43MjlDMjQgLjc3NCAyMy4yIDAgMjIuMjIyIDB6Ii8+PC9zdmc+)](https://www.linkedin.com/in/kacperszewczyk)
 
 ## Documentation

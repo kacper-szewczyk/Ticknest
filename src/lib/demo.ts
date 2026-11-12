@@ -7,7 +7,7 @@ export const DEMO_SOURCE_URL = 'https://github.com/kacper-szewczyk/Ticknest'
 /** Where visitors who like the project can support the author. */
 export const DEMO_SUPPORT_URL = 'https://buymeacoffee.com/kszewczyk'
 /** How visitors can reach the author for help with setup or custom features. */
-export const DEMO_CONTACT_EMAIL = 'kacper.szewczyk@wp.pl'
+export const DEMO_CONTACT_EMAIL = 'kacper.szewczyk.sp@gmail.com'
 export const DEMO_CONTACT_LINKEDIN_URL = 'https://www.linkedin.com/in/kacperszewczyk'
 
 export { DEMO_ACCOUNTS, type DemoAccount, type DemoAccountRole } from '../../functions/src/demo/accounts'
