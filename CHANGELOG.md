@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.42.0...ticknest-v1.43.0) (2026-11-12)
+
+
+### Features
+
+* make the demo support and contact links more call-to-action ([#235](https://github.com/kacper-szewczyk/Ticknest/issues/235)) ([91358ac](https://github.com/kacper-szewczyk/Ticknest/commit/91358ac47f228b773b3d08c216d0ffa7d5b11ffb))
+
 ## [1.42.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.41.1...ticknest-v1.42.0) (2026-11-12)
 
 
