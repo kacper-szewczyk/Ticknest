@@ -77,6 +77,10 @@ jobs:
           url=$(npx firebase hosting:channel:deploy "$CHANNEL_ID" --expires 7d --project "$FIREBASE_PROJECT_ID" --json \
             | jq -er '.result | to_entries[0].value.url')
           echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Smoke check
+        env:
+          URL: ${{ steps.channel.outputs.url }}
+        run: node scripts/smoke-check.mjs "$URL" "$(node -p "require('./package.json').version")"
       # Keep one comment per pull request and update it on each push.
       - name: Comment preview URL
         env:
