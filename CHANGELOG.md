@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.42.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.41.1...ticknest-v1.42.0) (2026-11-12)
+
+
+### Features
+
+* add feature flags and hide budgets behind VITE_FEATURE_BUDGETS_ENABLED ([#229](https://github.com/kacper-szewczyk/Ticknest/issues/229)) ([a109b37](https://github.com/kacper-szewczyk/Ticknest/commit/a109b37499a5ce0ab9bd7f555b5f181e14f6c196)), closes [#227](https://github.com/kacper-szewczyk/Ticknest/issues/227)
+
 ## [1.41.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.41.0...ticknest-v1.41.1) (2026-11-12)
 
 
