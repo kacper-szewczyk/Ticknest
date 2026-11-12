@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { keyframes } from '@emotion/react'
 import type { ReactNode } from 'react'
+import { useTranslation } from './i18n'
 
 export function SectionCard({
   labelledBy,
@@ -108,19 +109,14 @@ export function ListRow({ children, sx }: { children: ReactNode; sx?: SxProps<Th
 }
 
 export function BillableChip() {
-  return <Chip label="Billable" color="success" variant="outlined" />
+  const { t } = useTranslation()
+  return <Chip label={t('common.billable')} color="success" variant="outlined" />
 }
 
 // Marks an entry whose timer ran past midnight and was stopped at the end of the day it started.
 export function AutoStoppedChip() {
-  return (
-    <Chip
-      label="Auto-stopped"
-      color="info"
-      variant="outlined"
-      title="This timer ran past midnight, so it was stopped at the end of the day it started."
-    />
-  )
+  const { t } = useTranslation()
+  return <Chip label={t('common.autoStopped')} color="info" variant="outlined" title={t('common.autoStoppedTitle')} />
 }
 
 export function EmptyText({ children }: { children: ReactNode }) {

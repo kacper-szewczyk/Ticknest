@@ -9,7 +9,9 @@ import Button from '@mui/material/Button'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
+import type { TFunction } from 'i18next'
 import { useId, useState, type ReactNode } from 'react'
+import { Trans, useAppLanguage, useTranslation } from './i18n'
 import {
   DEMO_ACCOUNTS,
   DEMO_CONTACT_EMAIL,
@@ -22,7 +24,23 @@ import {
   type DemoAccountRole,
 } from './lib/demo'
 
-const ROLE_LABELS: Record<DemoAccountRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
+function roleLabel(role: DemoAccountRole, t: TFunction): string {
+  const labels: Record<DemoAccountRole, string> = {
+    owner: t('demo.roleOwner'),
+    manager: t('demo.roleManager'),
+    member: t('demo.roleMember'),
+  }
+  return labels[role]
+}
+
+function signingInAnnouncement(account: DemoAccount, t: TFunction): string {
+  const messages: Record<DemoAccountRole, string> = {
+    owner: t('demo.signingInOwner', { email: account.email }),
+    manager: t('demo.signingInManager', { email: account.email }),
+    member: t('demo.signingInMember', { email: account.email }),
+  }
+  return messages[account.role]
+}
 
 /** A non-dismissible notice that the demo data resets daily, with the next reset in the viewer's local time. */
 export function DemoResetBanner() {
@@ -39,11 +57,13 @@ export function DemoAccountsPanel({ onUse, disabled }: AccountsPanelProps) {
 }
 
 function ResetBanner() {
+  const { t } = useTranslation()
+  const language = useAppLanguage()
   const [reset] = useState(() => nextDemoReset(new Date()))
   return (
     <Box
       component="section"
-      aria-label="Demo notice"
+      aria-label={t('demo.noticeLabel')}
       sx={{
         px: { xs: 2, sm: 3 },
         py: 1,
@@ -54,20 +74,20 @@ function ResetBanner() {
         textAlign: 'center',
       }}
     >
-      <Box component="strong" sx={{ fontWeight: 700 }}>
-        Public demo.
-      </Box>{' '}
-      All data is reset every 24 hours and anything you add is removed. Next reset:{' '}
-      <Box component="time" dateTime={reset.toISOString()} sx={{ fontWeight: 650, whiteSpace: 'nowrap' }}>
-        {formatDemoReset(reset)}
-      </Box>
-      .{' '}
+      <Trans
+        i18nKey="demo.banner"
+        values={{ reset: formatDemoReset(reset, language) }}
+        components={{
+          strong: <Box component="strong" sx={{ fontWeight: 700 }} />,
+          time: <Box component="time" dateTime={reset.toISOString()} sx={{ fontWeight: 650, whiteSpace: 'nowrap' }} />,
+        }}
+      />{' '}
       <ExternalLink href={DEMO_SOURCE_URL} color="inherit" sx={{ fontWeight: 650 }}>
-        View the source on GitHub
+        {t('demo.viewSource')}
       </ExternalLink>
       {' · '}
       <ExternalLink href={DEMO_SUPPORT_URL} color="inherit" sx={{ fontWeight: 650 }}>
-        Buy me a coffee
+        {t('demo.buyCoffee')}
       </ExternalLink>
     </Box>
   )
@@ -85,6 +105,7 @@ function ExternalLink({ href, children, color, sx }: ExternalLinkProps) {
 }
 
 function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
+  const { t } = useTranslation()
   const headingId = useId()
   const rowIdPrefix = useId()
   const [announcement, setAnnouncement] = useState('')
@@ -96,14 +117,15 @@ function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
       sx={{ mb: 3, p: 2, borderRadius: '11px', borderColor: 'app.tintBorder', bgcolor: 'app.tint' }}
     >
       <Typography variant="h3" component="h3" id={headingId}>
-        Try the demo
+        {t('demo.tryTitle')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5, lineHeight: 1.5 }}>
-        Sign in with a sample account. Every account uses the password{' '}
-        <Box component="code" sx={{ fontWeight: 650, color: 'text.primary' }}>
-          {DEMO_ACCOUNTS[0]?.password}
-        </Box>
-        . Data resets every 24 hours. <ExternalLink href={DEMO_SOURCE_URL}>View the source on GitHub</ExternalLink>
+        <Trans
+          i18nKey="demo.tryIntro"
+          values={{ password: DEMO_ACCOUNTS[0]?.password ?? '' }}
+          components={{ code: <Box component="code" sx={{ fontWeight: 650, color: 'text.primary' }} /> }}
+        />{' '}
+        <ExternalLink href={DEMO_SOURCE_URL}>{t('demo.viewSource')}</ExternalLink>
       </Typography>
       <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 1 }}>
         {DEMO_ACCOUNTS.map((account, index) => {
@@ -116,7 +138,7 @@ function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
             >
               <Box id={rowId} sx={{ minWidth: 0 }}>
                 <Typography variant="body2" sx={{ fontWeight: 650 }}>
-                  {ROLE_LABELS[account.role]}
+                  {roleLabel(account.role, t)}
                   <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary' }}>
                     {' · '}
                     {account.displayName}
@@ -133,13 +155,11 @@ function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
                 disabled={disabled}
                 onClick={() => {
                   onUse(account)
-                  setAnnouncement(
-                    `Signing in with the ${ROLE_LABELS[account.role].toLowerCase()} account ${account.email}.`,
-                  )
+                  setAnnouncement(signingInAnnouncement(account, t))
                 }}
                 sx={{ flexShrink: 0 }}
               >
-                Use this account
+                {t('demo.useAccount')}
               </Button>
             </Box>
           )
@@ -147,27 +167,33 @@ function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.5 }}>
         <Box component="strong" sx={{ fontWeight: 650, color: 'text.primary' }}>
-          Love Ticknest? Help keep it free.
+          {t('demo.supportLead')}
         </Box>{' '}
         <ExternalLink href={DEMO_SUPPORT_URL} sx={{ fontWeight: 650 }}>
-          <span aria-hidden="true">☕ </span>Buy me a coffee<span aria-hidden="true"> →</span>
+          <span aria-hidden="true">☕ </span>
+          {t('demo.buyCoffee')}
+          <span aria-hidden="true"> →</span>
         </ExternalLink>
         {' · '}
         <ExternalLink href={DEMO_SOURCE_URL} sx={{ fontWeight: 650 }}>
-          <span aria-hidden="true">⭐ </span>Star it on GitHub<span aria-hidden="true"> →</span>
+          <span aria-hidden="true">⭐ </span>
+          {t('demo.star')}
+          <span aria-hidden="true"> →</span>
         </ExternalLink>
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.5 }}>
         <Box component="strong" sx={{ fontWeight: 650, color: 'text.primary' }}>
-          Want Ticknest set up for your team, or need a feature it doesn&apos;t have yet?
+          {t('demo.contactLead')}
         </Box>{' '}
-        I&apos;ll help you get there.{' '}
+        {t('demo.contactHelp')}{' '}
         <Link href={`mailto:${DEMO_CONTACT_EMAIL}`} sx={{ fontWeight: 650, whiteSpace: 'nowrap' }}>
-          Get in touch<span aria-hidden="true"> →</span>
+          {t('demo.getInTouch')}
+          <span aria-hidden="true"> →</span>
         </Link>
         {' · '}
         <ExternalLink href={DEMO_CONTACT_LINKEDIN_URL} sx={{ fontWeight: 650 }}>
-          Message me on LinkedIn<span aria-hidden="true"> →</span>
+          {t('demo.linkedIn')}
+          <span aria-hidden="true"> →</span>
         </ExternalLink>
       </Typography>
       <Box role="status" sx={visuallyHiddenSx}>

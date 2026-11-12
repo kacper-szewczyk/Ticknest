@@ -34,10 +34,12 @@
     "@expo-google-fonts/inter": "0.4.2",
     "@mui/material": "9.5.0",
     "firebase": "^13.2.0",
+    "i18next": "27.1.1",
     "jspdf": "4.2.1",
     "jspdf-autotable": "5.0.9",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-i18next": "18.0.1"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^6.0.0",

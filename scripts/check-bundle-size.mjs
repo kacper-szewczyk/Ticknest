@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
 // Gzipped JavaScript loaded before the first screen renders: the entry, App, and their static imports.
-const INITIAL_GZIP_BUDGET_KB = 400
+// Raised from 400 kB for i18n (#242): i18next and react-i18next add about 25 kB, and the bundled English catalog
+// grows as every screen's text moves into src/locales/en.json. Other languages load lazily and do not count.
+const INITIAL_GZIP_BUDGET_KB = 440
 // Minified size of any single chunk, matching Vite's large-chunk warning.
 const CHUNK_BUDGET_KB = 500
 // App is imported dynamically by main.tsx but always loads, so it counts as initial.

@@ -76,6 +76,17 @@ These standards apply to all application code and contributions to Ticknest. The
 - Confirm destructive actions and make irreversible consequences clear.
 - Use consistent date/time formatting and respect the user's configured timezone.
 
+### Internationalization
+
+- User-facing text lives in the translation catalogs in `src/locales`, not in components. `en.json` is the source of truth; `es.json` and `pl.json` must have the same keys, placeholders, and markup, which `tests/unit/locales.test.ts` enforces.
+- Use i18next with react-i18next. Import `useTranslation`, `Trans`, and `i18n` from `src/i18n`, not from the libraries, so the instance is initialised first. Keys are typed from `en.json`, so a missing key fails `npm run typecheck`.
+- Use `t('key', { name })` interpolation instead of concatenating translated fragments, and `<Trans>` with named components (`<strong>…</strong>`) for text with markup or links, so each language can order the sentence its own way.
+- Use plural keys (`key_one`, `key_other`, plus `key_few` and `key_many` for Polish) with `t('key', { count })`; never `count === 1 ? … : …`. The catalog test checks every plural form each language's CLDR rules need.
+- Pass the active language (`useAppLanguage()` in components, `currentLanguage()` elsewhere) to `Intl.*` and `toLocale*String` calls instead of `undefined`.
+- Polish copy uses product wording for time tracking ("rejestrowanie czasu"), not "ewidencja czasu pracy", which has a specific meaning under the Polish Labour Code.
+- User-entered content (client, project, task, and workspace names) and the demo seed data are not translated.
+- To add a language, add `src/locales/<code>.json`, add the code to `SUPPORTED_LANGUAGES` and `LANGUAGE_NAMES` in `src/i18n/languages.ts`, its loader in `src/i18n/index.ts`, its MUI locale in `AppThemeProvider`, and the code to the `language` list in `firestore.rules`.
+
 ## 8. Errors and asynchronous work
 
 - Handle expected errors at the boundary where the user can take action; do not swallow errors silently.
