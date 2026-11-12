@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.44.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.43.2...ticknest-v1.44.0) (2026-11-12)
+
+
+### Features
+
+* add English, Spanish and Polish interface languages ([#254](https://github.com/kacper-szewczyk/Ticknest/issues/254)) ([9134c96](https://github.com/kacper-szewczyk/Ticknest/commit/9134c96fedbc548fd2bff31e6490889d969af3b8))
+
 ## [1.43.2](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.43.1...ticknest-v1.43.2) (2026-11-12)
 
 
