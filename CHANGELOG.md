@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.43.0...ticknest-v1.43.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* keep the sign-in hero centred on screen in demo mode ([#238](https://github.com/kacper-szewczyk/Ticknest/issues/238)) ([83e7597](https://github.com/kacper-szewczyk/Ticknest/commit/83e75978c23a8473919ffcf0ab5760b37068b936))
+
 ## [1.43.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.42.0...ticknest-v1.43.0) (2026-11-12)
 
 
