@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEMO_ACCOUNTS } from '../../functions/src/demo/accounts'
 import { DEMO_RESET_HOUR, DEMO_RESET_TIME_ZONE } from '../../functions/src/demo/schedule'
 import { AppShell } from '../../src/AppShell'
-import { DemoAccountsPanel, DemoResetBanner } from '../../src/DemoMode'
+import { DemoAccountsPanel, DemoPausedPage, DemoResetBanner } from '../../src/DemoMode'
 import {
   DEMO_CONTACT_EMAIL,
   DEMO_CONTACT_LINKEDIN_URL,
@@ -168,5 +168,20 @@ describe('demo UI contrast', () => {
     expect(contrast(palette.text.primary, palette.app.tint)).toBeGreaterThanOrEqual(4.5)
     expect(contrast(palette.text.secondary, palette.app.tint)).toBeGreaterThanOrEqual(4.5)
     expect(contrast(palette.primary.main, palette.app.tint)).toBeGreaterThanOrEqual(4.5)
+  })
+})
+
+describe('DemoPausedPage', () => {
+  it('renders nothing when demo mode is off', () => {
+    vi.stubEnv('VITE_DEMO_MODE', '')
+    expect(render(<DemoPausedPage />)).toBe('')
+  })
+
+  it('explains the pause and links to the source and support pages', () => {
+    vi.stubEnv('VITE_DEMO_MODE', 'true')
+    const html = render(<DemoPausedPage />)
+    expect(html).toContain('The Ticknest demo is paused')
+    expect(html).toContain(`href="${DEMO_SOURCE_URL}"`)
+    expect(html).toContain(`href="${DEMO_SUPPORT_URL}"`)
   })
 })

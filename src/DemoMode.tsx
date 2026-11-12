@@ -38,6 +38,37 @@ export function DemoAccountsPanel({ onUse, disabled }: AccountsPanelProps) {
   return <AccountsPanel onUse={onUse} disabled={disabled} />
 }
 
+/** Replaces the whole app while the demo is paused (VITE_DEMO_PAUSED=true), for example during a traffic spike. */
+export function DemoPausedPage() {
+  if (import.meta.env.VITE_DEMO_MODE !== 'true') return null
+  return <PausedPage />
+}
+
+function PausedPage() {
+  return (
+    <Box component="main" sx={{ maxWidth: '40rem', mx: 'auto', my: 8, px: 2 }}>
+      <Typography variant="h1" sx={{ fontSize: '2rem', mb: 2 }}>
+        The Ticknest demo is paused
+      </Typography>
+      <Typography sx={{ mb: 2, lineHeight: 1.6 }}>
+        The public demo is getting more visitors than it can handle right now, so it is paused for a while. Please check
+        back later.
+      </Typography>
+      <Typography sx={{ mb: 3, lineHeight: 1.6 }}>
+        Ticknest is open source. You can read the code and run your own copy on your own Firebase project.
+      </Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+        <Button variant="contained" href={DEMO_SOURCE_URL} target="_blank" rel="noopener noreferrer">
+          View the source on GitHub
+        </Button>
+        <Button variant="outlined" href={DEMO_SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+          Buy me a coffee
+        </Button>
+      </Box>
+    </Box>
+  )
+}
+
 function ResetBanner() {
   const [reset] = useState(() => nextDemoReset(new Date()))
   return (

@@ -1,3 +1,13 @@
+import { DEMO_SOURCE_URL } from './demo'
+
+// Quota, rate-limit, and overload errors: Firestore codes have no prefix, callable Functions codes do.
+const BUSY_CODES = new Set([
+  'resource-exhausted',
+  'unavailable',
+  'functions/resource-exhausted',
+  'functions/unavailable',
+])
+
 export function readableError(error: unknown): string {
   if (!(error instanceof Error)) return 'Something went wrong. Please try again.'
   const code = 'code' in error ? String(error.code) : ''
@@ -25,8 +35,12 @@ export function readableError(error: unknown): string {
       'The workspace service is not available in this Firebase project yet. Deploy the Firebase Functions, then try again.',
     'functions/not-found':
       'The workspace service is not deployed in this Firebase project. Deploy the Firebase Functions, then try again.',
-    'functions/unavailable': 'The workspace service is temporarily unavailable. Try again in a moment.',
     'permission-denied': 'You do not have access to this workspace.',
+  }
+  if (BUSY_CODES.has(code)) {
+    return import.meta.env.VITE_DEMO_MODE === 'true'
+      ? `The public demo is busy or unreachable right now. Try again in a few minutes, or run your own copy from ${DEMO_SOURCE_URL}.`
+      : 'Ticknest is busy or unreachable right now. Check your connection and try again in a few minutes.'
   }
   if (messages[code]) return messages[code]
   if (code.startsWith('auth/'))
