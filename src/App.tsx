@@ -46,7 +46,9 @@ function App() {
           sx={{
             display: 'block',
             px: 2,
-            py: 1.75,
+            py: 0.75,
+            fontSize: 11,
+            lineHeight: 1.4,
             borderTop: 1,
             borderColor: 'divider',
             bgcolor: 'background.default',
