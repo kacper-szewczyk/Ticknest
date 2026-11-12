@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.41.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.41.0...ticknest-v1.41.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* make the sign-in page footer more compact ([#226](https://github.com/kacper-szewczyk/Ticknest/issues/226)) ([5d4a914](https://github.com/kacper-szewczyk/Ticknest/commit/5d4a9142ee7c2beb954844762d11d9178be801ca))
+
 ## [1.41.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.40.0...ticknest-v1.41.0) (2026-11-11)
 
 
