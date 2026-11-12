@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.2](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.43.1...ticknest-v1.43.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* update example env ([#240](https://github.com/kacper-szewczyk/Ticknest/issues/240)) ([c7b28f6](https://github.com/kacper-szewczyk/Ticknest/commit/c7b28f6aebb4458dbd43482a50c59751899d762a))
+
 ## [1.43.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.43.0...ticknest-v1.43.1) (2026-11-12)
 
 
