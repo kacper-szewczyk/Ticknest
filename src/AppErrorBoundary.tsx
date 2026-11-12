@@ -4,12 +4,14 @@ import Button from '@mui/material/Button'
 import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { i18n, Trans, useTranslation } from './i18n'
 import { DEMO_SOURCE_URL } from './lib/demo'
 
 type ErrorPageProps = { title: string; message: string }
 
 /** A full-page error with a reload button. In demo builds it also points visitors to the repository. */
 export function ErrorPage({ title, message }: ErrorPageProps) {
+  const { t } = useTranslation()
   return (
     <Box component="main" role="alert" sx={{ maxWidth: '40rem', mx: 'auto', my: 8, px: 2 }}>
       <Typography variant="h1" sx={{ fontSize: '2rem', mb: 2 }}>
@@ -18,15 +20,14 @@ export function ErrorPage({ title, message }: ErrorPageProps) {
       <Typography sx={{ mb: 2 }}>{message}</Typography>
       {import.meta.env.VITE_DEMO_MODE === 'true' ? (
         <Typography sx={{ mb: 2 }}>
-          This is the public demo, so it may be busy. Try again in a few minutes, or{' '}
-          <Link href={DEMO_SOURCE_URL} target="_blank" rel="noopener noreferrer">
-            run your own copy from the GitHub repository
-          </Link>
-          .
+          <Trans
+            i18nKey="app.demoBusy"
+            components={{ link: <Link href={DEMO_SOURCE_URL} target="_blank" rel="noopener noreferrer" /> }}
+          />
         </Typography>
       ) : null}
       <Button variant="contained" onClick={() => window.location.reload()}>
-        Reload
+        {t('app.reload')}
       </Button>
     </Box>
   )
@@ -49,12 +50,7 @@ export class AppErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 
   render() {
     if (this.state.failed) {
-      return (
-        <ErrorPage
-          title="Something went wrong"
-          message="Ticknest hit an unexpected error. Reload the page to continue."
-        />
-      )
+      return <ErrorPage title={i18n.t('app.crashTitle')} message={i18n.t('app.crashBody')} />
     }
     return this.props.children
   }

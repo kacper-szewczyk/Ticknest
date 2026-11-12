@@ -9,7 +9,9 @@ import StepLabel from '@mui/material/StepLabel'
 import Stepper from '@mui/material/Stepper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import type { TFunction } from 'i18next'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from './i18n'
 import { InviteTeamStep } from './InviteTeamStep'
 import { type Catalog, saveCatalogRecord } from './lib/catalog'
 import { readableError } from './lib/errors'
@@ -19,27 +21,41 @@ import { FormMessage, SelectField } from './ui'
 
 type CatalogStep = Exclude<SetupStep, 'invite'>
 
-const STEP_LABELS: Record<SetupStep, string> = { client: 'Client', project: 'Project', task: 'Task', invite: 'Team' }
+function stepLabel(step: SetupStep, t: TFunction): string {
+  const labels: Record<SetupStep, string> = {
+    client: t('setup.stepClient'),
+    project: t('setup.stepProject'),
+    task: t('setup.stepTask'),
+    invite: t('setup.stepTeam'),
+  }
+  return labels[step]
+}
 
-const STEP_COPY: Record<CatalogStep, { label: string; title: string; hint: string; placeholder: string }> = {
-  client: {
-    label: 'Client',
-    title: 'Who do you work for?',
-    hint: 'Add your first client. Skip this step if you only track internal work.',
-    placeholder: 'e.g. Acme Corp',
-  },
-  project: {
-    label: 'Project',
-    title: 'What’s your first project?',
-    hint: 'Projects group your time. You can add more later under Clients & projects.',
-    placeholder: 'e.g. Website redesign',
-  },
-  task: {
-    label: 'Task',
-    title: 'Add a first task',
-    hint: 'Tasks split a project into pieces you track time against.',
-    placeholder: 'e.g. Design review',
-  },
+function stepCopy(
+  step: CatalogStep,
+  t: TFunction,
+): { field: string; title: string; hint: string; placeholder: string } {
+  const copy: Record<CatalogStep, { field: string; title: string; hint: string; placeholder: string }> = {
+    client: {
+      field: t('setup.clientName'),
+      title: t('setup.clientTitle'),
+      hint: t('setup.clientHint'),
+      placeholder: t('setup.clientPlaceholder'),
+    },
+    project: {
+      field: t('setup.projectName'),
+      title: t('setup.projectTitle'),
+      hint: t('setup.projectHint'),
+      placeholder: t('setup.projectPlaceholder'),
+    },
+    task: {
+      field: t('setup.taskName'),
+      title: t('setup.taskTitle'),
+      hint: t('setup.taskHint'),
+      placeholder: t('setup.taskPlaceholder'),
+    },
+  }
+  return copy[step]
 }
 
 export type SetupSummary = { clientName?: string; projectName?: string; taskName?: string; invitedCount?: number }
@@ -66,6 +82,7 @@ export function SetupWizard({
   initialStep?: SetupStep
   onFinish: (summary: SetupSummary) => void
 }) {
+  const { t, i18n } = useTranslation()
   const [step, setStep] = useState<SetupStep>(initialStep)
   const [name, setName] = useState('')
   const [color, setColor] = useState(DEFAULT_PROJECT_COLOR)
@@ -80,7 +97,7 @@ export function SetupWizard({
   const activeClients = catalog.clients.filter((client) => !client.archived)
   const visibleSteps = SETUP_STEPS.slice(SETUP_STEPS.indexOf(initialStep))
   // The catalog form below is only shown on catalog steps; the invite step has its own form.
-  const copy = STEP_COPY[step === 'invite' ? 'task' : step]
+  const copy = stepCopy(step === 'invite' ? 'task' : step, t)
 
   function advance(hasProject: boolean, nextSummary: SetupSummary) {
     setName('')
@@ -129,14 +146,14 @@ export function SetupWizard({
       >
         <div>
           <Typography variant="overline" component="p" sx={{ overflowWrap: 'anywhere' }}>
-            SET UP {workspaceName.toUpperCase()}
+            {t('setup.kicker', { workspace: workspaceName }).toLocaleUpperCase(i18n.language)}
           </Typography>
           <Typography variant="h1" id="setup-heading" sx={{ mt: 1 }}>
-            Get ready to track
+            {t('setup.title')}
           </Typography>
         </div>
         <Button size="small" onClick={() => onFinish(summary)} disabled={pending}>
-          Skip setup
+          {t('setup.skipSetup')}
         </Button>
       </Stack>
       {/* Opened part-way (from the "Finish setup" card), only the steps from there on are shown, if more than one. */}
@@ -145,7 +162,9 @@ export function SetupWizard({
           {visibleSteps.map((item) => (
             // Only steps that added something get a checkmark; skipped ones stay plain.
             <Step key={item} completed={isStepCompleted(item, summary)}>
-              <StepLabel optional={skipped.includes(item) ? 'Skipped' : undefined}>{STEP_LABELS[item]}</StepLabel>
+              <StepLabel optional={skipped.includes(item) ? t('setup.skipped') : undefined}>
+                {stepLabel(item, t)}
+              </StepLabel>
             </Step>
           ))}
         </Stepper>
@@ -181,26 +200,31 @@ export function SetupWizard({
             <TextField
               // Re-mount per step so the field takes focus again after advancing.
               key={step}
-              label={`${copy.label} name`}
+              label={copy.field}
               value={name}
               onChange={(event) => setName(event.target.value)}
               required
               autoFocus
               placeholder={copy.placeholder}
-              helperText={step === 'task' && project ? `Part of ${project.name}` : undefined}
+              helperText={step === 'task' && project ? t('setup.partOf', { project: project.name }) : undefined}
               slotProps={{ htmlInput: { maxLength: 120 } }}
             />
             {step === 'project' && (
-              <TextField label="Color" type="color" value={color} onChange={(event) => setColor(event.target.value)} />
+              <TextField
+                label={t('setup.color')}
+                type="color"
+                value={color}
+                onChange={(event) => setColor(event.target.value)}
+              />
             )}
             {step === 'project' && activeClients.length > 0 && (
               <SelectField
-                label="Client"
+                label={t('setup.client')}
                 value={clientId}
                 onChange={(event) => setClientId(event.target.value)}
                 sx={{ gridColumn: '1 / -1' }}
               >
-                <option value="">No client</option>
+                <option value="">{t('setup.noClient')}</option>
                 {activeClients.map((client) => (
                   <option key={client.id} value={client.id}>
                     {client.name}
@@ -211,7 +235,7 @@ export function SetupWizard({
             {step === 'task' && (
               <FormControlLabel
                 control={<Checkbox checked={billable} onChange={(event) => setBillable(event.target.checked)} />}
-                label="Billable"
+                label={t('common.billable')}
               />
             )}
           </Box>
@@ -223,10 +247,10 @@ export function SetupWizard({
               }}
               disabled={pending}
             >
-              Skip
+              {t('setup.skip')}
             </Button>
             <Button variant="contained" type="submit" disabled={pending || !name.trim()}>
-              {pending ? 'Saving…' : step === 'task' ? 'Finish' : 'Continue'}
+              {pending ? t('setup.saving') : step === 'task' ? t('setup.finish') : t('setup.continue')}
             </Button>
           </Stack>
         </Paper>

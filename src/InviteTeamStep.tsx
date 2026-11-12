@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { type FormEvent, useState } from 'react'
+import { i18n, useTranslation } from './i18n'
 import { readableError } from './lib/errors'
 import { invitationUrl } from './lib/inviteLink'
 import {
@@ -20,29 +21,35 @@ import {
 import { createWorkspaceInvitation } from './lib/workspaces'
 import { FormMessage } from './ui'
 
-const STATUS_LABELS: Record<InviteResult['status'], string> = {
-  created: 'Invitation created',
-  'already-member': 'Already a member',
-  'already-invited': 'Already invited',
-  invalid: 'Invalid email',
-  failed: 'Not sent',
+function statusLabel(status: InviteResult['status']): string {
+  const labels: Record<InviteResult['status'], string> = {
+    created: i18n.t('invite.statusCreated'),
+    'already-member': i18n.t('invite.statusAlreadyMember'),
+    'already-invited': i18n.t('invite.statusAlreadyInvited'),
+    invalid: i18n.t('invite.statusInvalid'),
+    failed: i18n.t('invite.statusFailed'),
+  }
+  return labels[status]
 }
 
-const FAILURE_MESSAGES: Record<Exclude<InviteFailure, 'failed'>, string> = {
-  invalid: 'Check the address and try again.',
-  'already-member': 'This person is already in the workspace.',
-  'already-invited': 'They already have a pending invitation. You can find it under Members.',
+function failureMessage(failure: Exclude<InviteFailure, 'failed'>): string {
+  const messages: Record<Exclude<InviteFailure, 'failed'>, string> = {
+    invalid: i18n.t('invite.failureInvalid'),
+    'already-member': i18n.t('invite.failureAlreadyMember'),
+    'already-invited': i18n.t('invite.failureAlreadyInvited'),
+  }
+  return messages[failure]
 }
 
 async function inviteOne(workspaceId: string, email: string): Promise<InviteResult> {
-  if (!isValidInviteEmail(email)) return { email, status: 'invalid', message: FAILURE_MESSAGES.invalid }
+  if (!isValidInviteEmail(email)) return { email, status: 'invalid', message: failureMessage('invalid') }
   try {
     const invitation = await createWorkspaceInvitation(workspaceId, email)
     const link = invitationUrl(window.location.origin, workspaceId, invitation.invitationId, invitation.token)
     return { email, status: 'created', link }
   } catch (error) {
     const kind = inviteFailureKind(error)
-    return { email, status: kind, message: kind === 'failed' ? readableError(error) : FAILURE_MESSAGES[kind] }
+    return { email, status: kind, message: kind === 'failed' ? readableError(error) : failureMessage(kind) }
   }
 }
 
@@ -58,6 +65,7 @@ export function InviteTeamStep({
   /** Leaves the step, with how many invitations were created (0 when skipped). */
   onDone: (invitedCount: number) => void
 }) {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const [results, setResults] = useState<InviteResult[]>([])
   const [pending, setPending] = useState(false)
@@ -72,7 +80,7 @@ export function InviteTeamStep({
     event.preventDefault()
     const emails = parseInviteEmails(text)
     if (emails.length === 0) {
-      setError('Enter at least one email address.')
+      setError(t('invite.enterAtLeastOne'))
       return
     }
     setPending(true)
@@ -99,7 +107,7 @@ export function InviteTeamStep({
       setCopyNotice(notice)
     } catch {
       setManualCopy((current) => [...new Set([...current, ...fallbackEmails])])
-      setCopyNotice('Your browser blocked copying. Select and copy the link below instead.')
+      setCopyNotice(t('invite.copyBlocked'))
     }
   }
 
@@ -114,23 +122,22 @@ export function InviteTeamStep({
     >
       <div>
         <Typography variant="h2" id="setup-step-heading" sx={{ fontSize: 23 }}>
-          Invite your team
+          {t('invite.title')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-          Add teammates so they can track time here too. Each gets a secure, single-use link that expires in 7 days.
-          Copy the links and send them yourself. You can skip this and invite people later under Members.
+          {t('invite.intro')}
         </Typography>
       </div>
       {error && <FormMessage severity="error">{error}</FormMessage>}
       <TextField
-        label="Email addresses"
+        label={t('invite.emailAddresses')}
         value={text}
         onChange={(event) => setText(event.target.value)}
         multiline
         minRows={3}
         autoFocus
         placeholder={'alex@example.com\nsam@example.com'}
-        helperText="Separate addresses with commas, spaces, or new lines."
+        helperText={t('invite.emailHelper')}
         slotProps={{ htmlInput: { 'aria-describedby': 'invite-results' } }}
       />
       <Box id="invite-results" aria-live="polite">
@@ -156,7 +163,7 @@ export function InviteTeamStep({
                     <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{result.email}</Typography>
                     <Chip
                       size="small"
-                      label={STATUS_LABELS[result.status]}
+                      label={statusLabel(result.status)}
                       color={
                         result.status === 'created'
                           ? 'success'
@@ -170,11 +177,13 @@ export function InviteTeamStep({
                     <Button
                       size="small"
                       variant="outlined"
-                      onClick={() => void copy(result.link, `Link for ${result.email} copied.`, [result.email])}
-                      aria-label={`Copy invitation link for ${result.email}`}
+                      onClick={() =>
+                        void copy(result.link, t('invite.linkCopied', { email: result.email }), [result.email])
+                      }
+                      aria-label={t('invite.copyLinkFor', { email: result.email })}
                       sx={{ flex: '0 0 auto', alignSelf: { xs: 'flex-start', sm: 'center' } }}
                     >
-                      Copy link
+                      {t('invite.copyLink')}
                     </Button>
                   )}
                 </Stack>
@@ -185,7 +194,7 @@ export function InviteTeamStep({
                 )}
                 {result.status === 'created' && manualCopy.includes(result.email) && (
                   <TextField
-                    label={`Invitation link for ${result.email}`}
+                    label={t('invite.linkFor', { email: result.email })}
                     value={result.link}
                     size="small"
                     onFocus={(event) => event.target.select()}
@@ -203,13 +212,13 @@ export function InviteTeamStep({
             onClick={() =>
               void copy(
                 created.map((result) => `${result.email}: ${result.link}`).join('\n'),
-                'All invitation links copied.',
+                t('invite.allLinksCopied'),
                 created.map((result) => result.email),
               )
             }
             disabled={pending}
           >
-            Copy all links
+            {t('invite.copyAllLinks')}
           </Button>
         )}
         <Button
@@ -217,14 +226,14 @@ export function InviteTeamStep({
           onClick={() => onDone(created.length)}
           disabled={pending}
         >
-          {created.length > 0 ? 'Done' : 'Skip'}
+          {created.length > 0 ? t('invite.done') : t('invite.skip')}
         </Button>
         <Button
           variant={created.length > 0 ? 'outlined' : 'contained'}
           type="submit"
           disabled={pending || !text.trim()}
         >
-          {pending ? 'Creating…' : created.length > 0 ? 'Invite more' : 'Create invitations'}
+          {pending ? t('invite.creating') : created.length > 0 ? t('invite.inviteMore') : t('invite.createInvitations')}
         </Button>
       </Stack>
     </Paper>

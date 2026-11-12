@@ -43,6 +43,8 @@ import { type WorkspaceView, DEFAULT_VIEW, canOpenView, isWorkspaceView, resolve
 import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { useSidebarControls } from './sidebarControls'
 import { AppearancePanel } from './AppearancePanel'
+import { LanguagePanel } from './LanguagePanel'
+import { useTranslation } from './i18n'
 import { Brand } from './Brand'
 import { CatalogPanel } from './CatalogPanel'
 import type { SetupSummary } from './SetupWizard'
@@ -82,6 +84,7 @@ function viewFromHash(): WorkspaceView | null {
 }
 
 export function WorkspaceScreen({ user }: { user: User }) {
+  const { t } = useTranslation()
   // undefined until the first membership read finishes, so an empty list really means "no workspace yet".
   const [workspaces, setWorkspaces] = useState<Workspace[] | undefined>()
   const [activeId, setActiveId] = useState<string | null>(getSavedWorkspaceId(user.uid))
@@ -243,20 +246,25 @@ export function WorkspaceScreen({ user }: { user: User }) {
   const viewAccess = { isOwner, seesAllEntries, budgetsEnabled }
   const currentView = resolveView(view, viewAccess)
   const allNavItems: NavItem<WorkspaceView>[] = [
-    { value: 'timesheet', label: 'Timesheet', icon: navIcons.timesheet, section: 'Track' },
+    { value: 'timesheet', label: t('nav.timesheet'), icon: navIcons.timesheet, section: t('nav.sectionTrack') },
     {
       value: 'dashboard',
-      label: seesAllEntries ? 'Team dashboard' : 'Dashboard',
+      label: seesAllEntries ? t('nav.teamDashboard') : t('nav.dashboard'),
       icon: navIcons.dashboard,
-      section: 'Analyze',
+      section: t('nav.sectionAnalyze'),
     },
-    { value: 'reports', label: 'Reports', icon: navIcons.reports, section: 'Analyze' },
-    { value: 'my-budgets', label: 'My budgets', icon: navIcons.myBudgets, section: 'Analyze' },
-    { value: 'team-budgets', label: 'Budget progress', icon: navIcons.teamBudgets, section: 'Analyze' },
-    { value: 'budgets', label: 'Budgets', icon: navIcons.budgets, section: 'Manage' },
-    { value: 'catalog', label: 'Clients & projects', icon: navIcons.catalog, section: 'Manage' },
-    { value: 'members', label: 'Members', icon: navIcons.members, section: 'Manage' },
-    { value: 'settings', label: 'Settings', icon: navIcons.settings, section: 'Account' },
+    { value: 'reports', label: t('nav.reports'), icon: navIcons.reports, section: t('nav.sectionAnalyze') },
+    { value: 'my-budgets', label: t('nav.myBudgets'), icon: navIcons.myBudgets, section: t('nav.sectionAnalyze') },
+    {
+      value: 'team-budgets',
+      label: t('nav.budgetProgress'),
+      icon: navIcons.teamBudgets,
+      section: t('nav.sectionAnalyze'),
+    },
+    { value: 'budgets', label: t('nav.budgets'), icon: navIcons.budgets, section: t('nav.sectionManage') },
+    { value: 'catalog', label: t('nav.catalog'), icon: navIcons.catalog, section: t('nav.sectionManage') },
+    { value: 'members', label: t('nav.members'), icon: navIcons.members, section: t('nav.sectionManage') },
+    { value: 'settings', label: t('nav.settings'), icon: navIcons.settings, section: t('nav.sectionAccount') },
   ]
   const navItems = activeWorkspace ? allNavItems.filter((item) => canOpenView(item.value, viewAccess)) : []
 
@@ -703,6 +711,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   onSaved={refreshWorkspaces}
                 />
                 <AppearancePanel user={user} />
+                <LanguagePanel user={user} />
                 {joinWorkspaceForm}
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}

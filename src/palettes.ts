@@ -1,4 +1,5 @@
 // Predefined color palettes a user can choose in Settings. The selected ID is stored on the user's profile.
+// Names and descriptions are translated under `palettes.<id>` in src/locales.
 
 export type AppColors = {
   /** Subtle background for inset forms and stat tiles. */
@@ -40,8 +41,6 @@ export type AppColors = {
 
 export type PaletteDefinition = {
   id: PaletteId
-  name: string
-  description: string
   mode: 'light' | 'dark'
   primary: { main: string; light: string; dark: string; contrastText: string }
   error: string
@@ -64,8 +63,6 @@ const SYSTEM_PALETTES = { light: 'forest', dark: 'forest-night' } as const satis
 export const PALETTES: Record<PaletteId, PaletteDefinition> = {
   forest: {
     id: 'forest',
-    name: 'Forest',
-    description: 'The classic Ticknest greens.',
     mode: 'light',
     primary: { main: '#254332', light: '#416b4c', dark: '#1d3728', contrastText: '#fff' },
     error: '#984b3e',
@@ -108,8 +105,6 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
   },
   ocean: {
     id: 'ocean',
-    name: 'Ocean',
-    description: 'Calm blues with a deep navy sidebar.',
     mode: 'light',
     primary: { main: '#1f4e79', light: '#3a6f9e', dark: '#163a5c', contrastText: '#fff' },
     error: '#a4443b',
@@ -152,8 +147,6 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
   },
   plum: {
     id: 'plum',
-    name: 'Plum',
-    description: 'Muted purples with soft lilac accents.',
     mode: 'light',
     primary: { main: '#5b3a6e', light: '#7a5890', dark: '#462c56', contrastText: '#fff' },
     error: '#9d4141',
@@ -196,8 +189,6 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
   },
   terracotta: {
     id: 'terracotta',
-    name: 'Terracotta',
-    description: 'Warm clay tones on a cream background.',
     mode: 'light',
     primary: { main: '#8a3f24', light: '#a85c3f', dark: '#6e311c', contrastText: '#fff' },
     error: '#a23b2b',
@@ -240,8 +231,6 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
   },
   'forest-night': {
     id: 'forest-night',
-    name: 'Forest Night',
-    description: 'Dark mode with the familiar green accents.',
     mode: 'dark',
     primary: { main: '#8cc796', light: '#b0dcb6', dark: '#5e9c69', contrastText: '#10201a' },
     error: '#e58f80',
@@ -284,8 +273,6 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
   },
   midnight: {
     id: 'midnight',
-    name: 'Midnight',
-    description: 'Dark mode in cool blues.',
     mode: 'dark',
     primary: { main: '#8ab4f8', light: '#b3cefb', dark: '#5c8fd6', contrastText: '#0b1726' },
     error: '#f28b82',
@@ -328,8 +315,6 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
   },
   graphite: {
     id: 'graphite',
-    name: 'Graphite',
-    description: 'Neutral dark mode with amber highlights.',
     mode: 'dark',
     primary: { main: '#f2b05e', light: '#f6c98d', dark: '#c98a3a', contrastText: '#1b1408' },
     error: '#ef8a7c',

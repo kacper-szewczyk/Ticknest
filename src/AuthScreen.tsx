@@ -7,17 +7,20 @@ import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
 import { type FormEvent, useState } from 'react'
+import { Trans, useTranslation } from './i18n'
 import { registerWithEmail, sendPasswordReset, signInWithEmail, signInWithGoogle } from './lib/auth'
 import { isGoogleSignInEnabled } from './lib/authOptions'
 import type { DemoAccount } from './lib/demo'
 import { readableError } from './lib/errors'
 import { Brand } from './Brand'
 import { DemoAccountsPanel } from './DemoMode'
+import { LanguageSelect } from './LanguageSelect'
 import { FormMessage } from './ui'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
 
 export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<AuthMode>('sign-in')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -34,7 +37,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
     try {
       if (mode === 'reset') {
         await sendPasswordReset(email)
-        setNotice('If an account exists for that address, a reset link is on its way.')
+        setNotice(t('auth.resetSent'))
       } else if (mode === 'sign-up') {
         const user = await registerWithEmail(name, email, password)
         onAuthenticated(user)
@@ -114,20 +117,20 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
         <Brand />
         <Box sx={{ maxWidth: 450, my: { xs: 5, md: 'auto' }, py: { md: 9 } }}>
           <Typography variant="overline" component="p">
-            YOUR TIME, YOUR INFRASTRUCTURE
+            {t('auth.heroKicker')}
           </Typography>
           <Typography variant="h1" sx={{ mt: 3, mb: 2.5, fontSize: 'clamp(43px, 5vw, 74px)' }}>
-            Make room for{' '}
-            <Box component="span" sx={{ color: 'primary.light' }}>
-              the work that matters.
-            </Box>
+            <Trans
+              i18nKey="auth.heroTitle"
+              components={{ highlight: <Box component="span" sx={{ color: 'primary.light' }} /> }}
+            />
           </Typography>
           <Typography color="text.secondary" sx={{ maxWidth: 360, lineHeight: 1.7 }}>
-            Track time with a team workspace that lives in your own Firebase project.
+            {t('auth.heroBody')}
           </Typography>
         </Box>
         <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
-          Open source · Self-hosted · No seat limits
+          {t('auth.heroFooter')}
         </Typography>
       </Box>
       <Box
@@ -143,17 +146,13 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
       >
         <Box sx={{ width: 'min(390px, 100%)' }}>
           <Typography variant="overline" component="p">
-            {isReset ? 'ACCOUNT RECOVERY' : 'WELCOME TO TICKNEST'}
+            {isReset ? t('auth.kickerReset') : t('auth.kickerWelcome')}
           </Typography>
           <Typography variant="h2" id="auth-heading" sx={{ fontSize: 34, mt: 1, mb: 1 }}>
-            {isReset ? 'Reset your password' : isSignUp ? 'Create your account' : 'Welcome back'}
+            {isReset ? t('auth.titleReset') : isSignUp ? t('auth.titleSignUp') : t('auth.titleSignIn')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3.5, lineHeight: 1.6 }}>
-            {isReset
-              ? 'We’ll email you a secure link to choose a new password.'
-              : isSignUp
-                ? 'Start a workspace for your team in just a moment.'
-                : 'Sign in to continue to your workspace.'}
+            {isReset ? t('auth.introReset') : isSignUp ? t('auth.introSignUp') : t('auth.introSignIn')}
           </Typography>
           {mode !== 'reset' && (
             <>
@@ -187,9 +186,9 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
                       </Box>
                     }
                   >
-                    {pending ? 'Connecting…' : 'Continue with Google'}
+                    {pending ? t('auth.googleConnecting') : t('auth.googleContinue')}
                   </Button>
-                  <Divider sx={{ my: 2.25, color: 'text.secondary', fontSize: 11 }}>or use email</Divider>
+                  <Divider sx={{ my: 2.25, color: 'text.secondary', fontSize: 11 }}>{t('auth.orUseEmail')}</Divider>
                 </>
               )}
             </>
@@ -197,7 +196,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
           <Stack component="form" spacing={2} onSubmit={handleSubmit} aria-busy={pending}>
             {isSignUp && (
               <TextField
-                label="Full name"
+                label={t('auth.fullName')}
                 size="medium"
                 autoComplete="name"
                 value={name}
@@ -207,7 +206,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
               />
             )}
             <TextField
-              label="Email address"
+              label={t('auth.email')}
               size="medium"
               type="email"
               autoComplete="email"
@@ -217,7 +216,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
             />
             {!isReset && (
               <TextField
-                label="Password"
+                label={t('auth.password')}
                 size="medium"
                 type="password"
                 autoComplete={isSignUp ? 'new-password' : 'current-password'}
@@ -230,7 +229,13 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
             {error && <FormMessage severity="error">{error}</FormMessage>}
             {notice && <FormMessage severity="success">{notice}</FormMessage>}
             <Button variant="contained" size="large" type="submit" disabled={pending}>
-              {pending ? 'Please wait…' : isReset ? 'Send reset link' : isSignUp ? 'Create account' : 'Sign in'}
+              {pending
+                ? t('auth.pleaseWait')
+                : isReset
+                  ? t('auth.sendResetLink')
+                  : isSignUp
+                    ? t('auth.createAccount')
+                    : t('auth.signIn')}
             </Button>
           </Stack>
           <Box sx={{ mt: 2.75, color: 'text.secondary', fontSize: 13, textAlign: 'center' }}>
@@ -242,12 +247,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
                   setMode('reset')
                 }}
               >
-                Forgot password?
+                {t('auth.forgotPassword')}
               </Button>
             )}
             {isReset ? (
               <p>
-                Remembered it?{' '}
+                {t('auth.rememberedIt')}{' '}
                 <Button
                   size="small"
                   onClick={() => {
@@ -255,12 +260,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
                     setMode('sign-in')
                   }}
                 >
-                  Sign in
+                  {t('auth.signIn')}
                 </Button>
               </p>
             ) : (
               <p>
-                {isSignUp ? 'Already have an account?' : 'New to Ticknest?'}{' '}
+                {isSignUp ? t('auth.haveAccount') : t('auth.newToTicknest')}{' '}
                 <Button
                   size="small"
                   onClick={() => {
@@ -268,11 +273,12 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
                     setMode(isSignUp ? 'sign-in' : 'sign-up')
                   }}
                 >
-                  {isSignUp ? 'Sign in' : 'Create an account'}
+                  {isSignUp ? t('auth.signIn') : t('auth.createAnAccount')}
                 </Button>
               </p>
             )}
           </Box>
+          <LanguageSelect disabled={pending} sx={{ display: 'flex', mt: 3, mx: 'auto', maxWidth: 220 }} />
         </Box>
       </Box>
     </Box>
