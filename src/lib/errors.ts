@@ -1,4 +1,13 @@
 import { i18n } from '../i18n'
+import { DEMO_SOURCE_URL } from './demo'
+
+// Quota, rate-limit, and overload errors: Firestore codes have no prefix, callable Functions codes do.
+const BUSY_CODES = new Set([
+  'resource-exhausted',
+  'unavailable',
+  'functions/resource-exhausted',
+  'functions/unavailable',
+])
 
 /** A message for the user in the active language. Unknown errors fall back to their own message. */
 export function readableError(error: unknown): string {
@@ -24,8 +33,10 @@ export function readableError(error: unknown): string {
     'auth/account-exists-with-different-credential': () => t('errors.accountExistsWithDifferentCredential'),
     'functions/internal': () => t('errors.functionsInternal'),
     'functions/not-found': () => t('errors.functionsNotFound'),
-    'functions/unavailable': () => t('errors.functionsUnavailable'),
     'permission-denied': () => t('errors.permissionDenied'),
+  }
+  if (BUSY_CODES.has(code)) {
+    return import.meta.env.VITE_DEMO_MODE === 'true' ? t('errors.busyDemo', { url: DEMO_SOURCE_URL }) : t('errors.busy')
   }
   const message = messages[code]
   if (message) return message()

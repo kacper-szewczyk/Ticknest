@@ -3,7 +3,11 @@
     "loadingAccount": "Wczytywanie konta Ticknest…",
     "version": "Ticknest v{{version}}",
     "startFailedTitle": "Nie udało się uruchomić Ticknest",
-    "startFailedBody": "Podczas wczytywania aplikacji wystąpił nieoczekiwany błąd."
+    "startFailedBody": "Podczas wczytywania aplikacji wystąpił nieoczekiwany błąd.",
+    "crashTitle": "Coś poszło nie tak",
+    "crashBody": "W Ticknest wystąpił nieoczekiwany błąd. Odśwież stronę, aby kontynuować.",
+    "reload": "Odśwież",
+    "demoBusy": "To publiczna wersja demo, więc może być przeciążona. Spróbuj ponownie za kilka minut albo <link>uruchom własną kopię z repozytorium na GitHubie</link>."
   },
   "language": {
     "label": "Język",
@@ -63,9 +67,10 @@
     "accountExistsWithDifferentCredential": "Konto z tym adresem e-mail już istnieje. Zaloguj się dotychczasową metodą, a potem połącz konto Google w ustawieniach konta.",
     "functionsInternal": "Usługa obszarów roboczych nie jest jeszcze dostępna w tym projekcie Firebase. Wdróż Firebase Functions i spróbuj ponownie.",
     "functionsNotFound": "Usługa obszarów roboczych nie jest wdrożona w tym projekcie Firebase. Wdróż Firebase Functions i spróbuj ponownie.",
-    "functionsUnavailable": "Usługa obszarów roboczych jest chwilowo niedostępna. Spróbuj ponownie za chwilę.",
     "permissionDenied": "Nie masz dostępu do tego obszaru roboczego.",
-    "authFallback": "Nie udało się Cię zalogować. Spróbuj ponownie. Jeśli problem się powtarza, sprawdź ustawienia Firebase Authentication."
+    "authFallback": "Nie udało się Cię zalogować. Spróbuj ponownie. Jeśli problem się powtarza, sprawdź ustawienia Firebase Authentication.",
+    "busy": "Ticknest jest teraz przeciążony lub nieosiągalny. Sprawdź połączenie i spróbuj ponownie za kilka minut.",
+    "busyDemo": "Publiczna wersja demo jest teraz przeciążona lub nieosiągalna. Spróbuj ponownie za kilka minut albo uruchom własną kopię z {{url}}."
   },
   "appearance": {
     "kicker": "WYGLĄD",
@@ -83,13 +88,34 @@
     "systemDescription": "Las za dnia, Nocny las, gdy urządzenie używa trybu ciemnego."
   },
   "palettes": {
-    "forest": { "name": "Las", "description": "Klasyczne zielenie Ticknest." },
-    "ocean": { "name": "Ocean", "description": "Spokojne błękity z granatowym paskiem bocznym." },
-    "plum": { "name": "Śliwka", "description": "Stonowane fiolety z delikatnymi liliowymi akcentami." },
-    "terracotta": { "name": "Terakota", "description": "Ciepłe odcienie gliny na kremowym tle." },
-    "forest-night": { "name": "Nocny las", "description": "Tryb ciemny ze znajomymi zielonymi akcentami." },
-    "midnight": { "name": "Północ", "description": "Tryb ciemny w chłodnych błękitach." },
-    "graphite": { "name": "Grafit", "description": "Neutralny tryb ciemny z bursztynowymi akcentami." }
+    "forest": {
+      "name": "Las",
+      "description": "Klasyczne zielenie Ticknest."
+    },
+    "ocean": {
+      "name": "Ocean",
+      "description": "Spokojne błękity z granatowym paskiem bocznym."
+    },
+    "plum": {
+      "name": "Śliwka",
+      "description": "Stonowane fiolety z delikatnymi liliowymi akcentami."
+    },
+    "terracotta": {
+      "name": "Terakota",
+      "description": "Ciepłe odcienie gliny na kremowym tle."
+    },
+    "forest-night": {
+      "name": "Nocny las",
+      "description": "Tryb ciemny ze znajomymi zielonymi akcentami."
+    },
+    "midnight": {
+      "name": "Północ",
+      "description": "Tryb ciemny w chłodnych błękitach."
+    },
+    "graphite": {
+      "name": "Grafit",
+      "description": "Neutralny tryb ciemny z bursztynowymi akcentami."
+    }
   },
   "nav": {
     "sectionTrack": "Rejestrowanie",
@@ -195,6 +221,9 @@
     "contactLead": "Chcesz, żebym skonfigurował Ticknest dla Twojego zespołu, albo potrzebujesz funkcji, której jeszcze nie ma?",
     "contactHelp": "Pomogę Ci to osiągnąć.",
     "getInTouch": "Napisz do mnie",
-    "linkedIn": "Napisz na LinkedInie"
+    "linkedIn": "Napisz na LinkedInie",
+    "pausedTitle": "Wersja demo Ticknest jest wstrzymana",
+    "pausedBody": "Publiczna wersja demo ma teraz więcej odwiedzających, niż może obsłużyć, więc została na jakiś czas wstrzymana. Zajrzyj później.",
+    "pausedOpenSource": "Ticknest jest open source. Możesz przejrzeć kod i uruchomić własną kopię we własnym projekcie Firebase."
   }
 }

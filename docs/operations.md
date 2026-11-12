@@ -90,22 +90,22 @@ The project must be on the Blaze plan, as for a manual deploy.
 1. Under **Settings → Environments**, create the `production` and `preview` environments. To approve each production deploy before it runs, add required reviewers to `production`. Restrict `production` to the `main` branch under **Deployment branches and tags**.
 2. Under **Settings → Secrets and variables → Actions → Variables**, add the variables below. None of them are secret. Set `FIREBASE_PROJECT_ID`, `FIREBASE_DEPLOY_ONLY`, and `FIREBASE_PREVIEW_CHANNELS` as repository variables, because GitHub reads them before it loads an environment. Set the others on the repository, or on an environment to give production and previews different values.
 
-| Variable                                         | Value                                                                                                                                                                                                                                            |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `FIREBASE_PROJECT_ID`                            | The Firebase project ID, also used as `VITE_FIREBASE_PROJECT_ID`. Setting it turns the workflows on. Also set it on the `preview` environment to build previews for a separate project.                                                          |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER`                 | `projects/<project-number>/locations/global/workloadIdentityPools/github/providers/ticknest`                                                                                                                                                     |
-| `GCP_SERVICE_ACCOUNT`                            | The deploy service account on `production`, and the preview service account on `preview`.                                                                                                                                                        |
-| `VITE_FIREBASE_API_KEY`                          | The Web app values, as in step 3 of [Configure your Firebase project](#configure-your-firebase-project).                                                                                                                                         |
-| `VITE_FIREBASE_AUTH_DOMAIN`                      |                                                                                                                                                                                                                                                  |
-| `VITE_FIREBASE_APP_ID`                           |                                                                                                                                                                                                                                                  |
-| `FUNCTIONS_REGION`                               | Optional. The [Functions region](#functions-region), used for both the Functions and the web app.                                                                                                                                                |
-| `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`             | Optional. See [App Check](#app-check-optional).                                                                                                                                                                                                  |
-| `ENFORCE_APP_CHECK`                              | Optional. `true` to enforce App Check on the callable Functions.                                                                                                                                                                                 |
-| `VITE_DEMO_MODE`, `DEMO_MODE`, `DEMO_PROJECT_ID` | Optional. See [Demo mode](#demo-mode-optional).                                                                                                                                                                                                  |
-| `VITE_FEATURE_BUDGETS_ENABLED`                   | Optional. See [Feature flags](#feature-flags-optional).                                                                                                                                                                                          |
-| `FIREBASE_DEPLOY_ONLY`                           | Optional. What `deploy.yml` deploys; defaults to `hosting,firestore:rules,firestore:indexes,functions`. Set it to `firestore:rules,firestore:indexes,functions` when the web app is [hosted on Vercel](#hosting-the-web-app-on-vercel-optional). |
-| `FIREBASE_PREVIEW_CHANNELS`                      | Optional. `false` turns off preview channels, for example when Vercel already builds a preview for each pull request.                                                                                                                            |
-| `FIREBASE_SITE_URL`                              | Optional. The production URL the smoke check fetches, such as a custom domain; defaults to `https://<FIREBASE_PROJECT_ID>.web.app`.                                                                                                              |
+| Variable                                                             | Value                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `FIREBASE_PROJECT_ID`                                                | The Firebase project ID, also used as `VITE_FIREBASE_PROJECT_ID`. Setting it turns the workflows on. Also set it on the `preview` environment to build previews for a separate project.                                                          |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER`                                     | `projects/<project-number>/locations/global/workloadIdentityPools/github/providers/ticknest`                                                                                                                                                     |
+| `GCP_SERVICE_ACCOUNT`                                                | The deploy service account on `production`, and the preview service account on `preview`.                                                                                                                                                        |
+| `VITE_FIREBASE_API_KEY`                                              | The Web app values, as in step 3 of [Configure your Firebase project](#configure-your-firebase-project).                                                                                                                                         |
+| `VITE_FIREBASE_AUTH_DOMAIN`                                          |                                                                                                                                                                                                                                                  |
+| `VITE_FIREBASE_APP_ID`                                               |                                                                                                                                                                                                                                                  |
+| `FUNCTIONS_REGION`                                                   | Optional. The [Functions region](#functions-region), used for both the Functions and the web app.                                                                                                                                                |
+| `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`                                 | Optional. See [App Check](#app-check-optional).                                                                                                                                                                                                  |
+| `ENFORCE_APP_CHECK`                                                  | Optional. `true` to enforce App Check on the callable Functions.                                                                                                                                                                                 |
+| `VITE_DEMO_MODE`, `VITE_DEMO_PAUSED`, `DEMO_MODE`, `DEMO_PROJECT_ID` | Optional. See [Demo mode](#demo-mode-optional).                                                                                                                                                                                                  |
+| `VITE_FEATURE_BUDGETS_ENABLED`                                       | Optional. See [Feature flags](#feature-flags-optional).                                                                                                                                                                                          |
+| `FIREBASE_DEPLOY_ONLY`                                               | Optional. What `deploy.yml` deploys; defaults to `hosting,firestore:rules,firestore:indexes,functions`. Set it to `firestore:rules,firestore:indexes,functions` when the web app is [hosted on Vercel](#hosting-the-web-app-on-vercel-optional). |
+| `FIREBASE_PREVIEW_CHANNELS`                                          | Optional. `false` turns off preview channels, for example when Vercel already builds a preview for each pull request.                                                                                                                            |
+| `FIREBASE_SITE_URL`                                                  | Optional. The production URL the smoke check fetches, such as a custom domain; defaults to `https://<FIREBASE_PROJECT_ID>.web.app`.                                                                                                              |
 
 `functions/.env` is ignored by Git, so the deploy workflow writes it from `FUNCTIONS_REGION`, `ENFORCE_APP_CHECK`, `DEMO_MODE`, and `DEMO_PROJECT_ID`. Params you leave unset keep their defaults.
 
@@ -182,6 +182,45 @@ Replace `europe-west1` with your [Functions region](#functions-region). The run 
 1. Set `DEMO_MODE=false` (or remove both params) and redeploy the Functions. `resetDemo` keeps running on schedule but skips the reset. To remove the job too, run `npx firebase functions:delete resetDemo --region <region>`.
 2. Set `VITE_DEMO_MODE=false` and redeploy the web app to remove the banner and the demo accounts from sign-in.
 3. The last seeded data and the demo accounts stay in the project. Delete them, or the whole project (see [Teardown](#teardown)), if you no longer need them.
+
+#### Traffic spikes
+
+A launch post can send thousands of visitors to the demo in a few hours. Prepare the demo project before you announce it, and know what to do if the bill starts to climb.
+
+**Before a launch.**
+
+1. **Budget alert.** In Google Cloud Billing, create a budget scoped to the demo project only, with email alerts at 50%, 90%, and 100% of an amount you are willing to lose in a month. A budget alert notifies you; it does not stop spending.
+2. **App Check.** Follow [App Check](#app-check-optional), then enforce it for both Cloud Firestore (in the Firebase console) and the callable Functions (`ENFORCE_APP_CHECK=true`). Check that the App Check metrics show nearly all requests as verified. Without enforcement, anyone can sign in with the published demo password and script writes directly against Firestore.
+3. **Quotas and limits.** Firestore has no per-user or per-IP write limit you can set. The limits that apply are the [Firestore quotas](https://firebase.google.com/docs/firestore/quotas), the Firebase Authentication sign-in limits (an IP that signs in too often gets `auth/too-many-requests`), and `maxInstances: 3` on every callable Function, which caps their compute but means requests queue or fail with `resource-exhausted` under heavy load. The web app shows those as a "demo is busy" message with a link to this repository.
+4. **Load test.** Run `npm run demo:load-test` with the emulators running (see [Load test](#load-test)).
+
+**If the budget alert fires or the demo is overwhelmed**, pause it:
+
+1. Set `VITE_DEMO_PAUSED=true` next to `VITE_DEMO_MODE=true` in the web app's environment (Vercel, the GitHub `production` environment variables, or `.env.local` for Firebase Hosting) and redeploy the web app. The flag is read at build time.
+2. The app is then replaced by a "demo paused" page that links to the repository. It loads no Firebase code and makes no Firebase requests, so honest traffic stops costing anything.
+3. Tabs that were already open keep working until they are reloaded. With App Check enforced, scripts that bypass the web app are rejected. Without it, they keep working; if spending continues, disable the sign-in providers in Firebase Authentication as well.
+4. When traffic drops, set `VITE_DEMO_PAUSED=false` (or remove it) and redeploy. The next daily reset clears whatever the spike wrote.
+
+`VITE_DEMO_PAUSED` has no effect unless `VITE_DEMO_MODE=true`, so it cannot take a real deployment offline by mistake.
+
+**Crashes and outages.** A render error anywhere in the app shows a "Something went wrong" page with a reload button instead of a blank screen. Firestore and Functions `resource-exhausted` and `unavailable` errors show a "busy or unreachable" message. In demo builds, both point visitors to this repository.
+
+<a id="load-test"></a>**Load test.** `npm run demo:load-test` seeds the local emulators with the demo, then runs many virtual visitors at once. Each one uses the Firebase client SDK with the deployed rules, like a browser tab: it signs in with a demo account, loads its workspaces, runs the "last 30 days" report, starts a timer, waits two seconds, and stops it. It then adds bulk time entries and accounts, and times the daily reset on them. Options: `--visitors` (default 200), `--concurrency` (default 50), `--timer-ms`, `--extra-entries` (default 20,000), and `--skip-reset`. It only connects to emulators on this machine and wipes their data.
+
+Result on 2026-11-12 (Apple Silicon laptop, Firestore and Auth emulators, 200 visitors, 50 at a time):
+
+| Step             | p50 ms | p95 ms | max ms |
+| ---------------- | -----: | -----: | -----: |
+| Sign in          |    755 |  1,325 |  1,364 |
+| Load workspaces  |    377 |    693 |  1,000 |
+| Workspace doc    |    300 |    624 |    781 |
+| Report (30 days) |    777 |  3,548 |  4,477 |
+| Start timer      |    377 |  1,284 |  2,674 |
+| Stop timer       |    557 |    893 |    931 |
+
+All 200 visitors finished in 16.8 s with no Firestore, rules, or Auth errors. 180 of the 200 timer starts were refused because that demo account already had a running timer. That is expected: visitors share five demo accounts, each account can run one timer at a time, and the web app shows the other visitor's running timer instead. The reset then deleted 205 accounts and 21,768 documents and reseeded the demo in 44 s, well inside the `resetDemo` timeout of 540 s; the reset time grows roughly linearly with the number of documents.
+
+The emulators run on one machine and enforce no quotas, so these numbers show that the rules, queries, and reset cope with concurrent use and a large day of data. They do not predict production latency or cost. Point a copy of the script at a dedicated test project before relying on it for capacity planning.
 
 ### Feature flags (optional)
 

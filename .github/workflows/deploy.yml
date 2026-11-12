@@ -73,6 +73,7 @@ jobs:
           VITE_FIREBASE_FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY }}
           VITE_DEMO_MODE: ${{ vars.VITE_DEMO_MODE }}
+          VITE_DEMO_PAUSED: ${{ vars.VITE_DEMO_PAUSED }}
           VITE_FEATURE_BUDGETS_ENABLED: ${{ vars.VITE_FEATURE_BUDGETS_ENABLED }}
       # functions/.env is ignored by Git, so write the Functions params from repository variables.
       # Unset variables are left out and the params keep their defaults.

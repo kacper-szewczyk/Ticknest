@@ -56,6 +56,33 @@ export function DemoAccountsPanel({ onUse, disabled }: AccountsPanelProps) {
   return <AccountsPanel onUse={onUse} disabled={disabled} />
 }
 
+/** Replaces the whole app while the demo is paused (VITE_DEMO_PAUSED=true), for example during a traffic spike. */
+export function DemoPausedPage() {
+  if (import.meta.env.VITE_DEMO_MODE !== 'true') return null
+  return <PausedPage />
+}
+
+function PausedPage() {
+  const { t } = useTranslation()
+  return (
+    <Box component="main" sx={{ maxWidth: '40rem', mx: 'auto', my: 8, px: 2 }}>
+      <Typography variant="h1" sx={{ fontSize: '2rem', mb: 2 }}>
+        {t('demo.pausedTitle')}
+      </Typography>
+      <Typography sx={{ mb: 2, lineHeight: 1.6 }}>{t('demo.pausedBody')}</Typography>
+      <Typography sx={{ mb: 3, lineHeight: 1.6 }}>{t('demo.pausedOpenSource')}</Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+        <Button variant="contained" href={DEMO_SOURCE_URL} target="_blank" rel="noopener noreferrer">
+          {t('demo.viewSource')}
+        </Button>
+        <Button variant="outlined" href={DEMO_SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+          {t('demo.buyCoffee')}
+        </Button>
+      </Box>
+    </Box>
+  )
+}
+
 function ResetBanner() {
   const { t } = useTranslation()
   const language = useAppLanguage()
