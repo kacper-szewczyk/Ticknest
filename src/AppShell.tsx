@@ -7,6 +7,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { alpha, type Theme } from '@mui/material/styles'
 import { DemoResetBanner } from './DemoMode'
+import { useTranslation } from './i18n'
 import { loadSidebarCollapsed, saveSidebarCollapsed } from './lib/sidebarPreference'
 import { SidebarControlsContext } from './sidebarControls'
 
@@ -59,6 +60,7 @@ export function AppShell<V extends string>({
   compactFooter,
   children,
 }: ShellProps<V>) {
+  const { t } = useTranslation()
   const [drawerOpen, setDrawerOpen] = useState(false)
   // Only applies from md up; the small-screen drawer ignores it.
   const [collapsed, setCollapsed] = useState(loadSidebarCollapsed)
@@ -88,7 +90,7 @@ export function AppShell<V extends string>({
       <Box
         component="aside"
         id={sidebarId}
-        aria-label="Sidebar"
+        aria-label={t('shell.sidebar')}
         sx={{
           display: { xs: 'none', md: 'flex' },
           position: 'fixed',
@@ -116,7 +118,7 @@ export function AppShell<V extends string>({
             toggle={
               <IconButton
                 ref={expandButtonRef}
-                aria-label="Expand sidebar"
+                aria-label={t('shell.expandSidebar')}
                 aria-expanded={false}
                 aria-controls={sidebarId}
                 onClick={() => setSidebarCollapsed(false)}
@@ -139,7 +141,7 @@ export function AppShell<V extends string>({
             toggle={
               <IconButton
                 ref={collapseButtonRef}
-                aria-label="Collapse sidebar"
+                aria-label={t('shell.collapseSidebar')}
                 aria-expanded
                 aria-controls={sidebarId}
                 onClick={() => setSidebarCollapsed(true)}
@@ -169,7 +171,7 @@ export function AppShell<V extends string>({
         }}
       >
         <IconButton
-          aria-label="Open navigation"
+          aria-label={t('shell.openNavigation')}
           aria-expanded={drawerOpen}
           onClick={() => setDrawerOpen(true)}
           sx={{ color: 'inherit' }}
@@ -296,6 +298,7 @@ function SidebarContent<V extends string>({
   /** Collapse control next to the brand (desktop sidebar only). */
   toggle?: ReactNode
 }) {
+  const { t, i18n } = useTranslation()
   return (
     <Box
       sx={{
@@ -314,7 +317,7 @@ function SidebarContent<V extends string>({
         {toggle}
       </Box>
       {header && <Box sx={{ px: 1.5, pb: 1.5, borderBottom: 1, borderColor: sidebarColors.border }}>{header}</Box>}
-      <Box component="nav" aria-label="Main navigation" sx={{ flex: 1, overflowY: 'auto', px: 1.5, pb: 2 }}>
+      <Box component="nav" aria-label={t('shell.mainNavigation')} sx={{ flex: 1, overflowY: 'auto', px: 1.5, pb: 2 }}>
         {sectionsOf(items).map((section) => (
           <Box key={section} sx={{ mt: 2 }}>
             <Typography
@@ -328,7 +331,7 @@ function SidebarContent<V extends string>({
                 color: sidebarColors.muted,
               }}
             >
-              {section.toUpperCase()}
+              {section.toLocaleUpperCase(i18n.language)}
             </Typography>
             <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 0.25 }}>
               {items
@@ -385,6 +388,7 @@ function SidebarRail<V extends string>({
   onNavigate: (value: V) => void
   toggle: ReactNode
 }) {
+  const { t } = useTranslation()
   return (
     <Box
       sx={{
@@ -418,7 +422,7 @@ function SidebarRail<V extends string>({
       )}
       <Box
         component="nav"
-        aria-label="Main navigation"
+        aria-label={t('shell.mainNavigation')}
         sx={{ flex: 1, width: '100%', overflowY: 'auto', overflowX: 'hidden', px: 1.5, pb: 2 }}
       >
         {sectionsOf(items).map((section, index) => (

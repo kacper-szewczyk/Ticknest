@@ -5,6 +5,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import Typography from '@mui/material/Typography'
+import { useTranslation } from './i18n'
 import { savePalettePreference } from './lib/userPreferences'
 import { usePalette } from './paletteContext'
 import { isPaletteChoice, PALETTE_IDS, PALETTES, type PaletteChoice, type PaletteDefinition } from './palettes'
@@ -15,6 +16,7 @@ const DARK_PALETTES = PALETTE_IDS.map((id) => PALETTES[id]).filter((palette) => 
 
 export function AppearancePanel({ user }: { user: User }) {
   const { choice, applyPalette } = usePalette()
+  const { t } = useTranslation()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -30,11 +32,11 @@ export function AppearancePanel({ user }: { user: User }) {
     applyPalette(next)
     try {
       await savePalettePreference(user, next)
-      setNotice('Palette saved. It will follow you on any device you sign in to.')
+      setNotice(t('appearance.saved'))
     } catch (saveError) {
       console.error(saveError)
       applyPalette(previous)
-      setError('We couldn’t save your palette. Check your connection and try again.')
+      setError(t('appearance.saveFailed'))
     } finally {
       setPending(false)
     }
@@ -42,9 +44,9 @@ export function AppearancePanel({ user }: { user: User }) {
 
   return (
     <SectionCard labelledBy="appearance-heading">
-      <SectionHeading id="appearance-heading" kicker="APPEARANCE" title="Color palette" />
+      <SectionHeading id="appearance-heading" kicker={t('appearance.kicker')} title={t('appearance.title')} />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-        Choose how Ticknest looks for you. Other workspace members keep their own palettes.
+        {t('appearance.intro')}
       </Typography>
       {error && <FormMessage severity="error">{error}</FormMessage>}
       {notice && <FormMessage severity="success">{notice}</FormMessage>}
@@ -56,34 +58,34 @@ export function AppearancePanel({ user }: { user: User }) {
         aria-busy={pending}
         sx={{ display: 'grid', gap: 2.5, mt: 2.5 }}
       >
-        <PaletteGroup title="Automatic">
+        <PaletteGroup title={t('appearance.groupAutomatic')} label={t('appearance.groupAutomaticLabel')}>
           <PaletteOption
             value="system"
-            label="Match system"
-            description="Forest by day, Forest Night when your device uses dark mode."
+            label={t('appearance.systemName')}
+            description={t('appearance.systemDescription')}
             swatches={[PALETTES.forest, PALETTES['forest-night']]}
             disabled={pending}
           />
         </PaletteGroup>
-        <PaletteGroup title="Light">
+        <PaletteGroup title={t('appearance.groupLight')} label={t('appearance.groupLightLabel')}>
           {LIGHT_PALETTES.map((palette) => (
             <PaletteOption
               key={palette.id}
               value={palette.id}
-              label={palette.name}
-              description={palette.description}
+              label={t(`palettes.${palette.id}.name`)}
+              description={t(`palettes.${palette.id}.description`)}
               swatches={[palette]}
               disabled={pending}
             />
           ))}
         </PaletteGroup>
-        <PaletteGroup title="Dark">
+        <PaletteGroup title={t('appearance.groupDark')} label={t('appearance.groupDarkLabel')}>
           {DARK_PALETTES.map((palette) => (
             <PaletteOption
               key={palette.id}
               value={palette.id}
-              label={palette.name}
-              description={palette.description}
+              label={t(`palettes.${palette.id}.name`)}
+              description={t(`palettes.${palette.id}.description`)}
               swatches={[palette]}
               disabled={pending}
             />
@@ -94,9 +96,9 @@ export function AppearancePanel({ user }: { user: User }) {
   )
 }
 
-function PaletteGroup({ title, children }: { title: string; children: ReactNode }) {
+function PaletteGroup({ title, label, children }: { title: string; label: string; children: ReactNode }) {
   return (
-    <Box role="group" aria-label={`${title} palettes`}>
+    <Box role="group" aria-label={label}>
       <Typography variant="h3" component="p" sx={{ mb: 1 }}>
         {title}
       </Typography>

@@ -233,8 +233,13 @@ function newClient(overrides: Record<string, unknown> = {}) {
 describe('Firestore rules matrix', () => {
   matrix('read own users/{uid} profile', SIGNED_IN, ({ db, uid }) => getDoc(doc(db, 'users', uid)))
 
-  matrix('update own users/{uid} profile, including palette', SIGNED_IN, ({ db, uid }) =>
-    updateDoc(doc(db, 'users', uid), { displayName: 'Renamed', palette: 'ocean', updatedAt: serverTimestamp() }),
+  matrix('update own users/{uid} profile, including palette and language', SIGNED_IN, ({ db, uid }) =>
+    updateDoc(doc(db, 'users', uid), {
+      displayName: 'Renamed',
+      palette: 'ocean',
+      language: 'pl',
+      updatedAt: serverTimestamp(),
+    }),
   )
 
   matrix("read another user's profile", DENY_ALL, (subject) =>
@@ -250,6 +255,10 @@ describe('Firestore rules matrix', () => {
 
   matrix('set palette outside the predefined list', DENY_ALL, ({ db, uid }) =>
     updateDoc(doc(db, 'users', uid), { palette: 'neon', updatedAt: serverTimestamp() }),
+  )
+
+  matrix('set language outside the supported list', DENY_ALL, ({ db, uid }) =>
+    updateDoc(doc(db, 'users', uid), { language: 'de', updatedAt: serverTimestamp() }),
   )
 
   matrix('read workspace document', MEMBERS, ({ db }) => getDoc(doc(db, WS)))
@@ -853,6 +862,10 @@ describe('boundary validation', () => {
       },
     )
 
+    it.each(['en', 'es', 'pl'])('accepts the %s language', async (language) => {
+      await assertSucceeds(update({ language }))
+    })
+
     it.each<[string, Record<string, unknown>]>([
       ['an oversized display name', { displayName: 'a'.repeat(81) }],
       ['an email that does not match the token', { email: 'someone@example.com' }],
@@ -860,6 +873,8 @@ describe('boundary validation', () => {
       ['an unknown field', { role: 'owner' }],
       ['a changed createdAt', { createdAt: serverTimestamp() }],
       ['a palette that is not a string', { palette: 1 }],
+      ['a regional language tag', { language: 'pl-PL' }],
+      ['a language that is not a string', { language: 1 }],
     ])('denies %s', async (_, changes) => {
       await assertFails(update(changes))
     })
