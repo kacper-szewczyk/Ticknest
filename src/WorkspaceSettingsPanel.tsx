@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography'
 import { type FormEvent, useState } from 'react'
 import type { WeekStart } from './lib/dates'
 import { readableError } from './lib/errors'
+import { isFeatureEnabled } from './lib/featureFlags'
 import { type Workspace, updateWorkspaceSettings } from './lib/workspaces'
 import { type WorkspaceSettings, validateWorkspaceSettings, WORKSPACE_NAME_MAX_LENGTH } from './lib/workspaceSettings'
 import { FormMessage, SectionCard, SectionHeading } from './ui'
@@ -57,7 +58,7 @@ export function WorkspaceSettingsPanel({ workspace, onSaved }: Props) {
       <SectionHeading id="workspace-settings-heading" kicker="WORKSPACE SETTINGS" title="Name and week start" />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
         {isOwner
-          ? 'These settings apply to everyone in the workspace. The week start sets where timesheet, dashboard and budget weeks begin.'
+          ? `These settings apply to everyone in the workspace. The week start sets where timesheet, ${isFeatureEnabled('budgets') ? 'dashboard and budget' : 'and dashboard'} weeks begin.`
           : 'Only the workspace owner can change these settings.'}
       </Typography>
       {error && <FormMessage severity="error">{error}</FormMessage>}
