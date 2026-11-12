@@ -85,6 +85,54 @@ export function budgetFixture(userId: string) {
   }
 }
 
+export function leaveRequestId(uid: string): string {
+  return `leave-${uid}`
+}
+
+export function leaveAllowanceId(uid: string): string {
+  return `${uid}_holiday_2026`
+}
+
+export function leaveRequestFixture(uid: string) {
+  return {
+    uid,
+    userDisplayName: uid,
+    typeId: 'holiday',
+    year: 2026,
+    startDate: '2026-11-16',
+    endDate: '2026-11-20',
+    startHalf: false,
+    endHalf: false,
+    days: 5,
+    note: '',
+    status: 'pending',
+    overAllowance: false,
+    overAllowanceDays: 0,
+    autoApproved: false,
+    autoApprovedReason: null,
+    decidedBy: null,
+    decidedAt: null,
+    decisionNote: '',
+    cancelledBy: null,
+    cancelledAt: null,
+    createdAt: PAST,
+    updatedAt: PAST,
+  }
+}
+
+export function leaveAllowanceFixture(uid: string) {
+  return {
+    uid,
+    typeId: 'holiday',
+    year: 2026,
+    allowanceDays: 26,
+    adjustments: [{ days: 2, note: 'Carry-over', by: OWNER.uid, at: PAST }],
+    updatedBy: OWNER.uid,
+    createdAt: PAST,
+    updatedAt: PAST,
+  }
+}
+
 function membership(
   user: { uid: string; email: string },
   role: 'owner' | 'manager' | 'member',
@@ -152,6 +200,23 @@ export async function seedWorkspace(env: RulesTestEnvironment): Promise<void> {
       ...[OWNER, MEMBER, MANAGER, OTHER_MEMBER, REMOVED_MEMBER].map((user): [string, object] => [
         `${ws}/budgets/${budgetId(user.uid)}`,
         budgetFixture(user.uid),
+      ]),
+      [
+        `${ws}/leaveTypes/holiday`,
+        {
+          name: 'Holiday',
+          color: '#2e7d6b',
+          unit: 'half-day',
+          requiresApproval: true,
+          defaultAllowanceDays: 20,
+          archived: false,
+          createdAt: PAST,
+          updatedAt: PAST,
+        },
+      ],
+      ...[OWNER, MEMBER, MANAGER, OTHER_MEMBER, REMOVED_MEMBER].flatMap((user): [string, object][] => [
+        [`${ws}/leaveRequests/${leaveRequestId(user.uid)}`, leaveRequestFixture(user.uid)],
+        [`${ws}/leaveAllowances/${leaveAllowanceId(user.uid)}`, leaveAllowanceFixture(user.uid)],
       ]),
       [
         `${ws}/invitations/${INVITATION_ID}`,

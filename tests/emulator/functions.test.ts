@@ -758,3 +758,298 @@ describe('budget callables', () => {
     )
   })
 })
+
+describe('time-off callables', () => {
+  // 2030-03-04 and 2030-03-11 are Mondays; dates in 2030 are in the future, so approved leave there has not started.
+  async function workspaceWithTeam() {
+    const owner = await createUser('owner', 'owner@example.com')
+    const manager = await createUser('mira', 'mira@example.com')
+    const member = await createUser('alice', 'alice@example.com')
+    const workspaceId = await createWorkspaceAs(owner)
+    await inviteAndAccept(owner, workspaceId, manager)
+    await inviteAndAccept(owner, workspaceId, member)
+    await owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: manager.uid, role: 'manager' })
+    return { owner, manager, member, workspaceId, workspacePath: `workspaces/${workspaceId}` }
+  }
+
+  function leavePayload(workspaceId: string, overrides: Record<string, unknown> = {}) {
+    return {
+      workspaceId,
+      typeId: 'holiday',
+      startDate: '2030-03-04',
+      endDate: '2030-03-08',
+      startHalf: false,
+      endHalf: false,
+      note: 'Skiing',
+      ...overrides,
+    }
+  }
+
+  function typePayload(workspaceId: string, overrides: Record<string, unknown> = {}) {
+    return {
+      workspaceId,
+      typeId: null,
+      name: 'Unpaid',
+      color: '#123456',
+      unit: 'day',
+      requiresApproval: true,
+      defaultAllowanceDays: null,
+      archived: false,
+      ...overrides,
+    }
+  }
+
+  type Submitted = { requestId: string; status: string }
+
+  // A free Monday, after the request each test starts with.
+  const MAY_SIXTH = { startDate: '2030-05-06', endDate: '2030-05-06' }
+
+  async function storedRequest(workspacePath: string, requestId: string) {
+    return (await adminDb.doc(`${workspacePath}/leaveRequests/${requestId}`).get()).data()
+  }
+
+  it('submits a request against the built-in Holiday type, counting working days only', async () => {
+    const { member, workspaceId, workspacePath } = await workspaceWithTeam()
+    const { requestId, status } = await member.call<Submitted>(
+      'submitLeaveRequest',
+      leavePayload(workspaceId, { endDate: '2030-03-11', endHalf: true }),
+    )
+    expect(status).toBe('pending')
+    expect(await storedRequest(workspacePath, requestId)).toMatchObject({
+      uid: member.uid,
+      userDisplayName: 'Alice',
+      typeId: 'holiday',
+      year: 2030,
+      days: 5.5,
+      note: 'Skiing',
+      status: 'pending',
+      overAllowance: false,
+      overAllowanceDays: 0,
+      autoApproved: false,
+      decidedBy: null,
+    })
+  })
+
+  it('rejects overlaps, impossible ranges, unknown types, and half days on full-day types', async () => {
+    const { owner, member, workspaceId } = await workspaceWithTeam()
+    await member.call('submitLeaveRequest', leavePayload(workspaceId))
+    await expectCallError(
+      member.call('submitLeaveRequest', leavePayload(workspaceId, { typeId: 'sick', startDate: '2030-03-08' })),
+      'failed-precondition',
+    )
+    const invalid: Record<string, unknown>[] = [
+      { startDate: '2030-04-02', endDate: '2030-04-01' },
+      { startDate: '2030-02-30' },
+      { startDate: '2030-12-30', endDate: '2031-01-02' },
+      { startDate: '2030-03-09', endDate: '2030-03-10' },
+      { startHalf: 'yes' },
+    ]
+    for (const overrides of invalid) {
+      const payload = leavePayload(workspaceId, { startDate: '2030-04-01', endDate: '2030-04-02', ...overrides })
+      await expectCallError(member.call('submitLeaveRequest', payload), 'invalid-argument')
+    }
+    const { typeId: unpaidId } = await owner.call<{ typeId: string }>('saveLeaveType', typePayload(workspaceId))
+    await expectCallError(
+      member.call(
+        'submitLeaveRequest',
+        leavePayload(workspaceId, {
+          typeId: unpaidId,
+          startDate: '2030-05-06',
+          endDate: '2030-05-06',
+          startHalf: true,
+        }),
+      ),
+      'invalid-argument',
+    )
+    await expectCallError(
+      member.call('submitLeaveRequest', leavePayload(workspaceId, { typeId: 'missing', ...MAY_SIXTH })),
+      'failed-precondition',
+    )
+    await owner.call('saveLeaveType', typePayload(workspaceId, { typeId: unpaidId, archived: true }))
+    await expectCallError(
+      member.call('submitLeaveRequest', leavePayload(workspaceId, { typeId: unpaidId, ...MAY_SIXTH })),
+      'failed-precondition',
+    )
+  })
+
+  it('marks requests over the allowance without blocking them, and re-checks on approval', async () => {
+    const { manager, member, workspaceId, workspacePath } = await workspaceWithTeam()
+    const target = { workspaceId, uid: member.uid, typeId: 'holiday', year: 2030 }
+    await manager.call('setLeaveAllowance', { ...target, allowanceDays: 3 })
+    const first = await member.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId))
+    expect(await storedRequest(workspacePath, first.requestId)).toMatchObject({
+      status: 'pending',
+      overAllowance: true,
+      overAllowanceDays: 2,
+    })
+    await manager.call('addLeaveAdjustment', { ...target, days: 2, note: 'Carry-over' })
+    await manager.call('decideLeaveRequest', { workspaceId, requestId: first.requestId, decision: 'approve', note: '' })
+    expect(await storedRequest(workspacePath, first.requestId)).toMatchObject({
+      status: 'approved',
+      overAllowance: false,
+      overAllowanceDays: 0,
+      decidedBy: manager.uid,
+    })
+  })
+
+  it('lets owners and managers decide other people’s requests, never their own', async () => {
+    const { owner, manager, member, workspaceId, workspacePath } = await workspaceWithTeam()
+    const memberRequest = await member.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId))
+    const managerRequest = await manager.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId))
+    const ownerRequest = await owner.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId))
+    expect([memberRequest.status, managerRequest.status, ownerRequest.status]).toEqual([
+      'pending',
+      'pending',
+      'pending',
+    ])
+
+    const decide = (user: TestUser, requestId: string, decision = 'approve') =>
+      user.call('decideLeaveRequest', { workspaceId, requestId, decision, note: 'Enjoy' })
+    await expectCallError(decide(member, memberRequest.requestId), 'permission-denied')
+    await expectCallError(decide(manager, managerRequest.requestId), 'permission-denied')
+    await expectCallError(decide(owner, ownerRequest.requestId), 'permission-denied')
+
+    await decide(manager, memberRequest.requestId, 'reject')
+    await decide(owner, managerRequest.requestId)
+    await decide(manager, ownerRequest.requestId)
+    await expectCallError(decide(owner, memberRequest.requestId), 'failed-precondition')
+    await expectCallError(decide(owner, managerRequest.requestId, 'maybe'), 'invalid-argument')
+    expect(await storedRequest(workspacePath, memberRequest.requestId)).toMatchObject({
+      status: 'rejected',
+      decidedBy: manager.uid,
+      decisionNote: 'Enjoy',
+    })
+  })
+
+  it('auto-approves when nobody else can approve, and for types that need no approval', async () => {
+    const { owner, manager, member, workspaceId, workspacePath } = await workspaceWithTeam()
+    await owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: manager.uid, role: 'member' })
+    const ownerRequest = await owner.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId))
+    expect(ownerRequest.status).toBe('approved')
+    expect(await storedRequest(workspacePath, ownerRequest.requestId)).toMatchObject({
+      autoApproved: true,
+      autoApprovedReason: 'no-approver',
+    })
+
+    const sickType = typePayload(workspaceId, {
+      typeId: 'sick',
+      name: 'Sick leave',
+      color: '#C2185B',
+      unit: 'half-day',
+      requiresApproval: false,
+    })
+    await expectCallError(member.call('saveLeaveType', sickType), 'permission-denied')
+    await expectCallError(manager.call('saveLeaveType', sickType), 'permission-denied')
+    await expectCallError(owner.call('saveLeaveType', { ...sickType, typeId: 'missing' }), 'not-found')
+    await expectCallError(owner.call('saveLeaveType', { ...sickType, color: 'red' }), 'invalid-argument')
+    await owner.call('saveLeaveType', sickType)
+    expect((await adminDb.doc(`${workspacePath}/leaveTypes/sick`).get()).data()).toMatchObject({
+      color: '#c2185b',
+      requiresApproval: false,
+    })
+    const sick = await member.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId, { typeId: 'sick' }))
+    expect(sick.status).toBe('approved')
+    expect(await storedRequest(workspacePath, sick.requestId)).toMatchObject({ autoApprovedReason: 'type' })
+  })
+
+  it('lets members cancel pending and not-yet-started leave, and approvers cancel started leave', async () => {
+    const { owner, manager, member, workspaceId, workspacePath } = await workspaceWithTeam()
+    const other = await createUser('dave', 'dave@example.com')
+    await inviteAndAccept(owner, workspaceId, other)
+    const cancel = (user: TestUser, requestId: string) => user.call('cancelLeaveRequest', { workspaceId, requestId })
+
+    const pending = await member.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId))
+    await expectCallError(cancel(other, pending.requestId), 'failed-precondition')
+    await expectCallError(cancel(manager, pending.requestId), 'failed-precondition')
+    await cancel(member, pending.requestId)
+    expect(await storedRequest(workspacePath, pending.requestId)).toMatchObject({
+      status: 'cancelled',
+      cancelledBy: member.uid,
+    })
+    await expectCallError(cancel(member, pending.requestId), 'failed-precondition')
+
+    const future = await member.call<Submitted>('submitLeaveRequest', leavePayload(workspaceId))
+    await manager.call('decideLeaveRequest', {
+      workspaceId,
+      requestId: future.requestId,
+      decision: 'approve',
+      note: '',
+    })
+    await cancel(member, future.requestId)
+
+    const started = await member.call<Submitted>(
+      'submitLeaveRequest',
+      leavePayload(workspaceId, { startDate: '2026-01-05', endDate: '2026-01-09' }),
+    )
+    await owner.call('decideLeaveRequest', { workspaceId, requestId: started.requestId, decision: 'approve', note: '' })
+    await expectCallError(cancel(member, started.requestId), 'failed-precondition')
+    await cancel(manager, started.requestId)
+    expect(await storedRequest(workspacePath, started.requestId)).toMatchObject({
+      status: 'cancelled',
+      cancelledBy: manager.uid,
+    })
+  })
+
+  it('lets owners and managers edit allowances, but managers not their own, and keeps an adjustment log', async () => {
+    const { owner, manager, member, workspaceId, workspacePath } = await workspaceWithTeam()
+    const target = (uid: string) => ({ workspaceId, uid, typeId: 'holiday', year: 2030 })
+    await manager.call('setLeaveAllowance', { ...target(member.uid), allowanceDays: 26 })
+    await manager.call('addLeaveAdjustment', { ...target(member.uid), days: -0.5, note: 'Correction' })
+    await owner.call('addLeaveAdjustment', { ...target(member.uid), days: 2, note: 'Carry-over' })
+    await manager.call('setLeaveAllowance', { ...target(owner.uid), allowanceDays: 30 })
+    await owner.call('setLeaveAllowance', { ...target(owner.uid), allowanceDays: 25 })
+    await owner.call('setLeaveAllowance', { ...target(manager.uid), allowanceDays: null })
+
+    await expectCallError(
+      manager.call('setLeaveAllowance', { ...target(manager.uid), allowanceDays: 40 }),
+      'permission-denied',
+    )
+    await expectCallError(
+      member.call('setLeaveAllowance', { ...target(member.uid), allowanceDays: 40 }),
+      'permission-denied',
+    )
+    await expectCallError(
+      member.call('addLeaveAdjustment', { ...target(member.uid), days: 5, note: 'Please' }),
+      'permission-denied',
+    )
+    const invalid: [string, Record<string, unknown>][] = [
+      ['setLeaveAllowance', { allowanceDays: 0.25 }],
+      ['setLeaveAllowance', { allowanceDays: -1 }],
+      ['setLeaveAllowance', { allowanceDays: 400 }],
+      ['setLeaveAllowance', { allowanceDays: 10, year: 1999 }],
+      ['addLeaveAdjustment', { days: 0, note: 'Nothing' }],
+      ['addLeaveAdjustment', { days: 1, note: '  ' }],
+    ]
+    for (const [name, overrides] of invalid) {
+      await expectCallError(owner.call(name, { ...target(member.uid), ...overrides }), 'invalid-argument')
+    }
+    await expectCallError(
+      owner.call('setLeaveAllowance', { ...target(member.uid), typeId: 'missing', allowanceDays: 1 }),
+      'not-found',
+    )
+
+    const stored = (await adminDb.doc(`${workspacePath}/leaveAllowances/${member.uid}_holiday_2030`).get()).data()
+    expect(stored).toMatchObject({
+      uid: member.uid,
+      typeId: 'holiday',
+      year: 2030,
+      allowanceDays: 26,
+      updatedBy: owner.uid,
+    })
+    const log = ((stored?.adjustments ?? []) as { days: number; note: string; by: string }[]).map((item) => [
+      item.days,
+      item.note,
+      item.by,
+    ])
+    expect(log).toEqual([
+      [-0.5, 'Correction', manager.uid],
+      [2, 'Carry-over', owner.uid],
+    ])
+
+    const memberDb = rulesFirestore(member)
+    await assertSucceeds(
+      getDocs(query(collection(memberDb, workspacePath, 'leaveAllowances'), where('uid', '==', member.uid))),
+    )
+    await assertFails(getDocs(collection(memberDb, workspacePath, 'leaveAllowances')))
+  })
+})

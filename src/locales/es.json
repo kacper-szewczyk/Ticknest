@@ -83,13 +83,34 @@
     "systemDescription": "Bosque de día y Bosque nocturno cuando tu dispositivo usa el modo oscuro."
   },
   "palettes": {
-    "forest": { "name": "Bosque", "description": "Los verdes clásicos de Ticknest." },
-    "ocean": { "name": "Océano", "description": "Azules serenos con una barra lateral azul marino." },
-    "plum": { "name": "Ciruela", "description": "Morados apagados con suaves toques lila." },
-    "terracotta": { "name": "Terracota", "description": "Tonos cálidos de arcilla sobre un fondo crema." },
-    "forest-night": { "name": "Bosque nocturno", "description": "Modo oscuro con los acentos verdes de siempre." },
-    "midnight": { "name": "Medianoche", "description": "Modo oscuro en azules fríos." },
-    "graphite": { "name": "Grafito", "description": "Modo oscuro neutro con detalles en ámbar." }
+    "forest": {
+      "name": "Bosque",
+      "description": "Los verdes clásicos de Ticknest."
+    },
+    "ocean": {
+      "name": "Océano",
+      "description": "Azules serenos con una barra lateral azul marino."
+    },
+    "plum": {
+      "name": "Ciruela",
+      "description": "Morados apagados con suaves toques lila."
+    },
+    "terracotta": {
+      "name": "Terracota",
+      "description": "Tonos cálidos de arcilla sobre un fondo crema."
+    },
+    "forest-night": {
+      "name": "Bosque nocturno",
+      "description": "Modo oscuro con los acentos verdes de siempre."
+    },
+    "midnight": {
+      "name": "Medianoche",
+      "description": "Modo oscuro en azules fríos."
+    },
+    "graphite": {
+      "name": "Grafito",
+      "description": "Modo oscuro neutro con detalles en ámbar."
+    }
   },
   "nav": {
     "sectionTrack": "Registro",
@@ -105,7 +126,12 @@
     "budgets": "Presupuestos",
     "catalog": "Clientes y proyectos",
     "members": "Miembros",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "timeOff": "Ausencias",
+    "timeOffApprovals": "Aprobar ausencias",
+    "pendingCount_one": "{{count}} solicitud pendiente",
+    "pendingCount_many": "{{count}} solicitudes pendientes",
+    "pendingCount_other": "{{count}} solicitudes pendientes"
   },
   "shell": {
     "sidebar": "Barra lateral",
@@ -117,7 +143,8 @@
   "common": {
     "billable": "Facturable",
     "autoStopped": "Detenido automáticamente",
-    "autoStoppedTitle": "Este temporizador siguió en marcha pasada la medianoche, así que se detuvo al final del día en que empezó."
+    "autoStoppedTitle": "Este temporizador siguió en marcha pasada la medianoche, así que se detuvo al final del día en que empezó.",
+    "cancel": "Cancelar"
   },
   "setup": {
     "kicker": "CONFIGURA {{workspace}}",
@@ -196,5 +223,159 @@
     "contactHelp": "Te ayudo a conseguirlo.",
     "getInTouch": "Ponte en contacto",
     "linkedIn": "Escríbeme en LinkedIn"
+  },
+  "timeOff": {
+    "unknownType": "Tipo desconocido",
+    "unknownMember": "Miembro desconocido",
+    "unlimited": "Sin límite",
+    "days_one": "{{value}} día",
+    "days_many": "{{value}} días",
+    "days_other": "{{value}} días",
+    "halfDayShort": "medio día",
+    "loading": "Cargando ausencias…",
+    "saving": "Guardando…",
+    "close": "Cerrar",
+    "previousYear": "Año anterior",
+    "nextYear": "Año siguiente",
+    "overAllowance": "Supera el saldo",
+    "overAllowanceBy": "Supera el saldo en {{days}}",
+    "decisionNote": "Comentario: {{note}}",
+    "builtIn": {
+      "holiday": "Vacaciones",
+      "sick": "Baja por enfermedad"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "approved": "Aprobada",
+      "rejected": "Rechazada",
+      "cancelled": "Cancelada"
+    },
+    "autoApproved": {
+      "type": "Aprobada automáticamente: este tipo no necesita aprobación.",
+      "noApprover": "Aprobada automáticamente: nadie más en el espacio de trabajo puede aprobarla."
+    },
+    "balance": {
+      "ofAllowance": "disponibles de {{allowance}} · {{taken}} usados",
+      "takenUnlimited": "sin límite · {{taken}} usados",
+      "pending": "{{pending}} pendientes · quedan {{after}} si se aprueban",
+      "pendingUnlimited": "{{pending}} pendientes"
+    },
+    "mine": {
+      "kicker": "TUS AUSENCIAS",
+      "title": "Ausencias",
+      "request": "Solicitar ausencia",
+      "balancesLabel": "Saldos de {{year}}",
+      "requestsHeading": "Solicitudes de {{year}}",
+      "empty": "Todavía no has solicitado ausencias este año.",
+      "cancel": "Cancelar solicitud",
+      "cancelling": "Cancelando…",
+      "cancelConfirm": "¿Cancelar esta solicitud? Los días vuelven a tu saldo.",
+      "cancelled": "Solicitud cancelada.",
+      "submittedPending": "Solicitud enviada. Está pendiente de aprobación.",
+      "submittedApproved": "Solicitud aprobada."
+    },
+    "request": {
+      "title": "Solicitar ausencia",
+      "type": "Tipo de ausencia",
+      "start": "Primer día",
+      "end": "Último día",
+      "halfDay": "Medio día",
+      "startHalf": "El primer día es medio día",
+      "endHalf": "El último día es medio día",
+      "note": "Nota (opcional)",
+      "uses": "Usa {{days}}. Saldo después: {{after}}.",
+      "usesUnlimited": "Usa {{days}}. Este tipo no tiene límite.",
+      "weekendsNote": "Los fines de semana no cuentan. Los días festivos aún no se tienen en cuenta.",
+      "overWarning": "Supera tu saldo en {{days}}. Puedes enviarla igualmente; se marcará como que supera el saldo.",
+      "autoApprovedNote": "Este tipo no necesita aprobación, así que se aprueba al enviarla.",
+      "send": "Enviar solicitud",
+      "sending": "Enviando…",
+      "problem": {
+        "dates": "Elige el primer y el último día.",
+        "end-before-start": "El último día debe ser igual o posterior al primero.",
+        "crosses-year": "Una ausencia que cruza el cambio de año necesita una solicitud por cada año.",
+        "no-working-days": "Estas fechas no tienen días laborables. Los fines de semana no cuentan.",
+        "overlap": "Estas fechas se solapan con otra solicitud tuya pendiente o aprobada."
+      }
+    },
+    "approvals": {
+      "kicker": "AUSENCIAS DEL EQUIPO",
+      "title": "Aprobación de ausencias",
+      "intro": "Solicitudes pendientes de tu equipo. Nadie aprueba su propia solicitud: las tuyas van a otro responsable o al propietario.",
+      "empty": "No hay solicitudes esperando una decisión.",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "approveTitle": "Aprobar ausencia",
+      "rejectTitle": "Rechazar ausencia",
+      "ownRequest": "Es tu solicitud: la decide otra persona.",
+      "balanceAfter": "Saldo tras aprobarla: {{days}}",
+      "decisionSummary": "{{name}} · {{type}} · {{days}}",
+      "comment": "Comentario (opcional)",
+      "approved": "Has aprobado la solicitud de {{name}}.",
+      "rejected": "Has rechazado la solicitud de {{name}}.",
+      "cancelConfirm": "¿Cancelar esta ausencia aprobada de {{name}}? Los días vuelven a su saldo.",
+      "cancelled": "Has cancelado la ausencia de {{name}}.",
+      "balanceAfterUnlimited": "Este tipo no tiene límite."
+    },
+    "approved": {
+      "kicker": "AUSENCIAS APROBADAS",
+      "title": "Ausencias aprobadas en {{year}}",
+      "intro": "Ausencias aprobadas en todo el espacio de trabajo. Cada miembro puede cancelar la suya hasta que empiece; después, la cancela aquí quien aprueba.",
+      "empty": "No hay ausencias aprobadas este año.",
+      "cancel": "Cancelar ausencia"
+    },
+    "balances": {
+      "kicker": "SALDOS",
+      "title": "Saldos y asignaciones",
+      "intro": "Días disponibles por miembro y tipo. Fija la asignación anual de un miembro o añade un ajuste con una nota, como días arrastrados del año anterior.",
+      "cell": "{{type}}: {{available}} disponibles, {{pending}} pendientes",
+      "edit": "Editar asignación",
+      "ownAllowance": "Pide al propietario que cambie tu propia asignación.",
+      "cellUnlimited": "{{type}}: sin límite, {{taken}} usados, {{pending}} pendientes"
+    },
+    "allowance": {
+      "title": "{{name}} · {{year}}",
+      "override": "Asignación para {{year}} (días)",
+      "overrideHelp": "Déjalo vacío para usar la asignación por defecto del tipo ({{default}}).",
+      "overrideInvalid": "Introduce días enteros o medios entre 0 y {{max}}.",
+      "saveOverride": "Guardar asignación",
+      "saved": "Asignación guardada.",
+      "adjustments": "Ajustes",
+      "noAdjustments": "No hay ajustes este año.",
+      "adjustDays": "Días",
+      "adjustNote": "Motivo",
+      "adjustHelp": "Usa un signo menos para quitar días, p. ej. -1. El motivo se muestra con el ajuste.",
+      "adjustmentInvalid": "Introduce días enteros o medios distintos de cero, p. ej. 2 o -0,5.",
+      "noteRequired": "Añade un motivo para el ajuste.",
+      "addAdjustment": "Añadir",
+      "adjustmentAdded": "Ajuste añadido.",
+      "adjustedBy": "Por {{name}} el {{date}}"
+    },
+    "types": {
+      "kicker": "AUSENCIAS",
+      "title": "Tipos de ausencia",
+      "intro": "Tipos que pueden solicitar los miembros, su asignación anual por defecto (por año natural) y si necesitan aprobación. Los tipos archivados ya no se pueden solicitar.",
+      "add": "Añadir tipo",
+      "addTitle": "Añadir tipo de ausencia",
+      "editTitle": "Editar tipo de ausencia",
+      "edit": "Editar",
+      "save": "Guardar tipo",
+      "saved": "{{name}} guardado.",
+      "name": "Nombre",
+      "nameRequired": "Introduce un nombre.",
+      "color": "Color",
+      "unit": "Se toma en",
+      "fullDays": "Días completos",
+      "halfDays": "Días completos o medios días",
+      "defaultAllowance": "Asignación anual por defecto (días)",
+      "defaultAllowanceHelp": "Déjalo vacío para no poner límite. La asignación de cada miembro se puede cambiar por separado.",
+      "allowanceSummary": "Asignación: {{days}}",
+      "requiresApproval": "Necesita aprobación",
+      "requiresApprovalHelp": "Si está desactivado, las solicitudes se aprueban en cuanto se envían.",
+      "needsApproval": "Necesita aprobación",
+      "autoApproved": "Se aprueba automáticamente",
+      "archive": "Archivado",
+      "archived": "Archivado"
+    }
   }
 }

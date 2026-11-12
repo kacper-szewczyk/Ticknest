@@ -1,14 +1,19 @@
 /**
- * Build-time switches for whole features. Each feature is on unless the build sets its variable to `false`, so
- * deployments that set nothing keep every feature. Read flags only through this module, not `import.meta.env`.
+ * Build-time switches for whole features. Each flag has a default: a default-on feature is turned off only by
+ * `false`, and a default-off feature is turned on only by `true`, so deployments that set nothing keep today's
+ * behaviour. Read flags only through this module, not `import.meta.env`.
  */
-export type Feature = 'budgets'
+export type Feature = 'budgets' | 'timeOff'
+
+type Flag = { defaultEnabled: boolean; value: () => string | undefined }
 
 // Each variable is spelled out so Vite can replace it at build time.
-const FLAG_VALUES: Record<Feature, () => string | undefined> = {
-  budgets: () => import.meta.env.VITE_FEATURE_BUDGETS_ENABLED,
+const FLAGS: Record<Feature, Flag> = {
+  budgets: { defaultEnabled: true, value: () => import.meta.env.VITE_FEATURE_BUDGETS_ENABLED },
+  timeOff: { defaultEnabled: false, value: () => import.meta.env.VITE_FEATURE_TIME_OFF_ENABLED },
 }
 
 export function isFeatureEnabled(feature: Feature): boolean {
-  return FLAG_VALUES[feature]() !== 'false'
+  const flag = FLAGS[feature]
+  return flag.defaultEnabled ? flag.value() !== 'false' : flag.value() === 'true'
 }

@@ -18,7 +18,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 ## 3. Non-goals for the first release
 
-- Scheduling, resource capacity planning, leave management, expenses, invoices, payroll, and kiosk mode.
+- Scheduling, resource capacity planning, expenses, invoices, payroll, and kiosk mode.
 - Automatic activity monitoring, screenshots, location tracking, or employee surveillance.
 - External integrations, public API, webhooks, and calendar sync.
 - Advanced approval workflows, multiple rate hierarchies, and accounting exports.
@@ -27,7 +27,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 ## 4. Users and roles
 
 - **Workspace owner:** creates the workspace, manages members and workspace settings, and can edit all workspace time entries and projects.
-- **Manager:** a member who can also read every workspace time entry, run reports on all users, and create, edit, and delete budgets for any member. Managers track and edit only their own time and cannot manage clients, projects, tasks, invitations, members, or workspace settings. The owner promotes members to manager and demotes them back; invitations always join as members.
+- **Manager:** a member who can also read every workspace time entry, run reports on all users, create, edit, and delete budgets for any member, and (with time off on) approve or reject other people's leave and change other members' leave allowances. Managers track and edit only their own time and cannot manage clients, projects, tasks, invitations, members, or workspace settings. The owner promotes members to manager and demotes them back; invitations always join as members.
 - **Member:** tracks and edits their own time; views shared clients, projects, and tasks.
 - A user may belong to multiple workspaces. The active workspace is selected in the application.
 - There is no configurable permission matrix beyond these three roles.
@@ -91,7 +91,19 @@ This is an independent product. It must not use Clockify branding, proprietary a
 - Export filtered detailed entries as CSV. Escape commas, quotes, and newlines correctly.
 - Export the filtered report as a PDF, built in the browser: a header (workspace, date range, time zone, generation time, active filters), totals, the summary for the selected group-by tab, and the detailed entries with the CSV's dates and durations. The user column follows the same rule as the on-screen table. The PDF library and fonts load only on export. Reports over 5,000 entries show a message to narrow the filters or use CSV instead.
 
-### 5.7 Settings and privacy
+### 5.7 Time off
+
+Behind the build flag `VITE_FEATURE_TIME_OFF_ENABLED`, off unless set to `true`.
+
+- **Leave types** (owner, in Settings): every workspace has the built-in Holiday (20 days a year, needs approval) and Sick leave (no limit, needs approval) without any setup, and the owner can add custom types. Each type has a name, color, unit (full days, or full and half days), whether it needs approval, a default allowance per calendar year (empty is unlimited), and an archived flag. Archived types cannot be requested; types are never deleted.
+- **Allowances** (owners and managers): per member, type, and year, an allowance that overrides the type's default, and adjustments of whole or half days with a required note (for example carry-over), recorded with who made them and when. Managers cannot change their own allowance; the owner can.
+- **Balance** per member, type, and year = allowance + adjustments − approved days; pending days are shown separately with what is left if they are approved.
+- **Requesting** (every member, on the Time off page): type, first and last day, half first or last day for types taken in half days, optional note. Days count Monday to Friday; public holidays are not counted yet. A request stays within one calendar year and cannot overlap the member's own pending or approved requests. The form shows the days used and the balance after. Going over the balance warns but does not block: the request is stored and shown everywhere as "Over allowance", with how many days over.
+- **Approval** (owners and managers, on the Time-off approvals page, with a pending count in the sidebar): approve or reject pending requests with an optional comment, seeing the balance after approval. Nobody decides their own request: a manager's goes to the owner or another manager, the owner's to a manager. When nobody else may approve (an owner without managers), or the type needs no approval, the request is approved on submit and marked as approved automatically, with the reason. Approval re-checks the over-allowance mark.
+- **Cancelling:** members cancel their pending requests and approved leave that has not started yet (in their time zone snapshot); approved leave that has started is cancelled by an approver. Decisions and cancellations keep who made them and when.
+- Later: a team calendar with filters, approved leave reducing "expected to date" in budgets, time off in reports, public holidays, hourly leave and accrual, notifications.
+
+### 5.8 Settings and privacy
 
 - Workspace settings include name and default week start day.
 - User settings include display name and preferred timezone (default to browser-detected timezone, editable by the user).
@@ -111,6 +123,9 @@ This is an independent product. It must not use Clockify branding, proprietary a
 7. **Budgets** — owners and managers list budgets grouped per member (collapsible, with the weekly hours of active budgets), searched by member, project, or client name and filtered by status (active, upcoming, past, archived). Creating a budget, or selecting one, opens it in a side drawer while the list stays in place; archive, restore, and delete are in each row's menu. Hours are set as one daily value for Monday to Friday or every day, or per weekday, and the drawer shows the resulting weekly and total hours. Hours accept decimal hours (`7.5`) or `H:MM` (`7:30`) and are shown as `H:MM`. Hidden from members.
 8. **My budgets** — every user sees their own active budgets, grouped per project or client: today's logged time against today's target, the running balance (e.g. `−2h 30m behind`), time logged to date, and a week-by-week breakdown with each day's status in words (under, met, over, to go, no target). It updates live as entries are saved, edited, deleted, or a timer stops. Upcoming budgets are listed with their start date; ended budgets are not shown.
 9. **Budget progress** — owners and managers see a table of every member's budgets, grouped per member and project or client: target, range, expected to date, logged to date, running balance, and status in words (behind, on track, over). Filters by member, target, and an active-day window (today by default). Each row opens the same week-by-week breakdown the member sees, with the same numbers. Entries are read once per member, bounded by the shown budgets' days, and refreshed on demand. No CSV export yet. Hidden from members.
+
+10. **Time off** — every member's balances per type for a year, their requests with status and over-allowance marks, the request form, and cancel. Behind the time-off flag.
+11. **Time-off approvals** — owners and managers: pending requests to approve or reject, every member's balances with allowance and adjustment editing, and the year's approved leave, which approvers can cancel. Behind the time-off flag; hidden from members.
 
 The interface must be responsive and usable on desktop and mobile web. Keyboard focus, labels, validation announcements, and sufficient contrast are required for core forms and timer actions.
 
@@ -140,6 +155,10 @@ All workspace-owned documents are scoped under a workspace ID. Exact collection 
 - `workspaces/{workspaceId}/timeEntries/{entryId}`: user UID, user-name snapshot, description, client/project/task IDs and display snapshots, `startAt`, nullable `endAt`, the IANA time zone the timer was started in (`startTimeZone`, set on timer start only), an `autoStopped` flag set only by the scheduled auto-stop, billable boolean, created/updated timestamps, optional deleted/archive marker if soft deletion is used.
 - `workspaces/{workspaceId}/budgets/{budgetId}`: tracked user UID and name snapshot, project or client target with a name snapshot, inclusive start and end calendar days (at most 731 days), target minutes per weekday, exception dates, archived flag, creator, created/updated timestamps. Progress is calculated in the browser from the tracked member's completed entries, with days in the member's snapshot timezone (falling back to the viewer's timezone when a member joined before the snapshot existed). Client budgets count entries by their client snapshot. Past days are under, met (an exact match in whole minutes), or over; the running balance covers past days plus the time logged today, and today's target is due only when the day ends.
 
+- `workspaces/{workspaceId}/leaveTypes/{typeId}`: name, color, unit, requires-approval flag, default yearly allowance (nullable), archived flag, timestamps. The built-in `holiday` and `sick` IDs fall back to code defaults until saved.
+- `workspaces/{workspaceId}/leaveAllowances/{uid_typeId_year}`: member UID, type ID, year, allowance override (nullable), adjustments log (days, note, by, at), last editor, timestamps.
+- `workspaces/{workspaceId}/leaveRequests/{requestId}`: member UID and name snapshot, type ID, year, inclusive start and end dates, half-day flags, working days, note, status (`pending`, `approved`, `rejected`, `cancelled`), over-allowance flag and days, auto-approval flag and reason, decider, decision time and comment, canceller and time, timestamps. Written only by the leave callables, in transactions serialized per member.
+
 Use server timestamps for audit fields. Store instants as Firestore timestamps. Do not treat client-supplied role, owner, or membership fields as authoritative.
 
 ## 8. Security requirements
@@ -148,7 +167,7 @@ Use server timestamps for audit fields. Store instants as Firestore timestamps. 
 - A user may read workspace data only if they have an active membership record for that workspace.
 - Members and managers may create and change only their own time entries; owners may manage all workspace entries. Owners and managers may read all workspace entries. Validate allowed fields, types, timestamps, and workspace scope in rules and trusted functions.
 - Members and managers cannot write membership, invitation, or workspace-owner fields directly. Only the owner can change a member's role, through a trusted callable.
-- Only the owner can manage clients, projects, tasks, invites, members, and workspace settings. Managers can additionally manage budgets.
+- Only the owner can manage clients, projects, tasks, invites, members, and workspace settings. Managers can additionally manage budgets and decide other people's time off. Time-off writes go only through trusted callables, which enforce status transitions, approver eligibility (nobody decides their own request), overlap, and over-allowance marking.
 - Invitation tokens must be high entropy, stored as hashes, expire, and be single-use. Do not expose open invitation enumeration.
 - Restrict Firebase API keys by app/domain where supported; document that Firebase client API keys are identifiers, not secrets.
 - Include a security rules test matrix and emulator-based verification before release.

@@ -63,6 +63,7 @@ jobs:
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY }}
           VITE_DEMO_MODE: ${{ vars.VITE_DEMO_MODE }}
           VITE_FEATURE_BUDGETS_ENABLED: ${{ vars.VITE_FEATURE_BUDGETS_ENABLED }}
+          VITE_FEATURE_TIME_OFF_ENABLED: ${{ vars.VITE_FEATURE_TIME_OFF_ENABLED }}
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:

@@ -10,6 +10,27 @@ import { getDemoGuardResult } from './demo/config'
 import { resetDemoProject } from './demo/reset'
 import { DEMO_RESET_SCHEDULE, DEMO_RESET_TIME_ZONE } from './demo/schedule'
 import { autoStopRunningTimers } from './timers/autoStop'
+import { resolveTimeZone, zonedDay } from './timers/midnight'
+import {
+  type ApproverCandidate,
+  type LeaveRange,
+  type LeaveStatus,
+  type LeaveTypeSettings,
+  type LeaveUnit,
+  BUILT_IN_LEAVE_TYPES,
+  MAX_ADJUSTMENTS,
+  MAX_LEAVE_DAYS,
+  allowanceDocumentId,
+  canCancelLeave,
+  canDecideLeave,
+  countLeaveDays,
+  hasEligibleApprover,
+  isBuiltInLeaveType,
+  isHalfDayAmount,
+  leaveBalance,
+  overAllowanceDays,
+  rangesOverlap,
+} from './timeOff/leave'
 
 initializeApp()
 
@@ -712,6 +733,431 @@ export const deleteBudget = onCall(FUNCTION_OPTIONS, async (request) => {
     transaction.delete(budgetRef)
   })
   return { budgetId }
+})
+
+// Time off. Leave types, allowances, and requests are written only by the callables below; the rules let
+// clients read them. Every write that changes a member's balance reads and writes that member's lock document,
+// so concurrent submissions and decisions for one member are serialized and see each other's requests.
+
+const MAX_CUSTOM_LEAVE_TYPES = 20
+const LEAVE_UNITS: readonly LeaveUnit[] = ['day', 'half-day']
+
+type MemberData = { role?: string; status?: string; displayName?: string; email?: string; timezone?: string }
+
+function getBoolean(data: CallableData, field: string): boolean {
+  const value = data[field]
+  if (typeof value !== 'boolean') throw new HttpsError('invalid-argument', `Enter a valid ${field}.`)
+  return value
+}
+
+function getLeaveYear(data: CallableData): number {
+  const year = data.year
+  if (typeof year !== 'number' || !Number.isInteger(year) || year < 2000 || year > 2100) {
+    throw new HttpsError('invalid-argument', 'Enter a valid year.')
+  }
+  return year
+}
+
+function getAllowanceDays(data: CallableData, field: string): number | null {
+  const value = data[field]
+  if (value === null) return null
+  if (!isHalfDayAmount(value, 0, MAX_LEAVE_DAYS)) {
+    throw new HttpsError('invalid-argument', `Allowances are whole or half days between 0 and ${MAX_LEAVE_DAYS}.`)
+  }
+  return value
+}
+
+function getLeaveTypeSettings(data: CallableData): LeaveTypeSettings {
+  const color = data.color
+  if (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)) {
+    throw new HttpsError('invalid-argument', 'Choose a valid color.')
+  }
+  if (typeof data.unit !== 'string' || !(LEAVE_UNITS as readonly string[]).includes(data.unit)) {
+    throw new HttpsError('invalid-argument', 'Choose full days or half days.')
+  }
+  return {
+    name: getRequiredText(data, 'name', 60),
+    color: color.toLowerCase(),
+    unit: data.unit as LeaveUnit,
+    requiresApproval: getBoolean(data, 'requiresApproval'),
+    defaultAllowanceDays: getAllowanceDays(data, 'defaultAllowanceDays'),
+    archived: getBoolean(data, 'archived'),
+  }
+}
+
+/** A stored leave type, or the built-in default when the owner has not saved one; `null` if it does not exist. */
+async function readLeaveType(
+  transaction: Transaction,
+  workspaceRef: DocumentReference,
+  typeId: string,
+): Promise<LeaveTypeSettings | null> {
+  const stored = (await transaction.get(workspaceRef.collection('leaveTypes').doc(typeId))).data()
+  if (stored) return stored as LeaveTypeSettings
+  return isBuiltInLeaveType(typeId) ? BUILT_IN_LEAVE_TYPES[typeId] : null
+}
+
+async function readActiveMember(transaction: Transaction, workspaceRef: DocumentReference, uid: string) {
+  const member = (await transaction.get(workspaceRef.collection('members').doc(uid))).data() as MemberData | undefined
+  if (!member || member.status === 'removed') return null
+  return { uid, role: member.role ?? 'member', status: member.status, data: member }
+}
+
+function memberName(member: MemberData, fallback: string): string {
+  const name = typeof member.displayName === 'string' && member.displayName.trim() ? member.displayName : member.email
+  return String(name ?? fallback)
+    .trim()
+    .slice(0, 80)
+}
+
+/** Allowance, adjustments, and every request of one member, type, and year, read inside the transaction. */
+async function readLeaveBalance(
+  transaction: Transaction,
+  workspaceRef: DocumentReference,
+  uid: string,
+  typeId: string,
+  year: number,
+  type: LeaveTypeSettings,
+  excludeRequestId?: string,
+) {
+  const [allowance, requests] = await Promise.all([
+    transaction.get(workspaceRef.collection('leaveAllowances').doc(allowanceDocumentId(uid, typeId, year))),
+    transaction.get(workspaceRef.collection('leaveRequests').where('uid', '==', uid)),
+  ])
+  const allowanceData = allowance.data()
+  const allowanceDays =
+    allowanceData && typeof allowanceData.allowanceDays === 'number'
+      ? allowanceData.allowanceDays
+      : type.defaultAllowanceDays
+  const adjustments = Array.isArray(allowanceData?.adjustments) ? (allowanceData.adjustments as { days: number }[]) : []
+  const counted = requests.docs
+    .filter((request) => request.id !== excludeRequestId)
+    .map((request) => request.data() as { typeId: string; year: number; status: LeaveStatus; days: number })
+    .filter((request) => request.typeId === typeId && request.year === year)
+  return { balance: leaveBalance(allowanceDays, adjustments, counted), requests: requests.docs }
+}
+
+async function requireLeaveManager(transaction: Transaction, workspaceRef: DocumentReference, uid: string) {
+  const caller = await readActiveMember(transaction, workspaceRef, uid)
+  if (!caller || (caller.role !== 'owner' && caller.role !== 'manager')) {
+    throw new HttpsError('permission-denied', 'Only the workspace owner and managers can manage time off.')
+  }
+  return caller
+}
+
+function rethrowAborted(error: unknown): never {
+  if (isAbortedError(error)) {
+    throw new HttpsError('aborted', 'Another time-off change for this member was saved at the same moment. Try again.')
+  }
+  throw error
+}
+
+// Creates a custom leave type or saves a type's settings, including the built-in Holiday and Sick leave.
+export const saveLeaveType = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const typeId = getOptionalDocumentId(data, 'typeId')
+  const settings = getLeaveTypeSettings(data)
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const typesRef = workspaceRef.collection('leaveTypes')
+  const typeRef = typeId ? typesRef.doc(typeId) : typesRef.doc()
+
+  await db.runTransaction(async (transaction) => {
+    const caller = await readActiveMember(transaction, workspaceRef, user.uid)
+    if (caller?.role !== 'owner') {
+      throw new HttpsError('permission-denied', 'Only the workspace owner can manage leave types.')
+    }
+    const existing = await transaction.get(typeRef)
+    const now = FieldValue.serverTimestamp()
+    if (existing.exists) {
+      transaction.update(typeRef, { ...settings, updatedAt: now })
+      return
+    }
+    if (typeId && !isBuiltInLeaveType(typeId)) throw new HttpsError('not-found', 'This leave type no longer exists.')
+    if (!typeId) {
+      const stored = await transaction.get(typesRef)
+      const customCount = stored.docs.filter((item) => !isBuiltInLeaveType(item.id)).length
+      if (customCount >= MAX_CUSTOM_LEAVE_TYPES) {
+        throw new HttpsError(
+          'resource-exhausted',
+          `A workspace can have at most ${MAX_CUSTOM_LEAVE_TYPES} custom types.`,
+        )
+      }
+    }
+    transaction.create(typeRef, { ...settings, createdAt: now, updatedAt: now })
+  })
+  return { typeId: typeRef.id }
+})
+
+function getAllowanceTarget(data: CallableData) {
+  return {
+    workspaceId: getDocumentId(data, 'workspaceId'),
+    uid: getDocumentId(data, 'uid'),
+    typeId: getDocumentId(data, 'typeId'),
+    year: getLeaveYear(data),
+  }
+}
+
+// Shared checks for allowance edits: a manager or the owner, an existing type, and an active member. Managers
+// cannot change their own allowance; the owner can.
+async function prepareAllowanceEdit(
+  transaction: Transaction,
+  callerUid: string,
+  target: ReturnType<typeof getAllowanceTarget>,
+) {
+  const workspaceRef = db.collection('workspaces').doc(target.workspaceId)
+  const caller = await requireLeaveManager(transaction, workspaceRef, callerUid)
+  if (caller.role !== 'owner' && caller.uid === target.uid) {
+    throw new HttpsError('permission-denied', 'Ask the workspace owner to change your own allowance.')
+  }
+  const [type, member] = await Promise.all([
+    readLeaveType(transaction, workspaceRef, target.typeId),
+    readActiveMember(transaction, workspaceRef, target.uid),
+  ])
+  if (!type) throw new HttpsError('not-found', 'This leave type no longer exists.')
+  if (!member) throw new HttpsError('failed-precondition', 'Choose an active workspace member.')
+  const allowanceRef = workspaceRef
+    .collection('leaveAllowances')
+    .doc(allowanceDocumentId(target.uid, target.typeId, target.year))
+  const existing = (await transaction.get(allowanceRef)).data()
+  return { allowanceRef, existing }
+}
+
+function newAllowance(target: ReturnType<typeof getAllowanceTarget>, now: FieldValue) {
+  return {
+    uid: target.uid,
+    typeId: target.typeId,
+    year: target.year,
+    allowanceDays: null,
+    adjustments: [],
+    createdAt: now,
+  }
+}
+
+// Overrides a member's yearly allowance for a type; `null` goes back to the type's default.
+export const setLeaveAllowance = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const target = getAllowanceTarget(data)
+  const allowanceDays = getAllowanceDays(data, 'allowanceDays')
+
+  await db.runTransaction(async (transaction) => {
+    const { allowanceRef, existing } = await prepareAllowanceEdit(transaction, user.uid, target)
+    const now = FieldValue.serverTimestamp()
+    const values = { allowanceDays, updatedBy: user.uid, updatedAt: now }
+    if (existing) transaction.update(allowanceRef, values)
+    else transaction.create(allowanceRef, { ...newAllowance(target, now), ...values })
+  })
+  return { allowanceDays }
+})
+
+// Adds or removes days with a note (carry-over, extra days granted), recording who made the change and when.
+export const addLeaveAdjustment = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const target = getAllowanceTarget(data)
+  const days = data.days
+  if (!isHalfDayAmount(days, -MAX_LEAVE_DAYS, MAX_LEAVE_DAYS) || days === 0) {
+    throw new HttpsError('invalid-argument', 'Adjust by a whole or half number of days other than zero.')
+  }
+  const note = getRequiredText(data, 'note', 200)
+
+  await db.runTransaction(async (transaction) => {
+    const { allowanceRef, existing } = await prepareAllowanceEdit(transaction, user.uid, target)
+    const adjustments = Array.isArray(existing?.adjustments) ? existing.adjustments : []
+    if (adjustments.length >= MAX_ADJUSTMENTS) {
+      throw new HttpsError('resource-exhausted', `A member can have at most ${MAX_ADJUSTMENTS} adjustments a year.`)
+    }
+    // Server timestamps cannot go inside arrays, so the adjustment records the commit time instead.
+    const adjustment = { days, note, by: user.uid, at: Timestamp.now() }
+    const now = FieldValue.serverTimestamp()
+    const values = { adjustments: [...adjustments, adjustment], updatedBy: user.uid, updatedAt: now }
+    if (existing) transaction.update(allowanceRef, values)
+    else transaction.create(allowanceRef, { ...newAllowance(target, now), ...values })
+  })
+  return { days }
+})
+
+// Requests leave for the caller. Days, overlap, and over-allowance are worked out here. Types that need no
+// approval, and members nobody else may approve, are approved on submit and marked as auto-approved.
+export const submitLeaveRequest = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const typeId = getDocumentId(data, 'typeId')
+  const startDate = getCalendarDay(data.startDate, 'start date').day
+  const endDate = getCalendarDay(data.endDate, 'end date').day
+  if (endDate < startDate) throw new HttpsError('invalid-argument', 'The end date must be on or after the start date.')
+  if (startDate.slice(0, 4) !== endDate.slice(0, 4)) {
+    throw new HttpsError('invalid-argument', 'Leave that crosses the new year needs one request for each year.')
+  }
+  const startHalf = getBoolean(data, 'startHalf')
+  const endHalf = getBoolean(data, 'endHalf')
+  const note = getOptionalText(data, 'note', 500)
+  const year = Number(startDate.slice(0, 4))
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const requestRef = workspaceRef.collection('leaveRequests').doc()
+
+  try {
+    const status = await db.runTransaction(async (transaction) => {
+      const caller = await readActiveMember(transaction, workspaceRef, user.uid)
+      if (!caller) throw new HttpsError('permission-denied', 'You are not a member of this workspace.')
+      const type = await readLeaveType(transaction, workspaceRef, typeId)
+      if (!type || type.archived) throw new HttpsError('failed-precondition', 'Choose an active leave type.')
+      if (type.unit === 'day' && (startHalf || endHalf)) {
+        throw new HttpsError('invalid-argument', 'This leave type is taken in full days.')
+      }
+      const days = countLeaveDays({ startDate, endDate, startHalf, endHalf })
+      if (days === null || days === 0) {
+        throw new HttpsError('invalid-argument', 'Choose dates that include at least one working day.')
+      }
+
+      const lockRef = workspaceRef.collection('leaveLocks').doc(user.uid)
+      const [, members, { balance, requests }] = await Promise.all([
+        transaction.get(lockRef),
+        transaction.get(workspaceRef.collection('members').where('role', 'in', ['owner', 'manager'])),
+        readLeaveBalance(transaction, workspaceRef, user.uid, typeId, year, type),
+      ])
+      const overlaps = requests.some((item) => {
+        const other = item.data()
+        return (
+          (other.status === 'pending' || other.status === 'approved') &&
+          rangesOverlap(other as LeaveRange, { startDate, endDate })
+        )
+      })
+      if (overlaps) {
+        throw new HttpsError('failed-precondition', 'These dates overlap another pending or approved request of yours.')
+      }
+      const approvers = members.docs.map(
+        (item) => ({ uid: item.id, ...(item.data() as MemberData) }) as ApproverCandidate,
+      )
+      const autoApproved = !type.requiresApproval || !hasEligibleApprover(approvers, user.uid)
+      const overDays = overAllowanceDays(balance, days)
+      const now = FieldValue.serverTimestamp()
+      transaction.set(lockRef, { updatedAt: now })
+      transaction.create(requestRef, {
+        uid: user.uid,
+        userDisplayName: memberName(caller.data, user.email || user.uid),
+        typeId,
+        year,
+        startDate,
+        endDate,
+        startHalf,
+        endHalf,
+        days,
+        note,
+        status: autoApproved ? 'approved' : 'pending',
+        overAllowance: overDays > 0,
+        overAllowanceDays: overDays,
+        autoApproved,
+        autoApprovedReason: autoApproved ? (type.requiresApproval ? 'no-approver' : 'type') : null,
+        decidedBy: null,
+        decidedAt: autoApproved ? now : null,
+        decisionNote: '',
+        cancelledBy: null,
+        cancelledAt: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      return autoApproved ? 'approved' : 'pending'
+    })
+    return { requestId: requestRef.id, status }
+  } catch (error) {
+    rethrowAborted(error)
+  }
+})
+
+// Approves or rejects a pending request. Approval re-checks the balance, since it may have changed since submit.
+export const decideLeaveRequest = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const requestId = getDocumentId(data, 'requestId')
+  const decision = data.decision
+  if (decision !== 'approve' && decision !== 'reject') {
+    throw new HttpsError('invalid-argument', 'Choose to approve or reject the request.')
+  }
+  const note = getOptionalText(data, 'note', 500)
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const requestRef = workspaceRef.collection('leaveRequests').doc(requestId)
+
+  try {
+    const status = await db.runTransaction(async (transaction) => {
+      const caller = await requireLeaveManager(transaction, workspaceRef, user.uid)
+      const leave = (await transaction.get(requestRef)).data()
+      if (!leave) throw new HttpsError('not-found', 'This request no longer exists.')
+      if (!canDecideLeave(caller, leave.uid)) {
+        throw new HttpsError('permission-denied', 'Someone else has to decide your own time off.')
+      }
+      if (leave.status !== 'pending')
+        throw new HttpsError('failed-precondition', 'This request has already been decided.')
+      const now = FieldValue.serverTimestamp()
+      const values: Record<string, unknown> = {
+        status: decision === 'approve' ? 'approved' : 'rejected',
+        decidedBy: user.uid,
+        decidedAt: now,
+        decisionNote: note,
+        updatedAt: now,
+      }
+      if (decision === 'approve') {
+        const lockRef = workspaceRef.collection('leaveLocks').doc(leave.uid)
+        // Archived types still resolve, so leave requested before archiving can be decided.
+        const type = await readLeaveType(transaction, workspaceRef, leave.typeId)
+        if (!type) throw new HttpsError('not-found', 'This leave type no longer exists.')
+        const [, { balance }] = await Promise.all([
+          transaction.get(lockRef),
+          readLeaveBalance(transaction, workspaceRef, leave.uid, leave.typeId, leave.year, type, requestId),
+        ])
+        const overDays = overAllowanceDays(balance, leave.days)
+        values.overAllowance = overDays > 0
+        values.overAllowanceDays = overDays
+        transaction.set(lockRef, { updatedAt: now })
+      }
+      transaction.update(requestRef, values)
+      return values.status as LeaveStatus
+    })
+    return { requestId, status }
+  } catch (error) {
+    rethrowAborted(error)
+  }
+})
+
+// Members cancel their pending requests and approved leave that has not started; approvers cancel approved leave.
+export const cancelLeaveRequest = onCall(FUNCTION_OPTIONS, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  const requestId = getDocumentId(data, 'requestId')
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const requestRef = workspaceRef.collection('leaveRequests').doc(requestId)
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const caller = await readActiveMember(transaction, workspaceRef, user.uid)
+      if (!caller) throw new HttpsError('permission-denied', 'You are not a member of this workspace.')
+      const leave = (await transaction.get(requestRef)).data()
+      if (!leave) throw new HttpsError('not-found', 'This request no longer exists.')
+      const lockRef = workspaceRef.collection('leaveLocks').doc(leave.uid)
+      const [, requester] = await Promise.all([
+        transaction.get(lockRef),
+        transaction.get(workspaceRef.collection('members').doc(leave.uid)),
+      ])
+      // "Today" is the requester's, so whether leave has started does not depend on who cancels it.
+      const today = zonedDay(Date.now(), resolveTimeZone((requester.data() as MemberData | undefined)?.timezone))
+      if (!canCancelLeave(leave as { uid: string; status: LeaveStatus; startDate: string }, caller, today)) {
+        if (leave.uid === user.uid && leave.status === 'approved') {
+          throw new HttpsError('failed-precondition', 'This leave has started. Ask an approver to cancel it.')
+        }
+        throw new HttpsError('failed-precondition', 'This request can no longer be cancelled.')
+      }
+      const now = FieldValue.serverTimestamp()
+      transaction.set(lockRef, { updatedAt: now })
+      transaction.update(requestRef, { status: 'cancelled', cancelledBy: user.uid, cancelledAt: now, updatedAt: now })
+    })
+    return { requestId, status: 'cancelled' }
+  } catch (error) {
+    rethrowAborted(error)
+  }
 })
 
 // Stops timers left running past the end of the day they were started on, in the time zone they were started in.

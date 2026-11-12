@@ -7,9 +7,9 @@ import {
   resolveView,
 } from '../../src/lib/workspaceViews'
 
-const OWNER: ViewAccess = { isOwner: true, seesAllEntries: true, budgetsEnabled: true }
-const MANAGER: ViewAccess = { isOwner: false, seesAllEntries: true, budgetsEnabled: true }
-const MEMBER: ViewAccess = { isOwner: false, seesAllEntries: false, budgetsEnabled: true }
+const OWNER: ViewAccess = { isOwner: true, seesAllEntries: true, budgetsEnabled: true, timeOffEnabled: false }
+const MANAGER: ViewAccess = { isOwner: false, seesAllEntries: true, budgetsEnabled: true, timeOffEnabled: false }
+const MEMBER: ViewAccess = { isOwner: false, seesAllEntries: false, budgetsEnabled: true, timeOffEnabled: false }
 
 function openViews(access: ViewAccess): string[] {
   return WORKSPACE_VIEWS.filter((view) => canOpenView(view, access))
@@ -24,8 +24,8 @@ describe('isWorkspaceView', () => {
 })
 
 describe('canOpenView with budgets on', () => {
-  it('opens every view to owners', () => {
-    expect(openViews(OWNER)).toEqual([...WORKSPACE_VIEWS])
+  it('opens every view to owners when time off is on too', () => {
+    expect(openViews({ ...OWNER, timeOffEnabled: true })).toEqual([...WORKSPACE_VIEWS])
   })
 
   it('opens budget management but not the catalog or members to managers', () => {
@@ -61,6 +61,27 @@ describe('canOpenView with budgets off', () => {
       'members',
       'settings',
     ])
+  })
+})
+
+describe('canOpenView with time off on', () => {
+  it('opens Time off to everyone and approvals to owners and managers', () => {
+    expect(openViews({ ...OWNER, timeOffEnabled: true })).toContain('time-off-approvals')
+    expect(openViews({ ...MANAGER, timeOffEnabled: true })).toEqual(
+      expect.arrayContaining(['time-off', 'time-off-approvals']),
+    )
+    const memberViews = openViews({ ...MEMBER, timeOffEnabled: true })
+    expect(memberViews).toContain('time-off')
+    expect(memberViews).not.toContain('time-off-approvals')
+  })
+
+  it('hides both time-off views when the flag is off', () => {
+    for (const access of [OWNER, MANAGER, MEMBER]) {
+      expect(openViews(access)).not.toContain('time-off')
+      expect(openViews(access)).not.toContain('time-off-approvals')
+    }
+    expect(resolveView('time-off', MEMBER)).toBe('timesheet')
+    expect(resolveView('time-off-approvals', { ...MEMBER, timeOffEnabled: true })).toBe('timesheet')
   })
 })
 

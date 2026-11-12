@@ -19,6 +19,7 @@ import { type Catalog, subscribeToCatalog } from './lib/catalog'
 import { localeWeekStart, type WeekStart } from './lib/dates'
 import { readableError } from './lib/errors'
 import { isFeatureEnabled } from './lib/featureFlags'
+import { usePendingLeaveCount } from './usePendingLeaveCount'
 import { clearInviteParamsFromAddressBar, hasInviteParams } from './lib/inviteLink'
 import {
   type SetupItem,
@@ -65,6 +66,11 @@ const MyBudgetsPanel = lazy(() => import('./MyBudgetsPanel').then((module) => ({
 const TeamBudgetsPanel = lazy(() =>
   import('./TeamBudgetsPanel').then((module) => ({ default: module.TeamBudgetsPanel })),
 )
+const TimeOffPanel = lazy(() => import('./TimeOffPanel').then((module) => ({ default: module.TimeOffPanel })))
+const TimeOffApprovalsPanel = lazy(() =>
+  import('./TimeOffApprovalsPanel').then((module) => ({ default: module.TimeOffApprovalsPanel })),
+)
+const LeaveTypesPanel = lazy(() => import('./LeaveTypesPanel').then((module) => ({ default: module.LeaveTypesPanel })))
 // Setup runs once per workspace, right after it is created.
 const SetupWizard = lazy(() => import('./SetupWizard').then((module) => ({ default: module.SetupWizard })))
 
@@ -243,7 +249,13 @@ export function WorkspaceScreen({ user }: { user: User }) {
   }, [activeId, isOwner])
   const seesAllEntries = canSeeAllEntries(activeWorkspace?.role)
   const budgetsEnabled = isFeatureEnabled('budgets')
-  const viewAccess = { isOwner, seesAllEntries, budgetsEnabled }
+  const timeOffEnabled = isFeatureEnabled('timeOff')
+  const viewAccess = { isOwner, seesAllEntries, budgetsEnabled, timeOffEnabled }
+  // Requests the signed-in owner or manager can decide, for the badge on Time-off approvals.
+  const pendingLeaveCount = usePendingLeaveCount(
+    timeOffEnabled && seesAllEntries ? activeWorkspace?.id : undefined,
+    user.uid,
+  )
   const currentView = resolveView(view, viewAccess)
   const allNavItems: NavItem<WorkspaceView>[] = [
     { value: 'timesheet', label: t('nav.timesheet'), icon: navIcons.timesheet, section: t('nav.sectionTrack') },
@@ -260,6 +272,34 @@ export function WorkspaceScreen({ user }: { user: User }) {
       label: t('nav.budgetProgress'),
       icon: navIcons.teamBudgets,
       section: t('nav.sectionAnalyze'),
+    },
+    { value: 'time-off', label: t('nav.timeOff'), icon: navIcons.timeOff, section: t('nav.sectionTrack') },
+    {
+      value: 'time-off-approvals',
+      label: t('nav.timeOffApprovals'),
+      icon: navIcons.timeOffApprovals,
+      section: t('nav.sectionManage'),
+      badge: pendingLeaveCount > 0 && (
+        <Box
+          component="span"
+          aria-label={t('nav.pendingCount', { count: pendingLeaveCount })}
+          sx={{
+            display: 'inline-flex',
+            minWidth: 20,
+            height: 20,
+            px: 0.75,
+            borderRadius: '10px',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'warning.main',
+            color: 'warning.contrastText',
+            fontSize: 12,
+            fontWeight: 700,
+          }}
+        >
+          {pendingLeaveCount}
+        </Box>
+      ),
     },
     { value: 'budgets', label: t('nav.budgets'), icon: navIcons.budgets, section: t('nav.sectionManage') },
     { value: 'catalog', label: t('nav.catalog'), icon: navIcons.catalog, section: t('nav.sectionManage') },
@@ -659,6 +699,27 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 <BudgetsPanel key={activeWorkspace.id} workspaceId={activeWorkspace.id} catalog={catalog} />
               </Suspense>
             )}
+            {currentView === 'time-off' && (
+              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+                <TimeOffPanel
+                  key={activeWorkspace.id}
+                  workspaceId={activeWorkspace.id}
+                  userId={user.uid}
+                  memberTimeZone={activeWorkspace.timezone}
+                />
+              </Suspense>
+            )}
+            {currentView === 'time-off-approvals' && (
+              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+                <TimeOffApprovalsPanel
+                  key={activeWorkspace.id}
+                  workspaceId={activeWorkspace.id}
+                  userId={user.uid}
+                  role={activeWorkspace.role}
+                  memberTimeZone={activeWorkspace.timezone}
+                />
+              </Suspense>
+            )}
             {currentView === 'catalog' && <CatalogPanel workspaceId={activeWorkspace.id} />}
             {currentView === 'members' && (
               <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
@@ -710,6 +771,11 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   workspace={activeWorkspace}
                   onSaved={refreshWorkspaces}
                 />
+                {isOwner && timeOffEnabled && (
+                  <Suspense fallback={null}>
+                    <LeaveTypesPanel key={activeWorkspace.id} workspaceId={activeWorkspace.id} />
+                  </Suspense>
+                )}
                 <AppearancePanel user={user} />
                 <LanguagePanel user={user} />
                 {joinWorkspaceForm}
@@ -863,6 +929,19 @@ const navIcons = {
     <NavIcon>
       <path d="M4 20V14M10 20V9M16 20v-4" />
       <path d="M3 20h18M15 5.5l2.5 2.5L21 4.5" />
+    </NavIcon>
+  ),
+  timeOff: (
+    <NavIcon>
+      <path d="M12 3v2M12 19v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M3 12h2M19 12h2M4.6 19.4L6 18M18 6l1.4-1.4" />
+      <circle cx="12" cy="12" r="4" />
+    </NavIcon>
+  ),
+  timeOffApprovals: (
+    <NavIcon>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M3 12h2M19 12h2M4.6 4.6l1.4 1.4M18 6l1.4-1.4" />
+      <path d="M14 19l2 2 4-4.5" />
     </NavIcon>
   ),
   budgets: (
