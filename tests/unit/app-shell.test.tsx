@@ -127,10 +127,12 @@ describe('AppShell desktop sidebar', () => {
   it('keeps the small-screen drawer showing the full sidebar while collapsed', async () => {
     window.localStorage.setItem(STORAGE_KEY, 'true')
     renderShell()
-    await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
-    const drawer = screen.getByRole('presentation')
+    // jsdom applies media queries at a fixed 1024px viewport that tests cannot resize, so the small-screen header
+    // and drawer are display: none here. `hidden: true` finds them anyway.
+    await userEvent.click(screen.getByRole('button', { name: 'Open navigation', hidden: true }))
+    const drawer = screen.getByRole('presentation', { hidden: true })
     expect(within(drawer).getByText('Full brand')).toBeTruthy()
     expect(within(drawer).getByText('Workspace switcher')).toBeTruthy()
-    expect(within(drawer).queryByRole('button', { name: 'Collapse sidebar' })).toBeNull()
+    expect(within(drawer).queryByRole('button', { name: 'Collapse sidebar', hidden: true })).toBeNull()
   })
 })
