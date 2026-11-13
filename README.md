@@ -4,6 +4,18 @@ Ticknest is an open-source time tracker that you deploy into a Firebase project 
 
 **Try the public demo at <https://ticknest-pi.vercel.app>.** Sign in with one of the sample accounts listed on the sign-in screen. All demo data is reset every 24 hours.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/en/timesheet-dark.png">
+  <img src="docs/screenshots/en/timesheet-light.png" alt="The Ticknest Timesheet with a running timer and a week of time entries grouped by day">
+</picture>
+
+| Track time                                                                   | Report and export                                                                    | Manage the team                                                                                    |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| ![Starting and stopping a timer on a project](docs/screenshots/en/timer.gif) | ![The Reports page with totals by project and user](docs/screenshots/en/reports.png) | ![The workspace members page with roles and a pending invitation](docs/screenshots/en/members.png) |
+| ![The Timesheet on a phone](docs/screenshots/en/mobile.png)                  | ![The first page of a report exported as PDF](docs/screenshots/en/pdf-export.png)    |                                                                                                    |
+
+Screenshots in Polish are in [docs/screenshots/pl](docs/screenshots/pl). All of them show the demo data, regenerated with `npm run screenshots`.
+
 ## Quick start
 
 Requirements: Node.js 22.12+, 24.x, or 26.x, npm, Java JDK 11+ for the Firebase emulators, and a Firebase project for deployment. Cloud Functions deployment requires the Firebase Blaze plan and a linked Cloud Billing account.
