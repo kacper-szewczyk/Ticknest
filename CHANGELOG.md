@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.50.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.49.0...ticknest-v1.50.0) (2026-11-13)
+
+
+### Features
+
+* import time entries from a Clockify CSV export ([#277](https://github.com/kacper-szewczyk/Ticknest/issues/277)) ([2c4c101](https://github.com/kacper-szewczyk/Ticknest/commit/2c4c101d1d0e2d82c19c1228e760a85b50177489)), closes [#250](https://github.com/kacper-szewczyk/Ticknest/issues/250)
+
 ## [1.49.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.48.0...ticknest-v1.49.0) (2026-11-13)
 
 
