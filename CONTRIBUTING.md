@@ -51,9 +51,19 @@ It works like `npm run test:e2e` (same emulators, ports, demo reseed and Vite se
 
 `npm run measure:costs` measures the Firestore operations of a workday in the real app against the emulators and prints the estimate in [docs/operations.md](docs/operations.md#what-does-it-cost). It uses its own Playwright config (`playwright.costs.config.ts`, port 5175) and reseeds the emulators like the e2e suite. Re-run it when a change adds or widens listeners or queries, commit the updated `docs/costs/firestore-usage.json`, and update the tables and date in the docs. `npm run cost:estimate` re-prints the tables from the committed measurement.
 
+### Social preview image
+
+`docs/social-preview.png` is the 1280×640 image GitHub shows when the repository is shared. It combines the logo, the tagline and the English Timesheet screenshot. Regenerate it after updating the screenshots or the tagline in `scripts/social-preview.mjs`:
+
+```sh
+npm run social-preview
+```
+
+It only needs Playwright's Chromium (`npx playwright install chromium`), not the emulators. GitHub has no API for the social preview, so upload the new PNG by hand under **Settings → General → Social preview**.
+
 ## Propose a change
 
-1. Check existing issues and pull requests, then open an issue for a substantial feature or bug that has not been discussed.
+1. Check existing issues and pull requests, then open an issue for a substantial feature or bug that has not been discussed. The issue templates ask for what we need. Questions and open-ended ideas go to [GitHub Discussions](https://github.com/kacper-szewczyk/Ticknest/discussions). Looking for something to pick up? Try issues labelled `good first issue` or `help wanted`.
 2. Create a focused branch from `main` and make the smallest coherent change.
 3. Update documentation when behavior, configuration, or data handling changes.
 4. Run `npm run format`, then `npm run lint`, `npm run typecheck`, `npm run lint:functions`, `npm run typecheck:functions`, `npm test`, and `npm run test:emulators`. CI fails if `npm run format:check` finds unformatted files, or if `npm run check:bundle-size` (run after `npm run build`) finds the initial load or a chunk over its budget in `scripts/check-bundle-size.mjs`.
@@ -76,4 +86,4 @@ Each merge to `main` opens or updates a release pull request that bumps the vers
 
 ## Security and privacy
 
-Never commit secrets, service-account keys, real Firebase project identifiers where they expose private environments, or personal/workspace data. Do not add analytics or telemetry without an explicit product decision and user disclosure. Report a suspected vulnerability privately through the repository's GitHub security advisory feature rather than opening a public issue.
+Never commit secrets, service-account keys, real Firebase project identifiers where they expose private environments, or personal/workspace data. Do not add analytics or telemetry without an explicit product decision and user disclosure. Report a suspected vulnerability privately as described in [SECURITY.md](SECURITY.md) rather than opening a public issue.

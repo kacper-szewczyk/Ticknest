@@ -52,6 +52,10 @@ Dla zespołu od 5 do 25 osób, które codziennie rejestrują czas, **zwykle 0 z�
 
 Najkrótsza droga: aplikacja webowa na Vercel, backend (reguły Firestore, indeksy, Functions) w Firebase. Kroki opisuje sekcja [Deploy](README.md#deploy), a szczegóły [przewodnik wdrożenia](docs/operations.md).
 
+## Pytania i pomoc
+
+Pytania, pomysły i własne wdrożenia możesz zgłaszać w [GitHub Discussions](https://github.com/kacper-szewczyk/Ticknest/discussions) (także po polsku), a błędy jako [zgłoszenia (issues)](https://github.com/kacper-szewczyk/Ticknest/issues/new/choose). Luki bezpieczeństwa zgłaszaj prywatnie, zgodnie z [SECURITY.md](SECURITY.md).
+
 ## Licencja
 
 Ticknest jest udostępniany na [licencji MIT](LICENSE).
