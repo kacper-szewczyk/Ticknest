@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.49.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.48.0...ticknest-v1.49.0) (2026-11-13)
+
+
+### Features
+
+* add generated README screenshots in English and Polish ([#263](https://github.com/kacper-szewczyk/Ticknest/issues/263)) ([6ac937d](https://github.com/kacper-szewczyk/Ticknest/commit/6ac937d92c04c82b8cce46b01fbb248112984a91))
+
 ## [1.48.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.47.0...ticknest-v1.48.0) (2026-11-13)
 
 
