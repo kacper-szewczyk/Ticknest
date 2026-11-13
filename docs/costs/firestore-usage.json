@@ -1,0 +1,93 @@
+{
+  "measuredOn": "2026-11-13",
+  "roles": {
+    "member": {
+      "signIn": {
+        "reads": 70,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 5
+      },
+      "openApp": {
+        "reads": 70,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 5
+      },
+      "timer": {
+        "reads": 9,
+        "writes": 3,
+        "deletes": 1,
+        "ruleReads": 12
+      },
+      "manualEntry": {
+        "reads": 2,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 2
+      },
+      "openReports": {
+        "reads": 104,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 2
+      },
+      "backToTimesheet": {
+        "reads": 0,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 0
+      },
+      "teammateTimer": {
+        "reads": 0,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 0
+      }
+    },
+    "manager": {
+      "signIn": {
+        "reads": 48,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 4
+      },
+      "openApp": {
+        "reads": 48,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 4
+      },
+      "timer": {
+        "reads": 27,
+        "writes": 3,
+        "deletes": 1,
+        "ruleReads": 12
+      },
+      "manualEntry": {
+        "reads": 2,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 2
+      },
+      "openReports": {
+        "reads": 469,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 2
+      },
+      "backToTimesheet": {
+        "reads": 0,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 0
+      },
+      "teammateTimer": {
+        "reads": 0,
+        "writes": 0,
+        "deletes": 0,
+        "ruleReads": 0
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import packageJson from './package.json' with { type: 'json' }
@@ -15,6 +16,18 @@ export default defineConfig({
       ],
     },
   ],
+  // `npm run measure:costs` swaps in a Firestore wrapper that counts billed reads and writes. Never set it for a build.
+  resolve:
+    process.env.TICKNEST_COUNT_FIRESTORE === 'true'
+      ? {
+          alias: [
+            {
+              find: /^firebase\/firestore$/,
+              replacement: fileURLToPath(new URL('./tests/costs/firestore-counter.ts', import.meta.url)),
+            },
+          ],
+        }
+      : undefined,
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },

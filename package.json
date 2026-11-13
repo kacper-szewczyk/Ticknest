@@ -17,6 +17,8 @@
     "screenshots": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"playwright test -c playwright.screenshots.config.ts\"",
     "demo:seed": "npm --prefix functions run build && node functions/lib/demo/seed-emulators.js",
     "demo:load-test": "npm --prefix functions run build && node scripts/demo-load-test.mjs",
+    "measure:costs": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"playwright test --config playwright.costs.config.ts\" && node scripts/cost-estimate.mjs",
+    "cost:estimate": "node scripts/cost-estimate.mjs",
     "build": "tsc -b && vite build",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
     "preview": "vite preview --host 127.0.0.1",
