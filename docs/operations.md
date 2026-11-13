@@ -65,7 +65,7 @@ done
 # Only jobs in the production environment may act as it.
 gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" --project="$PROJECT_ID" \
   --role=roles/iam.workloadIdentityUser \
-  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:$REPO:environment:production"
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:${REPO}:environment:production"
 ```
 
 `roles/firebase.admin` covers Hosting, Firestore rules and indexes, and Functions. `roles/iam.serviceAccountUser` lets the deploy attach the runtime service account to the Functions. If a deploy fails with a permission error, the Firebase CLI names the missing permission; grant a role that includes it.
@@ -80,7 +80,7 @@ for role in roles/firebasehosting.admin roles/firebaseauth.admin; do
 done
 gcloud iam service-accounts add-iam-policy-binding "$PREVIEW_SA" --project="$PROJECT_ID" \
   --role=roles/iam.workloadIdentityUser \
-  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:$REPO:environment:preview"
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:${REPO}:environment:preview"
 ```
 
 The project must be on the Blaze plan, as for a manual deploy.
