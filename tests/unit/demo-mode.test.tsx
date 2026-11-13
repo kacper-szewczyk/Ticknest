@@ -9,6 +9,8 @@ import { DemoAccountsPanel, DemoPausedPage, DemoResetBanner } from '../../src/De
 import {
   DEMO_CONTACT_EMAIL,
   DEMO_CONTACT_LINKEDIN_URL,
+  DEMO_LANDING_URL,
+  demoLandingUrl,
   DEMO_SOURCE_URL,
   DEMO_SUPPORT_URL,
   formatDemoReset,
@@ -144,6 +146,15 @@ describe('DemoAccountsPanel', () => {
     expect(html).toContain('Buy me a coffee')
     expect(html).toContain('Star it on GitHub')
     expect(html).toContain('Get in touch')
+  })
+
+  it('links to the landing page in the visitor language', () => {
+    vi.stubEnv('VITE_DEMO_MODE', 'true')
+    const html = render(<DemoAccountsPanel onUse={() => {}} />)
+    expect(html).toContain(`href="${DEMO_LANDING_URL}/"`)
+    expect(html).toContain('What is Ticknest?')
+    expect(demoLandingUrl('pl')).toBe(`${DEMO_LANDING_URL}/pl/`)
+    expect(demoLandingUrl('es')).toBe(`${DEMO_LANDING_URL}/`)
   })
 })
 
