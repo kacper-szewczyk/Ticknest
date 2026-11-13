@@ -342,6 +342,68 @@ Cloud Functions require Blaze and an attached billing account. The scheduled `au
 
 Review the current [Firebase pricing plans](https://firebase.google.com/docs/projects/billing/firebase-pricing-plans), [Firebase pricing details](https://firebase.google.com/pricing), and Google Cloud Billing reports for your region and usage. Set budgets and alerts, monitor actual use, and account for backups and retention when estimating cost. Do not assume the same cost for every workspace or traffic level.
 
+### What does it cost?
+
+**Short answer: a team of 5 to 25 people tracking time every workday stays within Firebase's no-cost quotas, so the expected bill is $0 a month, or a few cents if the Functions' container images outgrow their free storage.** Without the Firestore free quota (for example in a named database, or a project that already uses up the quota), Firestore would cost about $0.02 a month for 5 people and $0.13 for 25.
+
+This is an estimate, not a guarantee. It was measured on **2026-11-13** against the local emulators, with prices checked the same day, and it depends on the assumptions below. Your bill depends on how your team actually uses the app, on Google's prices when you read this, and on anything else in the same project or billing account.
+
+#### Firestore
+
+Measured with `npm run measure:costs` (see [Re-measure](#re-measure)), for the default deployment (budgets on, time off off):
+
+| Firestore, per workday |   5 people |    25 people | Free quota per day |
+| ---------------------- | ---------: | -----------: | -----------------: |
+| Document reads         | 3,248 (6%) | 18,312 (37%) |             50,000 |
+| Document writes        |    70 (0%) |     350 (2%) |             20,000 |
+| Document deletes       |    20 (0%) |     100 (1%) |             20,000 |
+
+| Firestore, per month (USD)          | 5 people | 25 people |
+| ----------------------------------- | -------: | --------: |
+| europe-west1, within the free quota |    $0.00 |     $0.00 |
+| europe-west1, no free quota         |    $0.02 |     $0.13 |
+| us-central1, within the free quota  |    $0.00 |     $0.00 |
+| us-central1, no free quota          |    $0.02 |     $0.12 |
+
+Reads dominate, and most of them come from opening the app (its listeners load the week's entries, the catalog and the workspace) and from owners and managers running reports, which read every entry in the range. The team adds about 105 entries per person per month. A year of entries for 25 people is about 32,000 small documents, far below the 1 GiB of free storage.
+
+Assumptions, per person and workday (change them in `scripts/cost-estimate.mjs`):
+
+- 21 workdays a month. The app is opened 3 times a day: in the morning, after lunch, and once more after a reconnect. Listeners are billed again on every reconnect, because the app keeps no offline cache.
+- 4 entries tracked with the timer, each with a client, project and task, and 1 entry added by hand.
+- Members open Reports once a week (their own entries); owners and managers once a day (everyone's entries). Reports open on the current month so far; it was measured on the 13th, close to the month's average. The 5-person team has 2 people who see everyone's entries; the 25-person team has 3.
+- A timer runs 7 hours a day, which `autoStopTimers` reads on its 15-minute runs. On weekends it only runs its one query.
+- Security-rule lookups (the caller's member document, and the client, project and task of an entry) count as reads, as Firestore bills them.
+
+#### Other services
+
+| Service                                          | Expected use, 5–25 people                                                                                                                         | No-cost amount                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Cloud Functions (Cloud Run functions)            | About 3,000–3,500 invocations a month: `autoStopTimers` (2,880), manual entries (105–525), the daily `resetDemo` check (30), and team admin calls | 2 million invocations, 180,000 vCPU-seconds and 360,000 GiB-seconds a month per billing account |
+| Cloud Scheduler                                  | 2 jobs: `autoStopTimers` and `resetDemo` (which does nothing unless demo mode is set up)                                                          | 3 jobs per billing account, then $0.10 per job a month                                          |
+| Artifact Registry                                | The Functions' container images. Accept the cleanup policy the Firebase CLI offers on deploy so old images are deleted                            | 0.5 GB per billing account, then about $0.10 per GB a month                                     |
+| Firebase Hosting (if you host the web app there) | About 425 kB (gzipped) per first visit after a release, then cached; about 3 MB stored per release                                                | 10 GB stored and 360 MB transferred a day                                                       |
+| Authentication                                   | Email/password and Google sign-in, one active user per person                                                                                     | 50,000 monthly active users                                                                     |
+
+Function compute time was not measured. Each run is short, so a few thousand runs a month should stay far below the free compute amounts. Free amounts marked "per billing account" are shared by every project on that billing account, so other projects can use them up. Prices: [Firestore](https://cloud.google.com/firestore/pricing), [Firebase](https://firebase.google.com/pricing), [Cloud Run](https://cloud.google.com/run/pricing), [Cloud Scheduler](https://cloud.google.com/scheduler/pricing), [Artifact Registry](https://cloud.google.com/artifact-registry/pricing).
+
+#### Set a budget alert
+
+A budget sends you an email when spending reaches a threshold. It does not stop spending or turn anything off.
+
+1. Open [Billing → Budgets & alerts](https://console.cloud.google.com/billing/budgets) in the Google Cloud console and choose the billing account linked to your Firebase project.
+2. Select **Create budget** and name it, for example `Ticknest`.
+3. Under **Scope**, choose your Ticknest project (or leave all projects selected to watch the whole billing account).
+4. Under **Amount**, choose **Specified amount** and enter a small monthly figure, for example $5.
+5. Under **Actions**, keep the alerts at 50%, 90% and 100% of actual spend and add one at 100% of forecasted spend. Leave **Email alerts to billing admins and users** on.
+6. Select **Finish**.
+
+Then check **Usage and billing** in the Firebase console, and the Firestore **Usage** tab, after the first weeks of real use.
+
+#### Re-measure
+
+`npm run measure:costs` builds the Functions, starts the emulators, and drives the real app in Chromium as a member and as a manager through a workday: opening the app, a timer, a manual entry, and Reports, plus a teammate's timer as seen by an open Timesheet. A Firestore wrapper used only for this run (`tests/costs/firestore-counter.ts`) counts the billed operations of each action. The results go to [`docs/costs/firestore-usage.json`](costs/firestore-usage.json), and `npm run cost:estimate` turns them into the tables above. Re-run both after changes that add listeners or queries, and update the date and tables here. The browser cannot see what callable Functions read and write, so the script adds that from the code. Security-rule lookups are estimated from each request.
+
 ## Backups and restore
 
 The CSV report is useful for exporting filtered time-entry rows, but it does not contain all users, workspaces, memberships, catalogs, invitations, settings, or Firestore metadata. Back up the Firestore database separately and verify that exports can be restored.

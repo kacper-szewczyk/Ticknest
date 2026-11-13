@@ -41,9 +41,13 @@ New here? The **[landing page](https://ticknest-landing.vercel.app)** sums up wh
 Ticknest covers the core of a hosted time tracker, with different trade-offs:
 
 - **You own the data.** Everything lives in your own Firebase project. The maintainers run no backend and never see your entries.
-- **No seat fees.** There are no per-user plans. You pay only Firebase's usage-based charges, which for a small team often stay within the no-cost quota (see [Costs](docs/operations.md#costs)).
+- **No seat fees.** There are no per-user plans. You pay only Firebase's usage-based charges.
 - **No monitoring.** No screenshots, activity tracking, keystroke or app logging, and no analytics or telemetry in the app. It records the time people enter, nothing else.
 - **Open source** under the MIT licence, so you can read, change and audit all of it.
+
+## What does it cost?
+
+For a team of 5 to 25 people tracking time every workday, **usually $0 a month**: the measured usage stays within Firebase's no-cost quotas (5 people use about 6% of the daily Firestore reads, 25 people about 37%). Firebase still needs the Blaze plan and a billing account for Cloud Functions, so [set a budget alert](docs/operations.md#set-a-budget-alert). The [measured estimate](docs/operations.md#what-does-it-cost) gives the assumptions, prices for europe-west1 and us-central1, and the date it was measured. It is an estimate, not a guarantee.
 
 ## What Ticknest doesn't do (yet)
 

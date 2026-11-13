@@ -35,9 +35,13 @@ Pełna dokumentacja jest po angielsku: zobacz [README](README.md) i [przewodnik 
 ## Dlaczego Ticknest
 
 - **Dane należą do Ciebie.** Wszystko jest w Twoim projekcie Firebase; autorzy nie prowadzą żadnego serwera i nie widzą Twoich wpisów.
-- **Bez opłat za użytkownika.** Płacisz tylko za zużycie Firebase, które dla małego zespołu często mieści się w darmowym limicie.
+- **Bez opłat za użytkownika.** Płacisz tylko za zużycie Firebase.
 - **Bez monitorowania.** Żadnych zrzutów ekranu, śledzenia aktywności ani analityki w aplikacji.
 - **Otwarty kod** na licencji MIT.
+
+## Ile to kosztuje?
+
+Dla zespołu od 5 do 25 osób, które codziennie rejestrują czas, **zwykle 0 zł miesięcznie**: zmierzone zużycie mieści się w bezpłatnych limitach Firebase (5 osób zużywa ok. 6% dziennego limitu odczytów Firestore, 25 osób ok. 37%). Cloud Functions wymagają jednak planu Blaze i konta rozliczeniowego, więc [ustaw alert budżetowy](docs/operations.md#set-a-budget-alert). [Zmierzony szacunek](docs/operations.md#what-does-it-cost) (po angielsku) podaje założenia, ceny dla europe-west1 i us-central1 oraz datę pomiaru. To szacunek, nie gwarancja.
 
 ## Czego (jeszcze) nie ma
 
