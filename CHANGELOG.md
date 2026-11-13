@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.47.0...ticknest-v1.48.0) (2026-11-13)
+
+
+### Features
+
+* add team time-off calendar and lower budget targets on approved leave ([#264](https://github.com/kacper-szewczyk/Ticknest/issues/264)) ([3db7945](https://github.com/kacper-szewczyk/Ticknest/commit/3db79459f1a8d5d8758aecb2eb0f9ea72d15489e))
+
 ## [1.47.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.46.0...ticknest-v1.47.0) (2026-11-13)
 
 
