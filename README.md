@@ -114,6 +114,7 @@ In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
 - [Coding standards](CODING_STANDARDS.md)
 - [Firestore data model](docs/firestore-data-model.md)
 - [Firestore rules test matrix](docs/firestore-rules-test-matrix.md)
+- [Launch kit: accounts, bios and launch-day posts](docs/launch/README.md)
 
 ## License
 
