@@ -1053,3 +1053,182 @@ describe('time-off callables', () => {
     await assertFails(getDocs(collection(memberDb, workspacePath, 'leaveAllowances')))
   })
 })
+
+describe('importTimeEntries', () => {
+  const HOUR = 60 * 60 * 1000
+  const BASE = Date.UTC(2026, 5, 1, 9)
+
+  async function workspaceWithTeam() {
+    const owner = await createUser('owner', 'owner@example.com')
+    const manager = await createUser('mira', 'mira@example.com')
+    const member = await createUser('alice', 'alice@example.com')
+    const workspaceId = await createWorkspaceAs(owner)
+    await inviteAndAccept(owner, workspaceId, manager)
+    await inviteAndAccept(owner, workspaceId, member)
+    await owner.call('setWorkspaceMemberRole', { workspaceId, memberUid: manager.uid, role: 'manager' })
+    return { owner, manager, member, workspaceId }
+  }
+
+  function row(line: number, userId: string, hour: number, overrides: Record<string, unknown> = {}) {
+    return {
+      line,
+      userId,
+      clientName: 'Globex',
+      projectName: 'App',
+      taskName: 'Build',
+      description: `Row ${line}`,
+      billable: true,
+      startAt: BASE + hour * HOUR,
+      endAt: BASE + (hour + 1) * HOUR,
+      ...overrides,
+    }
+  }
+
+  type ImportResult = {
+    results: Array<{ line: number; status: string; reason?: string }>
+    created: { clients: number; projects: number; tasks: number }
+  }
+
+  it('creates missing catalog items once and writes entries with name snapshots for each member', async () => {
+    const { owner, member, workspaceId } = await workspaceWithTeam()
+    const result = await owner.call<ImportResult>('importTimeEntries', {
+      workspaceId,
+      rows: [row(2, member.uid, 0), row(3, member.uid, 1), row(4, owner.uid, 0, { taskName: null, billable: false })],
+    })
+
+    expect(result.created).toEqual({ clients: 1, projects: 1, tasks: 1 })
+    expect(result.results.map((item) => item.status)).toEqual(['imported', 'imported', 'imported'])
+    const entries = await adminDb.collection(`workspaces/${workspaceId}/timeEntries`).get()
+    expect(entries.size).toBe(3)
+    const project = (await adminDb.collection(`workspaces/${workspaceId}/projects`).get()).docs[0]!
+    expect(project.data()).toMatchObject({ name: 'App', archived: false, color: '#668a6b' })
+    const first = entries.docs.find((entry) => entry.data().description === 'Row 2')!.data()
+    expect(first).toMatchObject({
+      userId: member.uid,
+      userDisplayName: 'Alice',
+      clientName: 'Globex',
+      projectId: project.id,
+      projectName: 'App',
+      taskName: 'Build',
+      billable: true,
+    })
+    expect((first.startAt as Timestamp).toMillis()).toBe(BASE)
+    expect((first.endAt as Timestamp).toMillis()).toBe(BASE + HOUR)
+  })
+
+  it('skips overlaps with stored entries, running timers, and other rows, so re-importing adds nothing', async () => {
+    const { owner, member, workspaceId } = await workspaceWithTeam()
+    const rows = [row(2, member.uid, 0), row(3, member.uid, 0.5), row(4, member.uid, 2)]
+    const first = await owner.call<ImportResult>('importTimeEntries', { workspaceId, rows })
+    expect(first.results).toEqual([
+      { line: 2, status: 'imported' },
+      { line: 3, status: 'skipped', reason: 'overlapsFile' },
+      { line: 4, status: 'imported' },
+    ])
+
+    const again = await owner.call<ImportResult>('importTimeEntries', { workspaceId, rows })
+    expect(again.created).toEqual({ clients: 0, projects: 0, tasks: 0 })
+    expect(again.results.map((item) => item.reason)).toEqual([
+      'overlapsExisting',
+      'overlapsExisting',
+      'overlapsExisting',
+    ])
+
+    await adminDb.doc(`workspaces/${workspaceId}/activeTimers/${owner.uid}`).set({
+      entryId: 'running',
+      startAt: Timestamp.fromMillis(BASE + 5 * HOUR),
+    })
+    const running = await owner.call<ImportResult>('importTimeEntries', {
+      workspaceId,
+      rows: [row(5, owner.uid, 4), row(6, owner.uid, 5)],
+    })
+    expect(running.results).toEqual([
+      { line: 5, status: 'imported' },
+      { line: 6, status: 'skipped', reason: 'overlapsRunningTimer' },
+    ])
+    expect((await adminDb.collection(`workspaces/${workspaceId}/timeEntries`).get()).size).toBe(3)
+  })
+
+  it('reuses archived catalog items without unarchiving them', async () => {
+    const { owner, member, workspaceId } = await workspaceWithTeam()
+    const now = Timestamp.now()
+    await adminDb
+      .doc(`workspaces/${workspaceId}/clients/acme`)
+      .set({ name: 'Acme', archived: true, createdAt: now, updatedAt: now })
+    await adminDb.doc(`workspaces/${workspaceId}/projects/site`).set({
+      name: 'Website',
+      clientId: 'acme',
+      description: '',
+      color: '#668a6b',
+      estimateMinutes: null,
+      archived: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    const result = await owner.call<ImportResult>('importTimeEntries', {
+      workspaceId,
+      rows: [row(2, member.uid, 0, { clientName: 'acme', projectName: 'WEBSITE', taskName: null })],
+    })
+
+    expect(result.created).toEqual({ clients: 0, projects: 0, tasks: 0 })
+    const entry = (await adminDb.collection(`workspaces/${workspaceId}/timeEntries`).get()).docs[0]!.data()
+    expect(entry).toMatchObject({ clientId: 'acme', clientName: 'Acme', projectId: 'site', projectName: 'Website' })
+    expect((await adminDb.doc(`workspaces/${workspaceId}/projects/site`).get()).data()?.archived).toBe(true)
+  })
+
+  it('lets managers import, and denies members, non-members, and signed-out callers', async () => {
+    const { manager, member, workspaceId } = await workspaceWithTeam()
+    const outsider = await createUser('olaf', 'olaf@example.com')
+    const result = await manager.call<ImportResult>('importTimeEntries', { workspaceId, rows: [row(2, member.uid, 0)] })
+    expect(result.results).toEqual([{ line: 2, status: 'imported' }])
+
+    await expectCallError(
+      member.call('importTimeEntries', { workspaceId, rows: [row(3, member.uid, 3)] }),
+      'permission-denied',
+    )
+    await expectCallError(
+      outsider.call('importTimeEntries', { workspaceId, rows: [row(4, member.uid, 4)] }),
+      'permission-denied',
+    )
+    await expectCallError(
+      anonymousCall('importTimeEntries', { workspaceId, rows: [row(5, member.uid, 5)] }),
+      'unauthenticated',
+    )
+  })
+
+  it('skips rows for users who are not active members and rows with invalid values', async () => {
+    const { owner, member, workspaceId } = await workspaceWithTeam()
+    await owner.call('removeWorkspaceMember', { workspaceId, memberUid: member.uid })
+    const result = await owner.call<ImportResult>('importTimeEntries', {
+      workspaceId,
+      rows: [
+        row(2, member.uid, 0),
+        row(3, 'nobody', 0),
+        row(4, owner.uid, 0, { endAt: BASE }),
+        row(5, owner.uid, 1, { projectName: null }),
+        row(6, owner.uid, 2, { description: 'x'.repeat(501) }),
+        row(7, owner.uid, 3),
+      ],
+    })
+    expect(result.results).toEqual([
+      { line: 2, status: 'skipped', reason: 'unknownUser' },
+      { line: 3, status: 'skipped', reason: 'unknownUser' },
+      { line: 4, status: 'skipped', reason: 'invalidRow' },
+      { line: 5, status: 'skipped', reason: 'invalidRow' },
+      { line: 6, status: 'skipped', reason: 'invalidRow' },
+      { line: 7, status: 'imported' },
+    ])
+  })
+
+  it('rejects requests without rows, with too many rows, or with duplicate line numbers', async () => {
+    const { owner, workspaceId } = await workspaceWithTeam()
+    await expectCallError(owner.call('importTimeEntries', { workspaceId, rows: [] }), 'invalid-argument')
+    const tooMany = Array.from({ length: 201 }, (_, index) => row(index + 2, owner.uid, index))
+    await expectCallError(owner.call('importTimeEntries', { workspaceId, rows: tooMany }), 'invalid-argument')
+    await expectCallError(
+      owner.call('importTimeEntries', { workspaceId, rows: [row(2, owner.uid, 0), row(2, owner.uid, 1)] }),
+      'invalid-argument',
+    )
+  })
+})

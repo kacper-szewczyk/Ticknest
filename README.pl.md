@@ -30,6 +30,7 @@ Pełna dokumentacja jest po angielsku: zobacz [README](README.md) i [przewodnik 
 - **Raporty** według dnia, klienta, projektu, zadania lub osoby, z eksportem do **CSV** i **PDF**.
 - **Zespoły**: zaproszenia przez link i role Właściciel, Menedżer i Członek.
 - **Budżety** (opcjonalne) dla projektów i osób.
+- **Import z Clockify**: przenieś historię z pliku CSV raportu szczegółowego, z podglądem przed zapisem.
 - **Interfejs po angielsku, hiszpańsku i polsku**, jasne i ciemne palety kolorów, działa na telefonach.
 
 ## Dlaczego Ticknest

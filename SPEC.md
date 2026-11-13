@@ -64,6 +64,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 - Validate that end is after start, duration is positive, and entries do not overlap another entry for the same user. Show an actionable validation message.
 - Store running entries with `endAt: null`; calculate current duration from `startAt` until stopped.
 - Support an explicit timezone-aware date/time editor and preserve the entered local date when saving.
+- Owners and managers can import a Clockify "Detailed report" CSV export from Settings. The preview asks which date format and time zone the export used, matches people by email (rows of people who are not active members are skipped or assigned to the importer), lists the clients, projects, and tasks that will be created (existing names, archived ones included, are reused and stay archived), and lists skipped rows with the reason. Rows that overlap another entry of the same user, in the file or already stored, or that user's running timer, are skipped, so importing the same file again adds nothing. Tags, rates, and amounts are not imported; longer descriptions and names are shortened to the stored limits.
 
 ### 5.4 Clients, projects, and tasks
 
