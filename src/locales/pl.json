@@ -131,7 +131,13 @@
     "budgets": "Budżety",
     "catalog": "Klienci i projekty",
     "members": "Członkowie",
-    "settings": "Ustawienia"
+    "settings": "Ustawienia",
+    "timeOff": "Nieobecności",
+    "timeOffApprovals": "Akceptacja nieobecności",
+    "pendingCount_one": "{{count}} wniosek czeka",
+    "pendingCount_few": "{{count}} wnioski czekają",
+    "pendingCount_many": "{{count}} wniosków czeka",
+    "pendingCount_other": "{{count}} wniosku czeka"
   },
   "shell": {
     "sidebar": "Pasek boczny",
@@ -143,7 +149,8 @@
   "common": {
     "billable": "Płatny",
     "autoStopped": "Zatrzymany automatycznie",
-    "autoStoppedTitle": "Ten licznik działał po północy, więc został zatrzymany z końcem dnia, w którym go uruchomiono."
+    "autoStoppedTitle": "Ten licznik działał po północy, więc został zatrzymany z końcem dnia, w którym go uruchomiono.",
+    "cancel": "Anuluj"
   },
   "setup": {
     "kicker": "KONFIGURACJA: {{workspace}}",
@@ -225,5 +232,160 @@
     "pausedTitle": "Wersja demo Ticknest jest wstrzymana",
     "pausedBody": "Publiczna wersja demo ma teraz więcej odwiedzających, niż może obsłużyć, więc została na jakiś czas wstrzymana. Zajrzyj później.",
     "pausedOpenSource": "Ticknest jest open source. Możesz przejrzeć kod i uruchomić własną kopię we własnym projekcie Firebase."
+  },
+  "timeOff": {
+    "unknownType": "Nieznany rodzaj",
+    "unknownMember": "Nieznany członek",
+    "unlimited": "Bez limitu",
+    "days_one": "{{value}} dzień",
+    "days_few": "{{value}} dni",
+    "days_many": "{{value}} dni",
+    "days_other": "{{value}} dnia",
+    "halfDayShort": "pół dnia",
+    "loading": "Wczytywanie nieobecności…",
+    "saving": "Zapisywanie…",
+    "close": "Zamknij",
+    "previousYear": "Poprzedni rok",
+    "nextYear": "Następny rok",
+    "overAllowance": "Ponad limit",
+    "overAllowanceBy": "Ponad limit o {{days}}",
+    "decisionNote": "Komentarz: {{note}}",
+    "builtIn": {
+      "holiday": "Urlop wypoczynkowy",
+      "sick": "Zwolnienie lekarskie"
+    },
+    "status": {
+      "pending": "Oczekuje",
+      "approved": "Zatwierdzony",
+      "rejected": "Odrzucony",
+      "cancelled": "Anulowany"
+    },
+    "autoApproved": {
+      "type": "Zatwierdzony automatycznie: ten rodzaj nie wymaga akceptacji.",
+      "noApprover": "Zatwierdzony automatycznie: nikt inny w przestrzeni roboczej nie może go zaakceptować."
+    },
+    "balance": {
+      "ofAllowance": "dostępne z {{allowance}} · wykorzystano {{taken}}",
+      "takenUnlimited": "bez limitu · wykorzystano {{taken}}",
+      "pending": "oczekuje {{pending}} · po akceptacji zostanie {{after}}",
+      "pendingUnlimited": "oczekuje {{pending}}"
+    },
+    "mine": {
+      "kicker": "TWOJE NIEOBECNOŚCI",
+      "title": "Nieobecności",
+      "request": "Złóż wniosek",
+      "balancesLabel": "Saldo na {{year}}",
+      "requestsHeading": "Wnioski w {{year}}",
+      "empty": "W tym roku nie złożono jeszcze żadnego wniosku.",
+      "cancel": "Anuluj wniosek",
+      "cancelling": "Anulowanie…",
+      "cancelConfirm": "Anulować ten wniosek? Dni wrócą do Twojego salda.",
+      "cancelled": "Wniosek anulowany.",
+      "submittedPending": "Wniosek wysłany. Czeka na akceptację.",
+      "submittedApproved": "Wniosek zatwierdzony."
+    },
+    "request": {
+      "title": "Wniosek o nieobecność",
+      "type": "Rodzaj nieobecności",
+      "start": "Pierwszy dzień",
+      "end": "Ostatni dzień",
+      "halfDay": "Pół dnia",
+      "startHalf": "Pierwszy dzień to pół dnia",
+      "endHalf": "Ostatni dzień to pół dnia",
+      "note": "Notatka (opcjonalnie)",
+      "uses": "Wykorzystuje {{days}}. Saldo po: {{after}}.",
+      "usesUnlimited": "Wykorzystuje {{days}}. Ten rodzaj nie ma limitu.",
+      "weekendsNote": "Weekendy nie są liczone. Święta nie są jeszcze uwzględniane.",
+      "overWarning": "To przekracza Twój limit o {{days}}. Nadal możesz wysłać wniosek; zostanie oznaczony jako ponad limit.",
+      "autoApprovedNote": "Ten rodzaj nie wymaga akceptacji, więc wniosek zostanie zatwierdzony od razu.",
+      "send": "Wyślij wniosek",
+      "sending": "Wysyłanie…",
+      "problem": {
+        "dates": "Wybierz pierwszy i ostatni dzień.",
+        "end-before-start": "Ostatni dzień nie może być wcześniejszy niż pierwszy.",
+        "crosses-year": "Nieobecność na przełomie roku wymaga osobnego wniosku na każdy rok.",
+        "no-working-days": "W tych dniach nie ma dni roboczych. Weekendy nie są liczone.",
+        "overlap": "Te daty nakładają się na inny Twój oczekujący lub zatwierdzony wniosek."
+      }
+    },
+    "approvals": {
+      "kicker": "NIEOBECNOŚCI ZESPOŁU",
+      "title": "Akceptacja nieobecności",
+      "intro": "Oczekujące wnioski Twojego zespołu. Nikt nie akceptuje własnego wniosku: Twoje trafiają do innego menedżera lub właściciela.",
+      "empty": "Żaden wniosek nie czeka na decyzję.",
+      "approve": "Zatwierdź",
+      "reject": "Odrzuć",
+      "approveTitle": "Zatwierdź nieobecność",
+      "rejectTitle": "Odrzuć nieobecność",
+      "ownRequest": "Twój wniosek: decyduje ktoś inny.",
+      "balanceAfter": "Saldo po akceptacji: {{days}}",
+      "decisionSummary": "{{name}} · {{type}} · {{days}}",
+      "comment": "Komentarz (opcjonalnie)",
+      "approved": "Zatwierdzono wniosek: {{name}}.",
+      "rejected": "Odrzucono wniosek: {{name}}.",
+      "cancelConfirm": "Anulować zatwierdzoną nieobecność ({{name}})? Dni wrócą do salda.",
+      "cancelled": "Anulowano nieobecność: {{name}}.",
+      "balanceAfterUnlimited": "Ten rodzaj nie ma limitu."
+    },
+    "approved": {
+      "kicker": "ZATWIERDZONE NIEOBECNOŚCI",
+      "title": "Zatwierdzone nieobecności w {{year}}",
+      "intro": "Zatwierdzone nieobecności w całej przestrzeni roboczej. Członek może anulować swoją nieobecność, dopóki się nie zacznie; potem anuluje ją tutaj osoba akceptująca.",
+      "empty": "W tym roku nie ma zatwierdzonych nieobecności.",
+      "cancel": "Anuluj nieobecność"
+    },
+    "balances": {
+      "kicker": "LIMITY",
+      "title": "Salda i limity",
+      "intro": "Dostępne dni według członka i rodzaju. Ustaw roczny limit członka albo dodaj korektę z notatką, na przykład dni przeniesione z poprzedniego roku.",
+      "cell": "{{type}}: dostępne {{available}}, oczekuje {{pending}}",
+      "edit": "Zmień limit",
+      "ownAllowance": "Poproś właściciela o zmianę Twojego limitu.",
+      "cellUnlimited": "{{type}}: bez limitu, wykorzystano {{taken}}, oczekuje {{pending}}"
+    },
+    "allowance": {
+      "title": "{{name}} · {{year}}",
+      "override": "Limit na {{year}} (dni)",
+      "overrideHelp": "Zostaw puste, aby użyć domyślnego limitu rodzaju ({{default}}).",
+      "overrideInvalid": "Wpisz pełne lub połówkowe dni od 0 do {{max}}.",
+      "saveOverride": "Zapisz limit",
+      "saved": "Limit zapisany.",
+      "adjustments": "Korekty",
+      "noAdjustments": "Brak korekt w tym roku.",
+      "adjustDays": "Dni",
+      "adjustNote": "Powód",
+      "adjustHelp": "Użyj minusa, aby odjąć dni, np. -1. Powód jest widoczny przy korekcie.",
+      "adjustmentInvalid": "Wpisz pełne lub połówkowe dni różne od zera, np. 2 lub -0,5.",
+      "noteRequired": "Dodaj powód korekty.",
+      "addAdjustment": "Dodaj",
+      "adjustmentAdded": "Korekta dodana.",
+      "adjustedBy": "{{name}}, {{date}}"
+    },
+    "types": {
+      "kicker": "NIEOBECNOŚCI",
+      "title": "Rodzaje nieobecności",
+      "intro": "Rodzaje, o które mogą wnioskować członkowie, ich domyślny roczny limit (na rok kalendarzowy) i to, czy wymagają akceptacji. O zarchiwizowane rodzaje nie można już wnioskować.",
+      "add": "Dodaj rodzaj",
+      "addTitle": "Dodaj rodzaj nieobecności",
+      "editTitle": "Edytuj rodzaj nieobecności",
+      "edit": "Edytuj",
+      "save": "Zapisz rodzaj",
+      "saved": "Zapisano: {{name}}.",
+      "name": "Nazwa",
+      "nameRequired": "Wpisz nazwę.",
+      "color": "Kolor",
+      "unit": "Wykorzystywany w",
+      "fullDays": "Pełnych dniach",
+      "halfDays": "Pełnych dniach lub połówkach",
+      "defaultAllowance": "Domyślny roczny limit (dni)",
+      "defaultAllowanceHelp": "Zostaw puste, jeśli bez limitu. Limit każdego członka można zmienić osobno.",
+      "allowanceSummary": "Limit: {{days}}",
+      "requiresApproval": "Wymaga akceptacji",
+      "requiresApprovalHelp": "Gdy wyłączone, wnioski są zatwierdzane od razu po wysłaniu.",
+      "needsApproval": "Wymaga akceptacji",
+      "autoApproved": "Zatwierdzany automatycznie",
+      "archive": "Zarchiwizowany",
+      "archived": "Zarchiwizowany"
+    }
   }
 }

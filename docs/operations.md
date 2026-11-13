@@ -224,13 +224,14 @@ The emulators run on one machine and enforce no quotas, so these numbers show th
 
 ### Feature flags (optional)
 
-Feature flags hide whole features from the web app. Each one is on unless its variable is set to `false`, so a deployment that sets nothing keeps every feature. Set them like the other `VITE_*` values: in `.env.local`, as Vercel environment variables, or as GitHub repository variables for the deploy and preview workflows. Flags are read at build time, so redeploy the web app after you change one.
+Feature flags hide whole features from the web app. Each has a default: budgets is on unless its variable is `false`, and time off is off unless its variable is `true`, so a deployment that sets nothing behaves as before time off existed. Set them like the other `VITE_*` values: in `.env.local`, as Vercel environment variables, or as GitHub repository variables for the deploy and preview workflows. Flags are read at build time, so redeploy the web app after you change one.
 
-| Variable                       | Feature                                                                                                                      |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_FEATURE_BUDGETS_ENABLED` | Budgets. `false` hides the My budgets, Budget progress and Budgets pages, and budget mentions in the role and settings copy. |
+| Variable                        | Feature                                                                                                                                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_FEATURE_BUDGETS_ENABLED`  | Budgets. `false` hides the My budgets, Budget progress and Budgets pages, and budget mentions in the role and settings copy.                                                                  |
+| `VITE_FEATURE_TIME_OFF_ENABLED` | Time off. Only `true` shows the Time off page (requests and balances), the Time-off approvals page for owners and managers, and the Leave types card in the owner's settings. Off by default. |
 
-A flag only hides the feature in the web app. It does not delete data or change Firestore rules or Functions: existing budgets stay in Firestore and come back when the flag is turned on again. In code, read flags through `isFeatureEnabled` in `src/lib/featureFlags.ts`.
+A flag only hides the feature in the web app. It does not delete data or change Firestore rules or Functions: existing budgets and time off stay in Firestore and come back when the flag is turned on again. The time-off rules and callables deploy with the rest, whatever the flag says. In code, read flags through `isFeatureEnabled` in `src/lib/featureFlags.ts`.
 
 ### Functions region
 

@@ -16,4 +16,6 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_SIGN_IN_ENABLED?: string
   /** `false` hides the budgets feature (My budgets, Budget progress, Budgets). Anything else (or unset) keeps it. */
   readonly VITE_FEATURE_BUDGETS_ENABLED?: string
+  /** `true` shows the time-off feature (Time off, Time-off approvals, leave settings). Anything else (or unset) hides it. */
+  readonly VITE_FEATURE_TIME_OFF_ENABLED?: string
 }

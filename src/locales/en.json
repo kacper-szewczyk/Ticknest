@@ -131,7 +131,11 @@
     "budgets": "Budgets",
     "catalog": "Clients & projects",
     "members": "Members",
-    "settings": "Settings"
+    "settings": "Settings",
+    "timeOff": "Time off",
+    "timeOffApprovals": "Time-off approvals",
+    "pendingCount_one": "{{count}} request waiting",
+    "pendingCount_other": "{{count}} requests waiting"
   },
   "shell": {
     "sidebar": "Sidebar",
@@ -143,7 +147,8 @@
   "common": {
     "billable": "Billable",
     "autoStopped": "Auto-stopped",
-    "autoStoppedTitle": "This timer ran past midnight, so it was stopped at the end of the day it started."
+    "autoStoppedTitle": "This timer ran past midnight, so it was stopped at the end of the day it started.",
+    "cancel": "Cancel"
   },
   "setup": {
     "kicker": "SET UP {{workspace}}",
@@ -225,5 +230,158 @@
     "pausedTitle": "The Ticknest demo is paused",
     "pausedBody": "The public demo is getting more visitors than it can handle right now, so it is paused for a while. Please check back later.",
     "pausedOpenSource": "Ticknest is open source. You can read the code and run your own copy on your own Firebase project."
+  },
+  "timeOff": {
+    "unknownType": "Unknown type",
+    "unknownMember": "Unknown member",
+    "unlimited": "Unlimited",
+    "days_one": "{{value}} day",
+    "days_other": "{{value}} days",
+    "halfDayShort": "half day",
+    "loading": "Loading time off…",
+    "saving": "Saving…",
+    "close": "Close",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
+    "overAllowance": "Over allowance",
+    "overAllowanceBy": "Over allowance by {{days}}",
+    "decisionNote": "Comment: {{note}}",
+    "builtIn": {
+      "holiday": "Holiday",
+      "sick": "Sick leave"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "autoApproved": {
+      "type": "Approved automatically: this type needs no approval.",
+      "noApprover": "Approved automatically: nobody else in the workspace can approve it."
+    },
+    "balance": {
+      "ofAllowance": "available of {{allowance}} · {{taken}} taken",
+      "takenUnlimited": "no limit · {{taken}} taken",
+      "pending": "{{pending}} pending · {{after}} left if approved",
+      "pendingUnlimited": "{{pending}} pending"
+    },
+    "mine": {
+      "kicker": "YOUR LEAVE",
+      "title": "Time off",
+      "request": "Request time off",
+      "balancesLabel": "Balances for {{year}}",
+      "requestsHeading": "Requests in {{year}}",
+      "empty": "No time off requested for this year yet.",
+      "cancel": "Cancel request",
+      "cancelling": "Cancelling…",
+      "cancelConfirm": "Cancel this request? The days go back to your balance.",
+      "cancelled": "Request cancelled.",
+      "submittedPending": "Request sent. It is pending approval.",
+      "submittedApproved": "Request approved."
+    },
+    "request": {
+      "title": "Request time off",
+      "type": "Leave type",
+      "start": "First day",
+      "end": "Last day",
+      "halfDay": "Half day",
+      "startHalf": "First day is a half day",
+      "endHalf": "Last day is a half day",
+      "note": "Note (optional)",
+      "uses": "Uses {{days}}. Balance after: {{after}}.",
+      "usesUnlimited": "Uses {{days}}. This type has no limit.",
+      "weekendsNote": "Weekends are not counted. Public holidays are not taken into account yet.",
+      "overWarning": "This goes over your allowance by {{days}}. You can still send it; it will be marked as over allowance.",
+      "autoApprovedNote": "This type needs no approval, so it is approved when you send it.",
+      "send": "Send request",
+      "sending": "Sending…",
+      "problem": {
+        "dates": "Choose the first and last day.",
+        "end-before-start": "The last day must be on or after the first day.",
+        "crosses-year": "Leave that crosses the new year needs one request for each year.",
+        "no-working-days": "These dates have no working days. Weekends are not counted.",
+        "overlap": "These dates overlap another pending or approved request of yours."
+      }
+    },
+    "approvals": {
+      "kicker": "TEAM LEAVE",
+      "title": "Time-off approvals",
+      "intro": "Pending requests from your team. Nobody approves their own request: yours go to another manager or the owner.",
+      "empty": "No requests are waiting for a decision.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveTitle": "Approve time off",
+      "rejectTitle": "Reject time off",
+      "ownRequest": "Your request: someone else decides it.",
+      "balanceAfter": "Balance after approval: {{days}}",
+      "decisionSummary": "{{name}} · {{type}} · {{days}}",
+      "comment": "Comment (optional)",
+      "approved": "Approved the request from {{name}}.",
+      "rejected": "Rejected the request from {{name}}.",
+      "cancelConfirm": "Cancel this approved leave for {{name}}? The days go back to their balance.",
+      "cancelled": "Cancelled the leave for {{name}}.",
+      "balanceAfterUnlimited": "This type has no limit."
+    },
+    "approved": {
+      "kicker": "APPROVED LEAVE",
+      "title": "Approved leave in {{year}}",
+      "intro": "Approved leave across the workspace. Members can cancel their own leave until it starts; after that, an approver cancels it here.",
+      "empty": "No approved leave this year.",
+      "cancel": "Cancel leave"
+    },
+    "balances": {
+      "kicker": "ALLOWANCES",
+      "title": "Balances and allowances",
+      "intro": "Available days per member and type. Set a member's allowance for the year or add an adjustment with a note, such as days carried over.",
+      "cell": "{{type}}: {{available}} available, {{pending}} pending",
+      "edit": "Edit allowance",
+      "ownAllowance": "Ask the owner to change your own allowance.",
+      "cellUnlimited": "{{type}}: no limit, {{taken}} taken, {{pending}} pending"
+    },
+    "allowance": {
+      "title": "{{name}} · {{year}}",
+      "override": "Allowance for {{year}} (days)",
+      "overrideHelp": "Leave empty to use the type's default ({{default}}).",
+      "overrideInvalid": "Enter whole or half days between 0 and {{max}}.",
+      "saveOverride": "Save allowance",
+      "saved": "Allowance saved.",
+      "adjustments": "Adjustments",
+      "noAdjustments": "No adjustments this year.",
+      "adjustDays": "Days",
+      "adjustNote": "Reason",
+      "adjustHelp": "Use a minus sign to remove days, e.g. -1. The reason is shown with the adjustment.",
+      "adjustmentInvalid": "Enter whole or half days other than zero, e.g. 2 or -0.5.",
+      "noteRequired": "Add a reason for the adjustment.",
+      "addAdjustment": "Add",
+      "adjustmentAdded": "Adjustment added.",
+      "adjustedBy": "By {{name}} on {{date}}"
+    },
+    "types": {
+      "kicker": "TIME OFF",
+      "title": "Leave types",
+      "intro": "Types members can request, their default yearly allowance (per calendar year), and whether they need approval. Archived types can no longer be requested.",
+      "add": "Add leave type",
+      "addTitle": "Add leave type",
+      "editTitle": "Edit leave type",
+      "edit": "Edit",
+      "save": "Save type",
+      "saved": "Saved {{name}}.",
+      "name": "Name",
+      "nameRequired": "Enter a name.",
+      "color": "Color",
+      "unit": "Taken in",
+      "fullDays": "Full days",
+      "halfDays": "Full or half days",
+      "defaultAllowance": "Default yearly allowance (days)",
+      "defaultAllowanceHelp": "Leave empty for no limit. Members' allowances can be changed one by one.",
+      "allowanceSummary": "Allowance: {{days}}",
+      "requiresApproval": "Needs approval",
+      "requiresApprovalHelp": "When off, requests are approved as soon as they are sent.",
+      "needsApproval": "Needs approval",
+      "autoApproved": "Approved automatically",
+      "archive": "Archived",
+      "archived": "Archived"
+    }
   }
 }

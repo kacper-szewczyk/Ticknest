@@ -345,6 +345,26 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // Time off is written only by the leave callables (saveLeaveType, setLeaveAllowance, addLeaveAdjustment,
+      // submitLeaveRequest, decideLeaveRequest, cancelLeaveRequest), which count working days, check overlaps,
+      // balances, and approver eligibility in a transaction. Clients only read.
+      match /leaveTypes/{typeId} {
+        allow read: if isMember(workspaceId);
+        allow create, update, delete: if false;
+      }
+
+      match /leaveAllowances/{allowanceId} {
+        allow get, list: if isMember(workspaceId)
+          && (canSeeAllEntries(workspaceId) || resource.data.uid == request.auth.uid);
+        allow create, update, delete: if false;
+      }
+
+      match /leaveRequests/{requestId} {
+        allow get, list: if isMember(workspaceId)
+          && (canSeeAllEntries(workspaceId) || resource.data.uid == request.auth.uid);
+        allow create, update, delete: if false;
+      }
+
       match /{collection}/{documentId} {
         allow read, write: if false;
       }

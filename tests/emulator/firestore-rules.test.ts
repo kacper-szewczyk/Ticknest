@@ -24,6 +24,9 @@ import {
   createTestEnvironment,
   INVITATION_ID,
   INVITEE,
+  leaveAllowanceId,
+  leaveRequestFixture,
+  leaveRequestId,
   MANAGER,
   MANAGER_ENTRY_ID,
   MEMBER,
@@ -314,6 +317,56 @@ describe('Firestore rules matrix', () => {
     deleteDoc(doc(db, WS, 'budgets', budgetId(MEMBER.uid))),
   )
 
+  matrix('read leave types', MEMBERS, ({ db }) => getDocs(collection(db, WS, 'leaveTypes')))
+
+  matrix('write a leave type from a web client', DENY_ALL, ({ db }) =>
+    updateDoc(doc(db, WS, 'leaveTypes', 'holiday'), { requiresApproval: false, updatedAt: serverTimestamp() }),
+  )
+
+  matrix(
+    'read own leave requests and allowances (direct get and query on uid == auth.uid)',
+    MEMBERS,
+    async ({ db, uid }) => {
+      await getDoc(doc(db, WS, 'leaveRequests', leaveRequestId(uid)))
+      await getDoc(doc(db, WS, 'leaveAllowances', leaveAllowanceId(uid)))
+      await getDocs(query(collection(db, WS, 'leaveAllowances'), where('uid', '==', uid)))
+      return getDocs(query(collection(db, WS, 'leaveRequests'), where('uid', '==', uid)))
+    },
+  )
+
+  matrix("read another member's leave request or allowance (direct get)", ENTRY_READERS, async (subject) => {
+    const other = subject.role === 'owner' ? MEMBER.uid : OTHER_MEMBER.uid
+    await getDoc(doc(subject.db, WS, 'leaveAllowances', leaveAllowanceId(other)))
+    return getDoc(doc(subject.db, WS, 'leaveRequests', leaveRequestId(other)))
+  })
+
+  matrix('query leave requests and allowances without a user constraint', ENTRY_READERS, async ({ db }) => {
+    await getDocs(query(collection(db, WS, 'leaveAllowances'), where('year', '==', 2026)))
+    return getDocs(query(collection(db, WS, 'leaveRequests'), where('status', '==', 'pending')))
+  })
+
+  matrix('approve own leave request from a web client', DENY_ALL, ({ db, uid }) =>
+    updateDoc(doc(db, WS, 'leaveRequests', leaveRequestId(uid)), {
+      status: 'approved',
+      updatedAt: serverTimestamp(),
+    }),
+  )
+
+  matrix('create a leave request from a web client', DENY_ALL, ({ db, uid }) =>
+    setDoc(doc(db, WS, 'leaveRequests', 'leave-new'), { ...leaveRequestFixture(uid), createdAt: serverTimestamp() }),
+  )
+
+  matrix('write a leave allowance from a web client', DENY_ALL, ({ db, uid }) =>
+    updateDoc(doc(db, WS, 'leaveAllowances', leaveAllowanceId(uid)), {
+      allowanceDays: 100,
+      updatedAt: serverTimestamp(),
+    }),
+  )
+
+  matrix('delete a leave request from a web client', DENY_ALL, ({ db, uid }) =>
+    deleteDoc(doc(db, WS, 'leaveRequests', leaveRequestId(uid))),
+  )
+
   matrix('query own memberships (members group, uid == auth.uid)', SIGNED_IN, ({ db, uid }) =>
     getDocs(query(collectionGroup(db, 'members'), where('uid', '==', uid))),
   )
@@ -529,6 +582,9 @@ describe('removed members', () => {
     await assertFails(getDocs(query(collection(db, WS, 'timeEntries'), where('userId', '==', REMOVED_MEMBER.uid))))
     await assertFails(setDoc(doc(db, WS, 'timeEntries', 'after-removal'), newEntry(REMOVED_MEMBER.uid)))
     await assertFails(getDoc(doc(db, WS, 'budgets', budgetId(REMOVED_MEMBER.uid))))
+    await assertFails(getDoc(doc(db, WS, 'leaveRequests', leaveRequestId(REMOVED_MEMBER.uid))))
+    await assertFails(getDoc(doc(db, WS, 'leaveAllowances', leaveAllowanceId(REMOVED_MEMBER.uid))))
+    await assertFails(getDocs(collection(db, WS, 'leaveTypes')))
   })
 
   it('can still find their own membership record', async () => {
