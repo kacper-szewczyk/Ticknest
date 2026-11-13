@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.51.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.50.0...ticknest-v1.51.0) (2026-11-13)
+
+
+### Features
+
+* tag landing page links with UTM parameters for launch analytics ([#279](https://github.com/kacper-szewczyk/Ticknest/issues/279)) ([6fafb92](https://github.com/kacper-szewczyk/Ticknest/commit/6fafb92b36937585288d80fd9624418f82374b10)), closes [#253](https://github.com/kacper-szewczyk/Ticknest/issues/253)
+
 ## [1.50.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.49.0...ticknest-v1.50.0) (2026-11-13)
 
 
