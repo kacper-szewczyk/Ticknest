@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.45.0...ticknest-v1.46.0) (2026-11-13)
+
+
+### Features
+
+* add time off with leave types, allowances, requests and approvals ([#259](https://github.com/kacper-szewczyk/Ticknest/issues/259)) ([0c93ae7](https://github.com/kacper-szewczyk/Ticknest/commit/0c93ae7e402017023f8e373102de3d8cc08586e7))
+
 ## [1.45.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.44.0...ticknest-v1.45.0) (2026-11-12)
 
 
