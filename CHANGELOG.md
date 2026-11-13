@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.47.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.46.0...ticknest-v1.47.0) (2026-11-13)
+
+
+### Features
+
+* add guided self-hosting setup script ([#261](https://github.com/kacper-szewczyk/Ticknest/issues/261)) ([be14df0](https://github.com/kacper-szewczyk/Ticknest/commit/be14df0348367884acd1976933809eb388346d7c)), closes [#247](https://github.com/kacper-szewczyk/Ticknest/issues/247)
+
 ## [1.46.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.45.0...ticknest-v1.46.0) (2026-11-13)
 
 
