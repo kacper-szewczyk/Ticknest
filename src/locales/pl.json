@@ -513,5 +513,10 @@
     "reportNotSent_many": "Nie wysłano {{count}} wpisów.",
     "reportNotSent_other": "Nie wysłano {{count}} wpisu.",
     "importAnother": "Zaimportuj inny plik"
+  },
+  "reports": {
+    "export": {
+      "csvFileType": "Plik CSV"
+    }
   }
 }

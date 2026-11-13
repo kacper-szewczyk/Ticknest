@@ -18,6 +18,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { User } from 'firebase/auth'
+import { useTranslation } from './i18n'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed, localDayString } from './lib/dates'
@@ -121,6 +122,7 @@ export function ReportsPanel({
   canSeeAllEntries: boolean
   catalog: Catalog
 }) {
+  const { t } = useTranslation()
   const [filters, setFilters] = useState<ReportFilters>(initialFilters)
   const [groupBy, setGroupBy] = useState<GroupBy>(() => groupFromHash(canSeeAllEntries))
   const wide = useMediaQuery(useTheme().breakpoints.up('lg'))
@@ -234,7 +236,7 @@ export function ReportsPanel({
       if (picker) {
         const handle = await picker.call(window, {
           suggestedName,
-          types: [{ description: 'CSV file', accept: { 'text/csv': ['.csv'] } }],
+          types: [{ description: t('reports.export.csvFileType'), accept: { 'text/csv': ['.csv'] } }],
         })
         writable = await handle.createWritable()
       }
