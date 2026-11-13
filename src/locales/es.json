@@ -213,6 +213,7 @@
     "noticeLabel": "Aviso de la demo",
     "banner": "<strong>Demo pública.</strong> Todos los datos se restablecen cada 24 horas y lo que añadas se elimina. Próximo restablecimiento: <time>{{reset}}</time>.",
     "viewSource": "Ver el código en GitHub",
+    "aboutProject": "¿Qué es Ticknest?",
     "buyCoffee": "Invítame a un café",
     "tryTitle": "Prueba la demo",
     "tryIntro": "Inicia sesión con una cuenta de ejemplo. Todas las cuentas usan la contraseña <code>{{password}}</code>. Los datos se restablecen cada 24 horas.",

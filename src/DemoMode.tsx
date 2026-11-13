@@ -16,6 +16,7 @@ import {
   DEMO_ACCOUNTS,
   DEMO_CONTACT_EMAIL,
   DEMO_CONTACT_LINKEDIN_URL,
+  demoLandingUrl,
   DEMO_SOURCE_URL,
   DEMO_SUPPORT_URL,
   formatDemoReset,
@@ -133,6 +134,7 @@ function ExternalLink({ href, children, color, sx }: ExternalLinkProps) {
 
 function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
   const { t } = useTranslation()
+  const language = useAppLanguage()
   const headingId = useId()
   const rowIdPrefix = useId()
   const [announcement, setAnnouncement] = useState('')
@@ -153,6 +155,8 @@ function AccountsPanel({ onUse, disabled = false }: AccountsPanelProps) {
           components={{ code: <Box component="code" sx={{ fontWeight: 650, color: 'text.primary' }} /> }}
         />{' '}
         <ExternalLink href={DEMO_SOURCE_URL}>{t('demo.viewSource')}</ExternalLink>
+        {' · '}
+        <ExternalLink href={demoLandingUrl(language)}>{t('demo.aboutProject')}</ExternalLink>
       </Typography>
       <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 1 }}>
         {DEMO_ACCOUNTS.map((account, index) => {

@@ -23,6 +23,8 @@ Screenshots in Polish are in [docs/screenshots/pl](docs/screenshots/pl). All of 
 
 **[Try the live demo](https://ticknest-pi.vercel.app)** with one of the sample accounts on the sign-in screen. Demo data resets every 24 hours.
 
+New here? The **[landing page](https://ticknest-landing.vercel.app)** sums up what Ticknest does and how it compares with other time trackers.
+
 ## Features
 
 - **Timer** always visible in the header. Start it with or without a description, pick a project and task from one search box, and running timers stop on their own at midnight.

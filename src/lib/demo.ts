@@ -4,6 +4,13 @@ import { DEMO_RESET_HOUR, DEMO_RESET_TIME_ZONE } from '../../functions/src/demo/
 
 /** The public repository, linked from the demo UI so visitors can find the source and self-host it. */
 export const DEMO_SOURCE_URL = 'https://github.com/kacper-szewczyk/Ticknest'
+/** The project's landing page, which explains what Ticknest is to visitors who arrive at the sign-in screen first. */
+export const DEMO_LANDING_URL = 'https://ticknest-landing.vercel.app'
+
+/** The landing page in the visitor's language: Polish has its own page, every other language gets the English one. */
+export function demoLandingUrl(language: string): string {
+  return language === 'pl' ? `${DEMO_LANDING_URL}/pl/` : `${DEMO_LANDING_URL}/`
+}
 /** Where visitors who like the project can support the author. */
 export const DEMO_SUPPORT_URL = 'https://buymeacoffee.com/kszewczyk'
 /** How visitors can reach the author for help with setup or custom features. */

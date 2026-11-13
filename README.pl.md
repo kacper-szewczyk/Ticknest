@@ -18,6 +18,8 @@ Wszystkie zrzuty ekranu pokazują dane demo i są generowane poleceniem `npm run
 
 **[Wypróbuj demo](https://ticknest-pi.vercel.app)**: zaloguj się jednym z przykładowych kont pokazanych na ekranie logowania. Dane demo są resetowane co 24 godziny. Interfejs jest dostępny po polsku.
 
+Pierwszy raz tutaj? **[Strona projektu](https://ticknest-landing.vercel.app/pl/)** w skrócie pokazuje, co potrafi Ticknest i jak wypada na tle innych trackerów czasu.
+
 Pełna dokumentacja jest po angielsku: zobacz [README](README.md) i [przewodnik wdrożenia](docs/operations.md).
 
 ## Co potrafi

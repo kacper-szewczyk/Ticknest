@@ -214,6 +214,7 @@
     "noticeLabel": "Informacja o wersji demo",
     "banner": "<strong>Publiczna wersja demo.</strong> Wszystkie dane są resetowane co 24 godziny, a wszystko, co dodasz, zostanie usunięte. Następny reset: <time>{{reset}}</time>.",
     "viewSource": "Zobacz kod na GitHubie",
+    "aboutProject": "Czym jest Ticknest?",
     "buyCoffee": "Postaw mi kawę",
     "tryTitle": "Wypróbuj wersję demo",
     "tryIntro": "Zaloguj się na przykładowe konto. Wszystkie konta mają hasło <code>{{password}}</code>. Dane są resetowane co 24 godziny.",
