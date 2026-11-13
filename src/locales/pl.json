@@ -134,6 +134,7 @@
     "settings": "Ustawienia",
     "timeOff": "Nieobecności",
     "timeOffApprovals": "Akceptacja nieobecności",
+    "teamTimeOff": "Nieobecności zespołu",
     "pendingCount_one": "{{count}} wniosek czeka",
     "pendingCount_few": "{{count}} wnioski czekają",
     "pendingCount_many": "{{count}} wniosków czeka",
@@ -386,6 +387,32 @@
       "autoApproved": "Zatwierdzany automatycznie",
       "archive": "Zarchiwizowany",
       "archived": "Zarchiwizowany"
+    },
+    "team": {
+      "kicker": "NIEOBECNOŚCI ZESPOŁU",
+      "title": "Nieobecności zespołu",
+      "intro": "Zatwierdzone i oczekujące nieobecności wszystkich w przestrzeni roboczej, jeden wiersz na osobę. Weekendy są zacienione, a ostatni wiersz pokazuje, ile osób jest nieobecnych danego dnia.",
+      "previousMonth": "Poprzedni miesiąc",
+      "nextMonth": "Następny miesiąc",
+      "memberFilter": "Członek",
+      "allMembers": "Wszyscy członkowie",
+      "typeFilter": "Rodzaj nieobecności",
+      "allTypes": "Wszystkie rodzaje",
+      "memberColumn": "Członek",
+      "onLeaveRow": "Nieobecni",
+      "tableLabel": "Nieobecności: {{month}}",
+      "cellPart": "{{type}}, {{status}}{{half}}",
+      "cellLabel": "{{name}}, {{date}}: {{leave}}",
+      "legendLabel": "Legenda",
+      "legendHalf": "Pół dnia",
+      "legendPending": "Oczekuje",
+      "empty": "Brak zatwierdzonych i oczekujących nieobecności: {{month}}.",
+      "loading": "Wczytywanie nieobecności zespołu…",
+      "removed": "{{name}} (usunięty)",
+      "pendingButton_one": "{{count}} wniosek do zatwierdzenia",
+      "pendingButton_few": "{{count}} wnioski do zatwierdzenia",
+      "pendingButton_many": "{{count}} wniosków do zatwierdzenia",
+      "pendingButton_other": "{{count}} wniosku do zatwierdzenia"
     }
   }
 }

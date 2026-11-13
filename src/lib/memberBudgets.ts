@@ -54,6 +54,8 @@ export function budgetDayLabel(day: BudgetDayProgress): string {
       return 'Met'
     case 'off':
       return 'No target'
+    case 'time-off':
+      return 'Time off'
     case 'in-progress':
       if (day.expectedMinutes === 0) return 'No target'
       return shortfall > 0 ? `${formatBudgetMinutes(shortfall)} to go` : 'Met so far'

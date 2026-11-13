@@ -68,17 +68,19 @@ describe('canOpenView with time off on', () => {
   it('opens Time off to everyone and approvals to owners and managers', () => {
     expect(openViews({ ...OWNER, timeOffEnabled: true })).toContain('time-off-approvals')
     expect(openViews({ ...MANAGER, timeOffEnabled: true })).toEqual(
-      expect.arrayContaining(['time-off', 'time-off-approvals']),
+      expect.arrayContaining(['time-off', 'time-off-approvals', 'team-time-off']),
     )
     const memberViews = openViews({ ...MEMBER, timeOffEnabled: true })
     expect(memberViews).toContain('time-off')
     expect(memberViews).not.toContain('time-off-approvals')
+    expect(memberViews).not.toContain('team-time-off')
   })
 
   it('hides both time-off views when the flag is off', () => {
     for (const access of [OWNER, MANAGER, MEMBER]) {
       expect(openViews(access)).not.toContain('time-off')
       expect(openViews(access)).not.toContain('time-off-approvals')
+      expect(openViews(access)).not.toContain('team-time-off')
     }
     expect(resolveView('time-off', MEMBER)).toBe('timesheet')
     expect(resolveView('time-off-approvals', { ...MEMBER, timeOffEnabled: true })).toBe('timesheet')

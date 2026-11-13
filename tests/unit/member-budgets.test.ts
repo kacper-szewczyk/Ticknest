@@ -31,7 +31,15 @@ function budget(overrides: Partial<Budget> = {}): Budget {
 }
 
 function day(overrides: Partial<BudgetDayProgress>): BudgetDayProgress {
-  return { day: '2026-11-02', expectedMinutes: 480, actualMinutes: 0, status: 'under', ...overrides }
+  return {
+    day: '2026-11-02',
+    expectedMinutes: 480,
+    leaveMinutes: 0,
+    leaveFraction: 0,
+    actualMinutes: 0,
+    status: 'under',
+    ...overrides,
+  }
 }
 
 describe('memberBudgetGroups', () => {

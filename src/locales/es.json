@@ -134,6 +134,7 @@
     "settings": "Configuración",
     "timeOff": "Ausencias",
     "timeOffApprovals": "Aprobar ausencias",
+    "teamTimeOff": "Ausencias del equipo",
     "pendingCount_one": "{{count}} solicitud pendiente",
     "pendingCount_many": "{{count}} solicitudes pendientes",
     "pendingCount_other": "{{count}} solicitudes pendientes"
@@ -384,6 +385,31 @@
       "autoApproved": "Se aprueba automáticamente",
       "archive": "Archivado",
       "archived": "Archivado"
+    },
+    "team": {
+      "kicker": "AUSENCIAS DEL EQUIPO",
+      "title": "Ausencias del equipo",
+      "intro": "Ausencias aprobadas y pendientes de todo el espacio de trabajo, una fila por miembro. Los fines de semana aparecen sombreados y la última fila cuenta quién está ausente cada día.",
+      "previousMonth": "Mes anterior",
+      "nextMonth": "Mes siguiente",
+      "memberFilter": "Miembro",
+      "allMembers": "Todos los miembros",
+      "typeFilter": "Tipo de ausencia",
+      "allTypes": "Todos los tipos",
+      "memberColumn": "Miembro",
+      "onLeaveRow": "Ausentes",
+      "tableLabel": "Ausencias en {{month}}",
+      "cellPart": "{{type}}, {{status}}{{half}}",
+      "cellLabel": "{{name}}, {{date}}: {{leave}}",
+      "legendLabel": "Leyenda",
+      "legendHalf": "Medio día",
+      "legendPending": "Pendiente",
+      "empty": "No hay ausencias aprobadas ni pendientes en {{month}}.",
+      "loading": "Cargando ausencias del equipo…",
+      "removed": "{{name}} (eliminado)",
+      "pendingButton_one": "{{count}} solicitud por aprobar",
+      "pendingButton_many": "{{count}} solicitudes por aprobar",
+      "pendingButton_other": "{{count}} solicitudes por aprobar"
     }
   }
 }

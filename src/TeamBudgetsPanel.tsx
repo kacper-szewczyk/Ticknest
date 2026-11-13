@@ -20,6 +20,8 @@ import { budgetTargetKey } from './lib/budgetForm'
 import { type BudgetProgress, calculateBudgetProgress, progressTimeZone, zonedDayString } from './lib/budgetProgress'
 import { localDayString } from './lib/dates'
 import { readableError } from './lib/errors'
+import type { LeaveRequest } from './lib/leave'
+import { approvedLeaveDays } from './lib/leaveCalendar'
 import { budgetGroupRange, formatBudgetBalance, formatBudgetDay, formatBudgetMinutes } from './lib/memberBudgets'
 import {
   type TeamBudgetFilters,
@@ -29,6 +31,7 @@ import {
   teamEntryRanges,
 } from './lib/teamBudgets'
 import { type TimeEntry, loadCompletedEntriesOverlapping } from './lib/timeEntries'
+import { subscribeToLeaveRequests } from './lib/timeOff'
 import { type WorkspaceMember, subscribeToWorkspaceMembers } from './lib/workspaces'
 import { EmptyText, FormMessage, LoadingState, SectionCard, SectionHeading, SelectField } from './ui'
 
@@ -53,10 +56,13 @@ function groupKey(group: Budget[]): string {
 export function TeamBudgetsPanel({
   workspaceId,
   weekStartsOn,
+  timeOffEnabled,
   onManageBudgets,
 }: {
   workspaceId: string
   weekStartsOn: number
+  // With time off on, approved leave lowers the targets of the days it covers.
+  timeOffEnabled: boolean
   // Opens the Budgets page, where budgets are created and edited.
   onManageBudgets: () => void
 }) {
@@ -67,6 +73,7 @@ export function TeamBudgetsPanel({
     return { userId: '', targetKey: '', fromDay: today, toDay: today }
   })
   const [entries, setEntries] = useState<{ key: string; byUser: Map<string, TimeEntry[]> } | undefined>()
+  const [leave, setLeave] = useState<LeaveRequest[] | undefined>()
   const [reloads, setReloads] = useState(0)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -87,6 +94,14 @@ export function TeamBudgetsPanel({
       stopMembers()
     }
   }, [workspaceId])
+
+  // Approved leave is small next to time entries, so everyone's is followed live.
+  useEffect(() => {
+    if (!timeOffEnabled) return
+    return subscribeToLeaveRequests(workspaceId, { status: 'approved' }, setLeave, (issue) =>
+      setError(readableError(issue)),
+    )
+  }, [workspaceId, timeOffEnabled])
 
   const membersById = useMemo(() => new Map(members.map((member) => [member.uid, member])), [members])
   // Budget days follow the tracked member's timezone, as in their own view.
@@ -122,7 +137,8 @@ export function TeamBudgetsPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, rangesKey])
 
-  const entriesReady = ranges.size === 0 || entries?.key === rangesKey
+  const leaveReady = !timeOffEnabled || leave !== undefined
+  const entriesReady = (ranges.size === 0 || entries?.key === rangesKey) && leaveReady
   const rows: Row[] =
     entries && entriesReady
       ? groups.map((group) => {
@@ -130,7 +146,13 @@ export function TeamBudgetsPanel({
           return {
             key: groupKey(group),
             group,
-            progress: calculateBudgetProgress(group, entries.byUser.get(group[0].userId) ?? [], timeZone, now),
+            progress: calculateBudgetProgress(
+              group,
+              entries.byUser.get(group[0].userId) ?? [],
+              timeZone,
+              now,
+              approvedLeaveDays(timeOffEnabled ? (leave ?? []) : [], group[0].userId),
+            ),
             memberName: memberNameFor(group[0]),
             today: zonedDayString(now.getTime(), timeZone),
           }
