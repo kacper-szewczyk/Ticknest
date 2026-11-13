@@ -151,10 +151,10 @@ describe('DemoAccountsPanel', () => {
   it('links to the landing page in the visitor language', () => {
     vi.stubEnv('VITE_DEMO_MODE', 'true')
     const html = render(<DemoAccountsPanel onUse={() => {}} />)
-    expect(html).toContain(`href="${DEMO_LANDING_URL}/"`)
+    expect(html).toContain(`href="${DEMO_LANDING_URL}/?utm_source=demo&amp;utm_medium=sign-in"`)
     expect(html).toContain('What is Ticknest?')
-    expect(demoLandingUrl('pl')).toBe(`${DEMO_LANDING_URL}/pl/`)
-    expect(demoLandingUrl('es')).toBe(`${DEMO_LANDING_URL}/`)
+    expect(demoLandingUrl('pl')).toBe(`${DEMO_LANDING_URL}/pl/?utm_source=demo&utm_medium=sign-in`)
+    expect(demoLandingUrl('es')).toBe(`${DEMO_LANDING_URL}/?utm_source=demo&utm_medium=sign-in`)
   })
 })
 

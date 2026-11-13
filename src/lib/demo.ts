@@ -7,9 +7,12 @@ export const DEMO_SOURCE_URL = 'https://github.com/kacper-szewczyk/Ticknest'
 /** The project's landing page, which explains what Ticknest is to visitors who arrive at the sign-in screen first. */
 export const DEMO_LANDING_URL = 'https://ticknest-landing.vercel.app'
 
+/** UTM tags so the landing page's cookieless analytics can count visitors who came from the demo. The app itself sends nothing. */
+const DEMO_LANDING_UTM = 'utm_source=demo&utm_medium=sign-in'
+
 /** The landing page in the visitor's language: Polish has its own page, every other language gets the English one. */
 export function demoLandingUrl(language: string): string {
-  return language === 'pl' ? `${DEMO_LANDING_URL}/pl/` : `${DEMO_LANDING_URL}/`
+  return `${DEMO_LANDING_URL}${language === 'pl' ? '/pl/' : '/'}?${DEMO_LANDING_UTM}`
 }
 /** Where visitors who like the project can support the author. */
 export const DEMO_SUPPORT_URL = 'https://buymeacoffee.com/kszewczyk'

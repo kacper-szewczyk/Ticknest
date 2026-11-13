@@ -15,6 +15,28 @@ Plans and copy for the public launch of Ticknest in English and Polish. Tracked 
 | Live demo             | https://ticknest-pi.vercel.app               |
 | Screenshots (EN / PL) | `docs/screenshots/en`, `docs/screenshots/pl` |
 
+## UTM tags
+
+The landing page counts visits with cookieless analytics (Umami, set up in the [ticknest-landing](https://github.com/kacper-szewczyk/ticknest-landing) repo), so tag every link to it to see which channel brought the visitor. The app and the GitHub repository have no analytics, so tags on demo and repository links do nothing.
+
+Add `?utm_source=<source>&utm_medium=<medium>` and, for launch-day posts, `&utm_campaign=launch`. Use `utm_content` to tell apart several posts on one source, such as subreddits.
+
+| Channel                      | `utm_source`               | `utm_medium`         |
+| ---------------------------- | -------------------------- | -------------------- |
+| Hacker News                  | `hackernews`               | `social`             |
+| Reddit                       | `reddit`                   | `social`             |
+| Product Hunt                 | `producthunt`              | `social`             |
+| LinkedIn                     | `linkedin`                 | `social` / `profile` |
+| X, Bluesky, Mastodon         | `x`, `bluesky`, `mastodon` | `social` / `profile` |
+| Wykop                        | `wykop`                    | `social` / `profile` |
+| 4programmers.net             | `4programmers`             | `social` / `profile` |
+| dev.to, Polish blog          | `devto`, `blog`            | `article`            |
+| Indie Hackers                | `indiehackers`             | `social`             |
+| README (set in the repo)     | `github`                   | `readme`             |
+| Demo sign-in screen (in app) | `demo`                     | `sign-in`            |
+
+Use `profile` for bio and profile links, and `social` for posts. Example: `https://ticknest-landing.vercel.app/pl/?utm_source=wykop&utm_medium=social&utm_campaign=launch`.
+
 ## Timeline
 
 Dates are relative to launch day (T-0). Pick a Tuesday, Wednesday or Thursday for T-0.

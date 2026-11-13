@@ -8,6 +8,7 @@ Times are in Polish time (CET/CEST). Spread the posts out so you can answer comm
 
 - [ ] Demo is up, the sample accounts sign in, and the data was reset in the last 24 hours.
 - [ ] README, landing page and latest release are current.
+- [ ] Landing page analytics is on: open the page and check the visit shows up in Umami's realtime view. Every landing page link below carries UTM tags (see [UTM tags](README.md#utm-tags)); add them to any link you add.
 - [ ] Issue templates and the discussion board (if used) are ready for feedback.
 - [ ] Notifications on for GitHub issues and every channel below.
 
@@ -134,7 +135,7 @@ Use the flair each subreddit asks for and add any disclosure its rules require. 
 > Demo with sample accounts: https://ticknest-pi.vercel.app
 > Repo: https://github.com/kacper-szewczyk/Ticknest
 >
-> Feedback on the onboarding and the landing page is very welcome: https://ticknest-landing.vercel.app
+> Feedback on the onboarding and the landing page is very welcome: https://ticknest-landing.vercel.app/?utm_source=reddit&utm_medium=social&utm_campaign=launch&utm_content=sideproject
 
 ### r/freelance
 
@@ -208,7 +209,7 @@ Attach `docs/screenshots/en/timer.gif`. Pin the post. On Mastodon add `#opensour
 >
 > Demo: https://ticknest-pi.vercel.app
 > Kod: https://github.com/kacper-szewczyk/Ticknest
-> Strona projektu: https://ticknest-landing.vercel.app/pl/
+> Strona projektu: https://ticknest-landing.vercel.app/pl/?utm_source=linkedin&utm_medium=social&utm_campaign=launch
 >
 > Jeśli Twój zespół mierzy czas pracy, chętnie usłyszę, czego brakuje, żebyś się przesiadł(a).
 >
@@ -279,7 +280,7 @@ Same outline as the dev.to article, using `docs/screenshots/pl` and the PL landi
 > The bet: small teams would rather own their data and pay Firebase's usage costs (usually $0 at 5 to 25 people) than pay a per-seat subscription. The code is MIT licensed; the project is funded by donations and paid help with setup and custom features.
 >
 > Demo: https://ticknest-pi.vercel.app
-> Landing page: https://ticknest-landing.vercel.app
+> Landing page: https://ticknest-landing.vercel.app/?utm_source=indiehackers&utm_medium=social&utm_campaign=launch
 >
 > I'll share the launch numbers (stars, demo sign-ins, deployments) in a week. What would you track to tell whether an open-source launch worked?
 
