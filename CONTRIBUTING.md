@@ -26,7 +26,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-`npm run test:e2e` builds the Functions, starts the Auth, Firestore, and Functions emulators, and runs Playwright, which starts its own Vite dev server on port 5174 with emulator and demo mode settings (your `.env.local` does not apply). Each spec file wipes and reseeds the emulators with the demo data first, so do not point it at emulators holding data you want to keep. Like `npm run test:emulators`, it needs Java and the emulator ports free. Specs tagged `@mobile` also run on a phone-sized viewport.
+`npm run test:e2e` builds the Functions, starts the Auth, Firestore, and Functions emulators, and runs Playwright, which starts its own Vite dev server on port 5174 with emulator and demo mode settings and time off turned on (your `.env.local` does not apply). Each spec file wipes and reseeds the emulators with the demo data first, so do not point it at emulators holding data you want to keep. Like `npm run test:emulators`, it needs Java and the emulator ports free. Specs tagged `@mobile` also run on a phone-sized viewport.
 
 To debug, keep the emulators running in one terminal with `npm run emulators`, then in another run:
 

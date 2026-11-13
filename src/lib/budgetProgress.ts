@@ -14,14 +14,20 @@ export type ProgressEntry = {
 }
 
 /**
- * `off` is a past day with no target and no time. Today is `in-progress` and later days are `upcoming`,
+ * `off` is a past day with no target and no time. `time-off` is a day whose whole target was taken away by
+ * approved leave and that has no time logged. Otherwise today is `in-progress` and later days are `upcoming`,
  * whatever has been logged on them.
  */
-export type BudgetDayStatus = 'under' | 'met' | 'over' | 'off' | 'in-progress' | 'upcoming'
+export type BudgetDayStatus = 'under' | 'met' | 'over' | 'off' | 'time-off' | 'in-progress' | 'upcoming'
 
 export type BudgetDayProgress = {
   day: string
+  /** The target after approved leave. */
   expectedMinutes: number
+  /** Target minutes taken off by approved leave on this day. */
+  leaveMinutes: number
+  /** Share of the day on approved leave: 0, 0.5, or 1. */
+  leaveFraction: number
   /** Completed time on the target that falls on this day, rounded to the nearest minute. */
   actualMinutes: number
   status: BudgetDayStatus
@@ -35,6 +41,10 @@ export type BudgetProgress = {
   totalExpectedMinutes: number
   /** Expected minutes of the days that have ended. Today's target is not due until the day ends. */
   expectedToDateMinutes: number
+  /** Target minutes taken off by approved leave over the whole range. */
+  totalLeaveMinutes: number
+  /** Target minutes taken off by approved leave on the days that have ended. */
+  leaveToDateMinutes: number
   /** Minutes logged on the days that have ended plus today. */
   actualToDateMinutes: number
   /** `actualToDateMinutes − expectedToDateMinutes`: negative is behind, positive is ahead. */
@@ -165,7 +175,14 @@ export function budgetInstantRange(budgets: Budget[], timeZone: string): [Date, 
   return [new Date(zonedDayStartMillis(startDay, timeZone)), new Date(zonedDayStartMillis(nextDay(endDay), timeZone))]
 }
 
-function dayStatus(day: string, today: string, expectedMinutes: number, actualMinutes: number): BudgetDayStatus {
+function dayStatus(
+  day: string,
+  today: string,
+  expectedMinutes: number,
+  actualMinutes: number,
+  wholeDayOff: boolean,
+): BudgetDayStatus {
+  if (wholeDayOff && actualMinutes === 0) return 'time-off'
   if (day > today) return 'upcoming'
   if (day === today) return 'in-progress'
   if (expectedMinutes === 0 && actualMinutes === 0) return 'off'
@@ -176,13 +193,15 @@ function dayStatus(day: string, today: string, expectedMinutes: number, actualMi
 /**
  * Calculates progress for active budgets that share one user and target. Days are calendar dates in the
  * tracked user's timezone, and an entry crossing midnight is split between its days. Running timers count
- * only after they stop.
+ * only after they stop. `leaveDays` holds the member's approved leave per calendar day (see `approvedLeaveDays`);
+ * it lowers each day's target by the share of the day taken off.
  */
 export function calculateBudgetProgress(
   budgets: Budget[],
   entries: ProgressEntry[],
   timeZone: string,
   now: Date,
+  leaveDays: ReadonlyMap<string, number> = new Map(),
 ): BudgetProgress {
   if (budgets.length === 0) throw new Error('Pass at least one budget.')
   if (budgets.some((budget) => budget.archived || budgetKey(budget) !== budgetKey(budgets[0]))) {
@@ -217,13 +236,30 @@ export function calculateBudgetProgress(
   let totalExpectedMinutes = 0
   let expectedToDateMinutes = 0
   let actualToDateMinutes = 0
+  let totalLeaveMinutes = 0
+  let leaveToDateMinutes = 0
   const days = covered.map((day, index): BudgetDayProgress => {
-    const expectedMinutes = budgets.reduce((sum, budget) => sum + expectedMinutesForDay(budget, day), 0)
+    const scheduledMinutes = budgets.reduce((sum, budget) => sum + expectedMinutesForDay(budget, day), 0)
+    const leaveFraction = Math.min(1, Math.max(0, leaveDays.get(day) ?? 0))
+    const expectedMinutes = Math.round(scheduledMinutes * (1 - leaveFraction))
+    const leaveMinutes = scheduledMinutes - expectedMinutes
     const actualMinutes = Math.round(loggedMillis[index] / MINUTE_MS)
     totalExpectedMinutes += expectedMinutes
-    if (day < today) expectedToDateMinutes += expectedMinutes
+    totalLeaveMinutes += leaveMinutes
+    if (day < today) {
+      expectedToDateMinutes += expectedMinutes
+      leaveToDateMinutes += leaveMinutes
+    }
     if (day <= today) actualToDateMinutes += actualMinutes
-    return { day, expectedMinutes, actualMinutes, status: dayStatus(day, today, expectedMinutes, actualMinutes) }
+    const wholeDayOff = scheduledMinutes > 0 && expectedMinutes === 0
+    return {
+      day,
+      expectedMinutes,
+      leaveMinutes,
+      leaveFraction,
+      actualMinutes,
+      status: dayStatus(day, today, expectedMinutes, actualMinutes, wholeDayOff),
+    }
   })
 
   return {
@@ -232,6 +268,8 @@ export function calculateBudgetProgress(
     days,
     totalExpectedMinutes,
     expectedToDateMinutes,
+    totalLeaveMinutes,
+    leaveToDateMinutes,
     actualToDateMinutes,
     balanceMinutes: actualToDateMinutes - expectedToDateMinutes,
   }

@@ -1,8 +1,68 @@
 # Ticknest
 
-Ticknest is an open-source time tracker that you deploy into a Firebase project you control. It supports workspaces, invitations, clients, projects, tasks, time tracking, and reports you can export as CSV or PDF.
+**English** | [Polski](README.pl.md)
 
-**Try the public demo at <https://ticknest-pi.vercel.app>.** Sign in with one of the sample accounts listed on the sign-in screen. All demo data is reset every 24 hours.
+**Open-source time tracking for small teams, running in a Firebase project you own.**
+
+[![Licence: MIT](https://img.shields.io/github/license/kacper-szewczyk/Ticknest)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/kacper-szewczyk/Ticknest)](https://github.com/kacper-szewczyk/Ticknest/releases/latest)
+[![Quality checks](https://github.com/kacper-szewczyk/Ticknest/actions/workflows/quality-checks.yml/badge.svg?branch=main)](https://github.com/kacper-szewczyk/Ticknest/actions/workflows/quality-checks.yml)
+[![Live demo](https://img.shields.io/badge/demo-ticknest--pi.vercel.app-2ea44f)](https://ticknest-pi.vercel.app)
+
+<!--
+  Hero image: timer + timesheet screenshot or short GIF, added in #246.
+  Keep it under ~500 KB and give it alt text, for example:
+  <p align="center"><img src="docs/images/hero.png" alt="Ticknest timer bar above a weekly timesheet of time entries" width="900"></p>
+-->
+
+**[Try the live demo](https://ticknest-pi.vercel.app)** with one of the sample accounts on the sign-in screen. Demo data resets every 24 hours.
+
+## Features
+
+- **Timer** always visible in the header. Start it with or without a description, pick a project and task from one search box, and running timers stop on their own at midnight.
+- **Timesheet** grouped by day, with daily totals and a dialog for adding or editing entries after the fact.
+- **Clients, projects and tasks** in a searchable catalog, with project colours, estimates in hours and tasks grouped by project.
+- **Reports** grouped by day, client, project, task or user, with detailed entries on demand and export to **CSV** or **PDF** (generated in the browser).
+- **Teams**: invite people by link, and give them the Owner, Manager or Member role. Managers see everyone's entries and reports; members see their own.
+- **Budgets** (optional) for projects and people, with progress for members and a team overview for managers.
+- **Workspaces** with their own name and week start, and a setup wizard for the first client, project and task.
+- **Interface in English, Spanish and Polish**, light and dark colour palettes, and a layout that works on phones.
+
+## Why not Clockify?
+
+Ticknest covers the core of a hosted time tracker, with different trade-offs:
+
+- **You own the data.** Everything lives in your own Firebase project. The maintainers run no backend and never see your entries.
+- **No seat fees.** There are no per-user plans. You pay only Firebase's usage-based charges, which for a small team often stay within the no-cost quota (see [Costs](docs/operations.md#costs)).
+- **No monitoring.** No screenshots, activity tracking, keystroke or app logging, and no analytics or telemetry in the app. It records the time people enter, nothing else.
+- **Open source** under the MIT licence, so you can read, change and audit all of it.
+
+## What Ticknest doesn't do (yet)
+
+- No integrations with other tools (calendars, issue trackers, invoicing).
+- No public API.
+- No mobile app or browser extension. The web app works in mobile browsers.
+- No invoicing or billable-rate calculations.
+
+## Deploy
+
+The shortest path to your own instance: host the web app on Vercel and keep the backend in Firebase.
+
+1. Create a Firebase project on the Blaze plan, register a Web app, and enable Email/Password and Google sign-in.
+2. Deploy the Firestore rules, indexes and Functions from a clone of this repository:
+
+   ```sh
+   npm install
+   npm --prefix functions install
+   npx firebase login
+   npx firebase use --add
+   npx firebase deploy --only firestore:rules,firestore:indexes,functions
+   ```
+
+3. Import the repository into [Vercel](https://vercel.com/new), add the `VITE_FIREBASE_*` values from your Web app as environment variables, and deploy.
+4. Add the Vercel domain to the authorised domains under Authentication → Settings in the Firebase console.
+
+The **[full setup guide](docs/operations.md)** covers each step in detail, plus deploying entirely to Firebase Hosting, deploying from GitHub Actions, demo mode, App Check, security headers, backups and teardown.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/en/timesheet-dark.png">
@@ -18,7 +78,9 @@ Screenshots in Polish are in [docs/screenshots/pl](docs/screenshots/pl). All of 
 
 ## Quick start
 
-Requirements: Node.js 22.12+, 24.x, or 26.x, npm, Java JDK 11+ for the Firebase emulators, and a Firebase project for deployment. Cloud Functions deployment requires the Firebase Blaze plan and a linked Cloud Billing account.
+Run Ticknest locally against the Firebase emulators.
+
+Requirements: Node.js 22.12+, 24.x, or 26.x, npm, and Java JDK 11+ for the Firebase emulators.
 
 ```sh
 npm install
@@ -28,9 +90,6 @@ npm run emulators
 ```
 
 In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
-
-> [!IMPORTANT]
-> The quick start only runs Ticknest locally against the Firebase emulators. To run it for real users, follow the **[full setup guide](docs/operations.md)**. It covers creating and configuring your Firebase project, authentication providers, billing, deploying (by hand, from GitHub Actions, or to Vercel), demo mode, App Check, security headers, backups, and teardown.
 
 ## Support and contact
 

@@ -9,8 +9,11 @@ import { BudgetProgressCard } from './BudgetProgressCard'
 import { type Budget, subscribeToBudgets } from './lib/budgets'
 import { budgetInstantRange, calculateBudgetProgress, progressTimeZone, zonedDayString } from './lib/budgetProgress'
 import { readableError } from './lib/errors'
+import type { LeaveRequest } from './lib/leave'
+import { approvedLeaveDays } from './lib/leaveCalendar'
 import { budgetGroupRange, budgetGroupSchedule, formatBudgetDay, memberBudgetGroups } from './lib/memberBudgets'
 import { type TimeEntry, subscribeToCompletedEntriesOverlapping } from './lib/timeEntries'
+import { subscribeToLeaveRequests } from './lib/timeOff'
 import { EmptyText, FormMessage, ListRow, LoadingState, SectionCard, SectionHeading } from './ui'
 
 // "Today" moves on at midnight in the member's timezone, so the panel re-reads the clock every minute.
@@ -22,17 +25,21 @@ export function MyBudgetsPanel({
   userId,
   memberTimeZone,
   weekStartsOn,
+  timeOffEnabled,
   onManageBudgets,
 }: {
   workspaceId: string
   userId: string
   memberTimeZone: string | undefined
   weekStartsOn: number
+  // With time off on, approved leave lowers the targets of the days it covers.
+  timeOffEnabled: boolean
   // Given to owners and managers, who can open the Budgets page to set budgets up.
   onManageBudgets?: () => void
 }) {
   const [budgets, setBudgets] = useState<Budget[] | undefined>()
   const [entries, setEntries] = useState<TimeEntry[] | undefined>()
+  const [leave, setLeave] = useState<LeaveRequest[] | undefined>()
   const [error, setError] = useState('')
   const [now, setNow] = useState(() => new Date())
   const timeZone = progressTimeZone(memberTimeZone)
@@ -48,6 +55,13 @@ export function MyBudgetsPanel({
     () => subscribeToBudgets(workspaceId, { userId }, setBudgets, (issue) => setError(readableError(issue))),
     [workspaceId, userId],
   )
+
+  useEffect(() => {
+    if (!timeOffEnabled) return
+    return subscribeToLeaveRequests(workspaceId, { uid: userId, status: 'approved' }, setLeave, (issue) =>
+      setError(readableError(issue)),
+    )
+  }, [workspaceId, userId, timeOffEnabled])
 
   const groups = memberBudgetGroups(budgets ?? [], today)
   const activeBudgets = groups.active.flat()
@@ -67,10 +81,15 @@ export function MyBudgetsPanel({
     )
   }, [workspaceId, userId, rangeStart, rangeEnd])
 
-  const progress = entries ? groups.active.map((group) => calculateBudgetProgress(group, entries, timeZone, now)) : []
+  const leaveReady = !timeOffEnabled || leave !== undefined
+  const leaveDays = approvedLeaveDays(timeOffEnabled ? (leave ?? []) : [], userId)
+  const progress =
+    entries && leaveReady
+      ? groups.active.map((group) => calculateBudgetProgress(group, entries, timeZone, now, leaveDays))
+      : []
 
   const hasActive = groups.active.length > 0
-  const loading = budgets === undefined || (hasActive && entries === undefined)
+  const loading = budgets === undefined || (hasActive && (entries === undefined || !leaveReady))
 
   return (
     <SectionCard labelledBy="my-budgets-heading">

@@ -27,6 +27,7 @@ const STATUS_STYLES: Record<BudgetDayStatus, { symbol: string; color: string }> 
   met: { symbol: '✓', color: 'success.main' },
   over: { symbol: '▲', color: 'success.main' },
   off: { symbol: '–', color: 'text.disabled' },
+  'time-off': { symbol: '◇', color: 'info.main' },
   'in-progress': { symbol: '●', color: 'primary.main' },
   upcoming: { symbol: '○', color: 'text.disabled' },
 }
@@ -111,6 +112,13 @@ export function BudgetProgressCard({
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
         The balance counts the days that have ended plus the time logged today; today’s target is due at midnight.
       </Typography>
+      {progress.totalLeaveMinutes > 0 && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+          Approved time off lowers the target by {formatBudgetMinutes(progress.totalLeaveMinutes)}
+          {progress.leaveToDateMinutes > 0 && ` (${formatBudgetMinutes(progress.leaveToDateMinutes)} so far)`}; the
+          numbers above already leave it out.
+        </Typography>
+      )}
 
       <Box component="section" aria-labelledby={weekHeadingId} sx={{ mt: 2.5 }}>
         <Stack
@@ -206,6 +214,11 @@ function BudgetDayCell({ day, isToday }: { day: BudgetDayProgress; isToday: bool
       <Typography variant="caption" sx={{ color: style.color, fontWeight: 600 }}>
         <span aria-hidden="true">{style.symbol}</span> {budgetDayLabel(day)}
       </Typography>
+      {day.leaveFraction > 0 && day.status !== 'time-off' && (
+        <Typography variant="caption" color="text.secondary">
+          {day.leaveFraction < 1 ? 'Half day off' : 'Time off'} · −{formatBudgetMinutes(day.leaveMinutes)}
+        </Typography>
+      )}
     </Box>
   )
 }

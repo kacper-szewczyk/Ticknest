@@ -1,7 +1,7 @@
 {
   "name": "ticknest",
   "private": true,
-  "version": "1.46.0",
+  "version": "1.47.0",
   "engines": {
     "node": "^22.12.0 || ^24.0.0 || ^26.0.0"
   },
@@ -28,7 +28,8 @@
     "typecheck:functions": "npm --prefix functions run build",
     "test": "vitest run --project unit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "setup": "node scripts/setup.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
