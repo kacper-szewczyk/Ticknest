@@ -68,6 +68,8 @@ gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" --project="$PROJ
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:${REPO}:environment:production"
 ```
 
+The member must match the `sub` claim of GitHub's OIDC token exactly. If the repository uses [immutable subject claims](https://docs.github.com/en/actions/reference/security/oidc), the claim has the form `repo:<owner>@<owner-id>/<repo>@<repo-id>:environment:production` instead. Check with `gh api repos/$REPO/actions/oidc/customization/sub`: when `use_immutable_subject` is `true`, use its `sub_claim_prefix` in place of `repo:${REPO}` in the binding above (and in the preview one below). A mismatched member makes the deploy fail with `Failed to authenticate, have you run firebase login?`, because the Firebase CLI reports the failed impersonation that way.
+
 `roles/firebase.admin` covers Hosting, Firestore rules and indexes, and Functions. `roles/iam.serviceAccountUser` lets the deploy attach the runtime service account to the Functions. If a deploy fails with a permission error, the Firebase CLI names the missing permission; grant a role that includes it.
 
 For previews, unless you turned them off, create a second service account with only what a preview channel needs. Firebase Authentication Admin lets the CLI add each channel's domain to the authorized domains, so Google sign-in works on the preview. If previews use a separate project, run the pool, provider, and service-account commands in that project instead.
