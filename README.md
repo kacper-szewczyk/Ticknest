@@ -93,6 +93,8 @@ In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
 
 ## Support and contact
 
+**Questions, ideas or something to show?** Join [GitHub Discussions](https://github.com/kacper-szewczyk/Ticknest/discussions): ask in [Q&A](https://github.com/kacper-szewczyk/Ticknest/discussions/categories/q-a), suggest features in [Ideas](https://github.com/kacper-szewczyk/Ticknest/discussions/categories/ideas), or share your setup in [Show and tell](https://github.com/kacper-szewczyk/Ticknest/discussions/categories/show-and-tell). Found a bug? [Open an issue](https://github.com/kacper-szewczyk/Ticknest/issues/new/choose). Contributions are welcome: issues labelled [good first issue](https://github.com/kacper-szewczyk/Ticknest/labels/good%20first%20issue) and [help wanted](https://github.com/kacper-szewczyk/Ticknest/labels/help%20wanted) are a good place to start, and [CONTRIBUTING.md](CONTRIBUTING.md) explains how.
+
 > [!TIP]
 > **Enjoying Ticknest?** Buying me a coffee helps keep the project maintained and the public demo online.
 >
@@ -108,6 +110,7 @@ In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
 - [Full setup guide: self-hosting, deployment, privacy, costs, backups, and teardown](docs/operations.md)
 - [Running a public demo](docs/operations.md#demo-mode-optional)
 - [Contributing](CONTRIBUTING.md)
+- [Security policy and reporting vulnerabilities](SECURITY.md)
 - [Coding standards](CODING_STANDARDS.md)
 - [Firestore data model](docs/firestore-data-model.md)
 - [Firestore rules test matrix](docs/firestore-rules-test-matrix.md)

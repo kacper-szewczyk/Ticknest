@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in Ticknest does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Before you submit, remove names, email addresses, workspace data, invite links, tokens and credentials from everything below.
+        To report a security vulnerability, do not open an issue. Follow [SECURITY.md](https://github.com/kacper-szewczyk/Ticknest/blob/main/SECURITY.md) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options:
+        - Public demo
+        - My own deployment
+        - Local development (emulators)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Ticknest version or commit
+      description: The release (for example 1.49.0) or the commit you deployed, if you know it.
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, OS and Node.js version
+      description: Node.js only matters for local development or deployment problems.
+      placeholder: Firefox 140 on macOS, Node.js 24.11
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output or screenshots
+      description: Browser console errors, Functions logs or screenshots, with personal data removed.

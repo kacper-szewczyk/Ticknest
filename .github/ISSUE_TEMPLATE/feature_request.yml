@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a new feature or a change to an existing one.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. For open-ended ideas you would like to discuss first, [start a discussion in Ideas](https://github.com/kacper-szewczyk/Ticknest/discussions/categories/ideas) instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How you would like Ticknest to handle it.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and workarounds
+      description: Other approaches you considered, or how you work around it now.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Who it helps (owners, managers, members), screenshots or examples from other tools.

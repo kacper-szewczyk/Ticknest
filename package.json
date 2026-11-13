@@ -31,7 +31,8 @@
     "test": "vitest run --project unit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "setup": "node scripts/setup.mjs"
+    "setup": "node scripts/setup.mjs",
+    "social-preview": "node scripts/social-preview.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
