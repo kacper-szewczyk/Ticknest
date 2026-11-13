@@ -51,6 +51,8 @@ export default defineConfig({
       VITE_APP_CHECK_DEBUG_TOKEN: '',
       VITE_DEMO_MODE: 'true',
       VITE_GOOGLE_SIGN_IN_ENABLED: 'false',
+      // Time off is off by default; the e2e suite covers it.
+      VITE_FEATURE_TIME_OFF_ENABLED: 'true',
     },
   },
 })

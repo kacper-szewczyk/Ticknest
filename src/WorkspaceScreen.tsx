@@ -67,6 +67,9 @@ const TeamBudgetsPanel = lazy(() =>
   import('./TeamBudgetsPanel').then((module) => ({ default: module.TeamBudgetsPanel })),
 )
 const TimeOffPanel = lazy(() => import('./TimeOffPanel').then((module) => ({ default: module.TimeOffPanel })))
+const TeamTimeOffPanel = lazy(() =>
+  import('./TeamTimeOffPanel').then((module) => ({ default: module.TeamTimeOffPanel })),
+)
 const TimeOffApprovalsPanel = lazy(() =>
   import('./TimeOffApprovalsPanel').then((module) => ({ default: module.TimeOffApprovalsPanel })),
 )
@@ -300,6 +303,12 @@ export function WorkspaceScreen({ user }: { user: User }) {
           {pendingLeaveCount}
         </Box>
       ),
+    },
+    {
+      value: 'team-time-off',
+      label: t('nav.teamTimeOff'),
+      icon: navIcons.teamTimeOff,
+      section: t('nav.sectionManage'),
     },
     { value: 'budgets', label: t('nav.budgets'), icon: navIcons.budgets, section: t('nav.sectionManage') },
     { value: 'catalog', label: t('nav.catalog'), icon: navIcons.catalog, section: t('nav.sectionManage') },
@@ -680,6 +689,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   userId={user.uid}
                   memberTimeZone={activeWorkspace.timezone}
                   weekStartsOn={activeWorkspace.weekStartsOn}
+                  timeOffEnabled={timeOffEnabled}
                   onManageBudgets={seesAllEntries ? () => navigate('budgets') : undefined}
                 />
               </Suspense>
@@ -690,6 +700,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}
                   weekStartsOn={activeWorkspace.weekStartsOn}
+                  timeOffEnabled={timeOffEnabled}
                   onManageBudgets={() => navigate('budgets')}
                 />
               </Suspense>
@@ -717,6 +728,17 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   userId={user.uid}
                   role={activeWorkspace.role}
                   memberTimeZone={activeWorkspace.timezone}
+                />
+              </Suspense>
+            )}
+            {currentView === 'team-time-off' && (
+              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+                <TeamTimeOffPanel
+                  key={activeWorkspace.id}
+                  workspaceId={activeWorkspace.id}
+                  memberTimeZone={activeWorkspace.timezone}
+                  pendingCount={pendingLeaveCount}
+                  onOpenApprovals={() => navigate('time-off-approvals')}
                 />
               </Suspense>
             )}
@@ -942,6 +964,12 @@ const navIcons = {
       <circle cx="12" cy="12" r="4" />
       <path d="M12 3v2M3 12h2M19 12h2M4.6 4.6l1.4 1.4M18 6l1.4-1.4" />
       <path d="M14 19l2 2 4-4.5" />
+    </NavIcon>
+  ),
+  teamTimeOff: (
+    <NavIcon>
+      <rect x="3.5" y="5" width="17" height="15" rx="2" />
+      <path d="M3.5 9.5h17M8 3v4M16 3v4M7 13.5h4M13 16.5h4" />
     </NavIcon>
   ),
   budgets: (

@@ -8,6 +8,7 @@ export type WorkspaceView =
   | 'budgets'
   | 'time-off'
   | 'time-off-approvals'
+  | 'team-time-off'
   | 'catalog'
   | 'members'
   | 'settings'
@@ -21,6 +22,7 @@ export const WORKSPACE_VIEWS: readonly WorkspaceView[] = [
   'budgets',
   'time-off',
   'time-off-approvals',
+  'team-time-off',
   'catalog',
   'members',
   'settings',
@@ -32,11 +34,11 @@ export const DEFAULT_VIEW: WorkspaceView = 'timesheet'
 const OWNER_VIEWS: readonly WorkspaceView[] = ['catalog', 'members']
 
 // Owners and managers manage budgets, follow everyone's progress on them, and decide time off.
-const MANAGER_VIEWS: readonly WorkspaceView[] = ['team-budgets', 'budgets', 'time-off-approvals']
+const MANAGER_VIEWS: readonly WorkspaceView[] = ['team-budgets', 'budgets', 'time-off-approvals', 'team-time-off']
 
 const BUDGET_VIEWS: readonly WorkspaceView[] = ['my-budgets', 'team-budgets', 'budgets']
 
-const TIME_OFF_VIEWS: readonly WorkspaceView[] = ['time-off', 'time-off-approvals']
+const TIME_OFF_VIEWS: readonly WorkspaceView[] = ['time-off', 'time-off-approvals', 'team-time-off']
 
 export type ViewAccess = { isOwner: boolean; seesAllEntries: boolean; budgetsEnabled: boolean; timeOffEnabled: boolean }
 

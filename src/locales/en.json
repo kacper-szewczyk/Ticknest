@@ -134,6 +134,7 @@
     "settings": "Settings",
     "timeOff": "Time off",
     "timeOffApprovals": "Time-off approvals",
+    "teamTimeOff": "Team time off",
     "pendingCount_one": "{{count}} request waiting",
     "pendingCount_other": "{{count}} requests waiting"
   },
@@ -382,6 +383,30 @@
       "autoApproved": "Approved automatically",
       "archive": "Archived",
       "archived": "Archived"
+    },
+    "team": {
+      "kicker": "TEAM LEAVE",
+      "title": "Team time off",
+      "intro": "Approved and pending leave for everyone in the workspace, one row per member. Weekends are shaded, and the last row counts who is off each day.",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "memberFilter": "Member",
+      "allMembers": "All members",
+      "typeFilter": "Leave type",
+      "allTypes": "All types",
+      "memberColumn": "Member",
+      "onLeaveRow": "Off",
+      "tableLabel": "Time off in {{month}}",
+      "cellPart": "{{type}}, {{status}}{{half}}",
+      "cellLabel": "{{name}}, {{date}}: {{leave}}",
+      "legendLabel": "Legend",
+      "legendHalf": "Half day",
+      "legendPending": "Pending",
+      "empty": "No approved or pending leave in {{month}}.",
+      "loading": "Loading team time off…",
+      "removed": "{{name}} (removed)",
+      "pendingButton_one": "{{count}} request to approve",
+      "pendingButton_other": "{{count}} requests to approve"
     }
   }
 }
