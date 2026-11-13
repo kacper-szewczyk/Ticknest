@@ -2,11 +2,37 @@
 
 Ticknest is software you deploy and operate in your own Firebase project. The repository maintainers do not receive application data through a Ticknest-operated backend. When you self-host, your Firebase project, Google Cloud configuration, domains, and notices to your users are your responsibility.
 
+## Guided setup
+
+**Before you start:** Ticknest needs the Firebase **Blaze (pay-as-you-go) plan** with a Cloud Billing account, because Cloud Functions do not deploy on the free Spark plan. A small team usually stays within the no-cost quotas, but usage beyond them is billed (see [Costs](#costs)).
+
+You need Node.js 22.12+, 24 or 26 and a Google account. The [gcloud CLI](https://cloud.google.com/sdk/docs/install) is optional; with it, the script can link the billing account for you. From a clone of the repository, run:
+
+```sh
+npm run setup
+```
+
+The script walks you through each step and prints a console link wherever you have to act in the browser:
+
+1. **Prerequisites.** Checks the Node.js version, installs dependencies if needed, and signs you in to the Firebase CLI.
+2. **Project.** Lists your Firebase projects. Pick one or enter a new ID to create it. `.firebaserc` then selects it.
+3. **Billing.** With gcloud signed in (`gcloud auth login`), you choose a billing account and the script links it. Without gcloud, it opens the step in the Firebase console and waits.
+4. **Region and database.** Asks for one region for Cloud Functions and the Firestore database. It suggests `europe-central2` (Warsaw) for Polish and EU users. The database location can't be changed later. If the database already exists, its location is kept.
+5. **Sign-in providers.** Waits while you enable Email/Password (required) and Google (optional) in the console. The Firebase CLI can't do this step.
+6. **Configuration.** Creates the Firebase web app if there is none. It writes its public config to `.env.production.local` and the region to `functions/.env`. Production builds use `.env.production.local`, so `npm run dev` keeps using the emulators through `.env.local`.
+7. **Deploy.** Asks whether Firebase Hosting serves the web app (answer no for [Vercel](#hosting-the-web-app-on-vercel-optional)). Then it shows the project and targets, and deploys only after you answer yes.
+
+Re-running the script is safe. It reuses the existing project, web app and database. It shows any existing value it would change in `.firebaserc`, `.env.production.local` or `functions/.env` and asks first. If you decline, the file keeps its value. It never deploys without a confirmation.
+
+When it finishes, it prints the site URL and the remaining steps: set a [budget alert](https://console.cloud.google.com/billing/budgets) (it notifies you but does not cap spending), and add your domain to the authorized domains if you host elsewhere. The sections below describe the same setup by hand and the optional features.
+
 ## Configure your Firebase project
+
+To set up by hand instead of with `npm run setup`:
 
 1. Create a Firebase project and register a Web app in the [Firebase console](https://console.firebase.google.com/).
 2. Enable Email/Password and Google sign-in providers under Authentication. Configure authorized domains and production email templates. Google sign-in may also require configuring the OAuth consent screen in Google Cloud.
-3. Copy `.env.example` to `.env.local` and set `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID` to the Web app values. Set `VITE_USE_FIREBASE_EMULATORS=false` for a production build. `VITE_*` values are bundled into browser assets and are public; never put service-account credentials or Firebase Admin keys in them.
+3. Copy `.env.example` to `.env.local` (or `.env.production.local`, which only production builds read) and set `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID` to the Web app values. Set `VITE_USE_FIREBASE_EMULATORS=false` for a production build. `VITE_*` values are bundled into browser assets and are public; never put service-account credentials or Firebase Admin keys in them.
 4. Install and authenticate the Firebase CLI with `npx firebase login`, then run `npx firebase use --add` and select the project. `.firebaserc` is local and ignored by Git. Check the selected project before deploying.
 5. Link a Cloud Billing account and use the Blaze plan. Cloud Functions deployment requires Blaze even when usage is within its no-cost quota.
 6. Install dependencies, build, and deploy:
