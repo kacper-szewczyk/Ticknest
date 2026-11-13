@@ -10,6 +10,17 @@ import { getDemoGuardResult } from './demo/config'
 import { resetDemoProject } from './demo/reset'
 import { DEMO_RESET_SCHEDULE, DEMO_RESET_TIME_ZONE } from './demo/schedule'
 import { autoStopRunningTimers } from './timers/autoStop'
+import {
+  type ImportCatalog,
+  type ImportSkipReason,
+  DEFAULT_IMPORT_PROJECT_COLOR,
+  IMPORT_CHUNK_SIZE,
+  MAX_IMPORT_DESCRIPTION_LENGTH,
+  MAX_IMPORT_NAME_LENGTH,
+  findClient,
+  findProject,
+  findTask,
+} from './import/clockifyCsv'
 import { resolveTimeZone, zonedDay } from './timers/midnight'
 import {
   type ApproverCandidate,
@@ -550,6 +561,282 @@ export const saveManualTimeEntry = onCall(FUNCTION_OPTIONS, async (request) => {
   }
 
   return { entryId: entryRef.id }
+})
+
+type ImportEntryRow = {
+  line: number
+  userId: string
+  clientName: string | null
+  projectName: string | null
+  taskName: string | null
+  description: string
+  billable: boolean
+  startAt: number
+  endAt: number
+}
+
+/** A trimmed catalog name, `null` for none, or `undefined` when the value is not valid. */
+function getImportName(value: unknown): string | null | undefined {
+  if (value === null) return null
+  if (typeof value !== 'string') return undefined
+  const name = value.trim()
+  if (name.length > MAX_IMPORT_NAME_LENGTH) return undefined
+  return name || null
+}
+
+/** Reads one row of an import request; `null` when a field is missing or out of range. */
+function getImportRow(line: number, value: unknown): ImportEntryRow | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const row = value as CallableData
+  const clientName = getImportName(row.clientName)
+  const projectName = getImportName(row.projectName)
+  const taskName = getImportName(row.taskName)
+  const { userId, description, billable, startAt, endAt } = row
+  if (
+    typeof userId !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,128}$/.test(userId) ||
+    clientName === undefined ||
+    projectName === undefined ||
+    taskName === undefined ||
+    (taskName !== null && projectName === null) ||
+    typeof description !== 'string' ||
+    description.trim().length > MAX_IMPORT_DESCRIPTION_LENGTH ||
+    typeof billable !== 'boolean' ||
+    typeof startAt !== 'number' ||
+    !Number.isFinite(startAt) ||
+    typeof endAt !== 'number' ||
+    !Number.isFinite(endAt) ||
+    endAt <= startAt
+  ) {
+    return null
+  }
+  return { line, userId, clientName, projectName, taskName, description: description.trim(), billable, startAt, endAt }
+}
+
+type ImportRowResult =
+  { line: number; status: 'imported' } | { line: number; status: 'skipped'; reason: ImportSkipReason }
+type CatalogMatch = { id: string; name: string }
+type ResolvedImportRow = {
+  row: ImportEntryRow
+  client: CatalogMatch | null
+  project: CatalogMatch | null
+  task: CatalogMatch | null
+}
+
+// Imports up to IMPORT_CHUNK_SIZE completed entries from a Clockify export, for any active member. The web app parses
+// the file, matches users by email, and sends rows in start order. This re-validates every row, creates missing
+// clients, projects and tasks (an archived match is reused and stays archived), and skips rows that overlap an
+// existing entry, a running timer, or another row of the same user, so re-sending a row skips it rather than
+// duplicating it. Owners and managers may import.
+export const importTimeEntries = onCall({ ...FUNCTION_OPTIONS, timeoutSeconds: 120 }, async (request) => {
+  const user = getAuthenticatedUser(request)
+  const data = getData(request.data)
+  const workspaceId = getDocumentId(data, 'workspaceId')
+  if (!Array.isArray(data.rows) || data.rows.length === 0 || data.rows.length > IMPORT_CHUNK_SIZE) {
+    throw new HttpsError('invalid-argument', `Send between 1 and ${IMPORT_CHUNK_SIZE} rows at a time.`)
+  }
+  const requestRows = (data.rows as unknown[]).map((value) => {
+    const line = typeof value === 'object' && value !== null ? (value as CallableData).line : undefined
+    if (typeof line !== 'number' || !Number.isInteger(line) || line < 1) {
+      throw new HttpsError('invalid-argument', 'Every row needs its line number.')
+    }
+    return { line, row: getImportRow(line, value) }
+  })
+  if (new Set(requestRows.map(({ line }) => line)).size !== requestRows.length) {
+    throw new HttpsError('invalid-argument', 'Every row needs a different line number.')
+  }
+
+  const workspaceRef = db.collection('workspaces').doc(workspaceId)
+  const [members, clients, projects, tasks] = await Promise.all([
+    workspaceRef.collection('members').get(),
+    workspaceRef.collection('clients').get(),
+    workspaceRef.collection('projects').get(),
+    workspaceRef.collection('tasks').get(),
+  ])
+  const caller = members.docs.find((member) => member.id === user.uid)?.data()
+  if (!caller || caller.status === 'removed' || (caller.role !== 'owner' && caller.role !== 'manager')) {
+    throw new HttpsError('permission-denied', 'Only the workspace owner and managers can import time entries.')
+  }
+  const activeMembers = new Map(
+    members.docs.filter((member) => member.data().status !== 'removed').map((member) => [member.id, member.data()]),
+  )
+
+  const results = new Map<number, ImportRowResult>()
+  const rows: ImportEntryRow[] = []
+  for (const { line, row } of requestRows) {
+    if (!row) results.set(line, { line, status: 'skipped', reason: 'invalidRow' })
+    else if (!activeMembers.has(row.userId)) results.set(line, { line, status: 'skipped', reason: 'unknownUser' })
+    else rows.push(row)
+  }
+
+  // Match each row's names to the catalog and create what is missing.
+  const asItem = (item: FirebaseFirestore.QueryDocumentSnapshot) => ({
+    id: item.id,
+    name: String(item.data().name ?? ''),
+    archived: item.data().archived !== false,
+  })
+  const catalog: ImportCatalog = {
+    clients: clients.docs.map(asItem),
+    projects: projects.docs.map((item) => ({
+      ...asItem(item),
+      clientId: typeof item.data().clientId === 'string' ? (item.data().clientId as string) : null,
+    })),
+    tasks: tasks.docs.map((item) => ({ ...asItem(item), projectId: String(item.data().projectId ?? '') })),
+  }
+  const now = FieldValue.serverTimestamp()
+  const creates: Array<{ ref: DocumentReference; values: Record<string, unknown> }> = []
+  const created = { clients: 0, projects: 0, tasks: 0 }
+  const resolved: ResolvedImportRow[] = rows.map((row) => {
+    let client: CatalogMatch | null = null
+    if (row.clientName) {
+      client = findClient(catalog, row.clientName) ?? null
+      if (!client) {
+        const ref = workspaceRef.collection('clients').doc()
+        client = { id: ref.id, name: row.clientName }
+        catalog.clients.push({ ...client, archived: false })
+        creates.push({ ref, values: { name: client.name, archived: false, createdAt: now, updatedAt: now } })
+        created.clients += 1
+      }
+    }
+    let project: CatalogMatch | null = null
+    if (row.projectName) {
+      const clientId = client?.id ?? null
+      project = findProject(catalog, row.projectName, clientId) ?? null
+      if (!project) {
+        const ref = workspaceRef.collection('projects').doc()
+        project = { id: ref.id, name: row.projectName }
+        catalog.projects.push({ ...project, clientId, archived: false })
+        creates.push({
+          ref,
+          values: {
+            name: project.name,
+            clientId,
+            description: '',
+            color: DEFAULT_IMPORT_PROJECT_COLOR,
+            estimateMinutes: null,
+            archived: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        })
+        created.projects += 1
+      }
+    }
+    let task: CatalogMatch | null = null
+    if (row.taskName && project) {
+      task = findTask(catalog, row.taskName, project.id) ?? null
+      if (!task) {
+        const ref = workspaceRef.collection('tasks').doc()
+        task = { id: ref.id, name: row.taskName }
+        catalog.tasks.push({ ...task, projectId: project.id, archived: false })
+        creates.push({
+          ref,
+          values: {
+            name: task.name,
+            projectId: project.id,
+            estimateMinutes: null,
+            billable: false,
+            archived: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        })
+        created.tasks += 1
+      }
+    }
+    return { row, client, project, task }
+  })
+  // Created in order (clients, projects, tasks), so a failure part-way never leaves a task without its project.
+  for (let start = 0; start < creates.length; start += 400) {
+    const batch = db.batch()
+    for (const { ref, values } of creates.slice(start, start + 400)) batch.create(ref, values)
+    await batch.commit()
+  }
+
+  const entriesRef = workspaceRef.collection('timeEntries')
+  const byUser = new Map<string, ResolvedImportRow[]>()
+  for (const item of resolved) byUser.set(item.row.userId, [...(byUser.get(item.row.userId) ?? []), item])
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const users = await Promise.all(
+        [...byUser].map(async ([userId, userRows]) => {
+          const minStart = Math.min(...userRows.map((item) => item.row.startAt))
+          const maxEnd = Math.max(...userRows.map((item) => item.row.endAt))
+          const lockRef = workspaceRef.collection('timeEntryLocks').doc(userId)
+          const [, active, overlapping] = await Promise.all([
+            transaction.get(lockRef),
+            transaction.get(workspaceRef.collection('activeTimers').doc(userId)),
+            transaction.get(
+              entriesRef
+                .where('userId', '==', userId)
+                .where('endAt', '>', Timestamp.fromMillis(minStart))
+                .where('startAt', '<', Timestamp.fromMillis(maxEnd)),
+            ),
+          ])
+          return { userId, userRows, lockRef, active, overlapping }
+        }),
+      )
+      // A retried transaction decides every row again.
+      const decisions: ImportRowResult[] = []
+      for (const { userId, userRows, lockRef, active, overlapping } of users) {
+        const existing = overlapping.docs.map((entry) => ({
+          startAt: (entry.data().startAt as Timestamp).toMillis(),
+          endAt: (entry.data().endAt as Timestamp).toMillis(),
+        }))
+        const activeStartAt = active.data()?.startAt
+        const runningSince = activeStartAt instanceof Timestamp ? activeStartAt.toMillis() : null
+        const member = activeMembers.get(userId)
+        const userDisplayName = String(member?.displayName || member?.email || userId).slice(0, 320)
+        const accepted: ImportEntryRow[] = []
+        const sorted = [...userRows].sort((a, b) => a.row.startAt - b.row.startAt || a.row.line - b.row.line)
+        for (const { row, client, project, task } of sorted) {
+          const overlaps = (other: { startAt: number; endAt: number }) =>
+            row.startAt < other.endAt && other.startAt < row.endAt
+          const reason: ImportSkipReason | null = existing.some(overlaps)
+            ? 'overlapsExisting'
+            : runningSince !== null && row.endAt > runningSince
+              ? 'overlapsRunningTimer'
+              : accepted.some(overlaps)
+                ? 'overlapsFile'
+                : null
+          if (reason) {
+            decisions.push({ line: row.line, status: 'skipped', reason })
+            continue
+          }
+          accepted.push(row)
+          decisions.push({ line: row.line, status: 'imported' })
+          transaction.create(entriesRef.doc(), {
+            userId,
+            userDisplayName,
+            description: row.description,
+            clientId: client?.id ?? null,
+            clientName: client?.name.slice(0, MAX_IMPORT_NAME_LENGTH) ?? null,
+            projectId: project?.id ?? null,
+            projectName: project?.name.slice(0, MAX_IMPORT_NAME_LENGTH) ?? null,
+            taskId: task?.id ?? null,
+            taskName: task?.name.slice(0, MAX_IMPORT_NAME_LENGTH) ?? null,
+            billable: row.billable,
+            startAt: Timestamp.fromMillis(row.startAt),
+            endAt: Timestamp.fromMillis(row.endAt),
+            createdAt: now,
+            updatedAt: now,
+          })
+        }
+        if (accepted.length > 0) transaction.set(lockRef, { updatedAt: now })
+      }
+      for (const decision of decisions) results.set(decision.line, decision)
+    })
+  } catch (error) {
+    if (isAbortedError(error)) {
+      throw new HttpsError('aborted', 'Other time entries were saved at the same moment. Try the import again.')
+    }
+    throw error
+  }
+
+  const imported = [...results.values()].filter((result) => result.status === 'imported').length
+  logger.info('Imported time entries.', { workspaceId, rows: requestRows.length, imported, created })
+  return { results: requestRows.map(({ line }) => results.get(line)), created }
 })
 
 const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const

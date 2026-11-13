@@ -73,6 +73,9 @@ const TeamTimeOffPanel = lazy(() =>
 const TimeOffApprovalsPanel = lazy(() =>
   import('./TimeOffApprovalsPanel').then((module) => ({ default: module.TimeOffApprovalsPanel })),
 )
+const ClockifyImportPanel = lazy(() =>
+  import('./ClockifyImportPanel').then((module) => ({ default: module.ClockifyImportPanel })),
+)
 const LeaveTypesPanel = lazy(() => import('./LeaveTypesPanel').then((module) => ({ default: module.LeaveTypesPanel })))
 // Setup runs once per workspace, right after it is created.
 const SetupWizard = lazy(() => import('./SetupWizard').then((module) => ({ default: module.SetupWizard })))
@@ -796,6 +799,19 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 {isOwner && timeOffEnabled && (
                   <Suspense fallback={null}>
                     <LeaveTypesPanel key={activeWorkspace.id} workspaceId={activeWorkspace.id} />
+                  </Suspense>
+                )}
+                {seesAllEntries && (
+                  <Suspense fallback={null}>
+                    <ClockifyImportPanel
+                      key={activeWorkspace.id}
+                      workspaceId={activeWorkspace.id}
+                      currentUserId={user.uid}
+                      catalog={catalog}
+                      defaultTimeZone={
+                        activeWorkspace.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC'
+                      }
+                    />
                   </Suspense>
                 )}
                 <AppearancePanel user={user} />

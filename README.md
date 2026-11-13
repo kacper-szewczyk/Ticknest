@@ -34,6 +34,7 @@ New here? The **[landing page](https://ticknest-landing.vercel.app)** sums up wh
 - **Teams**: invite people by link, and give them the Owner, Manager or Member role. Managers see everyone's entries and reports; members see their own.
 - **Budgets** (optional) for projects and people, with progress for members and a team overview for managers.
 - **Workspaces** with their own name and week start, and a setup wizard for the first client, project and task.
+- **Import from Clockify**: bring your history over from a Clockify Detailed report CSV, with a preview of who gets which entries and what will be created.
 - **Interface in English, Spanish and Polish**, light and dark colour palettes, and a layout that works on phones.
 
 ## Why not Clockify?
