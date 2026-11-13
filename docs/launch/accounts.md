@@ -4,15 +4,15 @@ Set these up at least two weeks before launch day. Tick an account off only when
 
 ## Bios
 
-Use these unless a platform needs something shorter or longer. Swap the link for the Polish landing page on Polish channels.
+Use these unless a platform needs something shorter or longer. Swap the link for the Polish landing page on Polish channels, and set `utm_source` to the platform (see [UTM tags](README.md#utm-tags)).
 
 **Short (about 160 characters), EN:**
 
-> Building Ticknest, open-source time tracking for small teams that runs in your own Firebase project. https://ticknest-landing.vercel.app
+> Building Ticknest, open-source time tracking for small teams that runs in your own Firebase project. https://ticknest-landing.vercel.app/?utm_source=x&utm_medium=profile
 
 **Short, PL:**
 
-> Tworzę Ticknest: otwartoźródłowy tracker czasu pracy dla małych zespołów, działający w Twoim własnym projekcie Firebase. https://ticknest-landing.vercel.app/pl/
+> Tworzę Ticknest: otwartoźródłowy tracker czasu pracy dla małych zespołów, działający w Twoim własnym projekcie Firebase. https://ticknest-landing.vercel.app/pl/?utm_source=wykop&utm_medium=profile
 
 **Long, EN:**
 
