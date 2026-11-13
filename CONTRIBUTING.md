@@ -37,6 +37,16 @@ npx playwright test --headed --project chromium
 
 On CI, a failing run uploads the HTML report and traces as the `playwright-report` artifact. Open a downloaded trace with `npx playwright show-trace <path>/trace.zip`.
 
+### Screenshots
+
+The README and launch screenshots in `docs/screenshots/<language>/` are generated from the demo data, so no real personal data appears in them. Regenerate them after a visible UI change:
+
+```sh
+npm run screenshots
+```
+
+It works like `npm run test:e2e` (same emulators, ports, demo reseed and Vite server) but runs `tests/screenshots` with `playwright.screenshots.config.ts`. For English and Polish it saves the Timesheet with a running timer in the light and dark palettes, Reports, the members page, the Timesheet on a phone, the first page of an exported PDF, and a looping GIF of starting and stopping a timer. The PDF page needs Poppler's `pdftoppm` and the GIF needs `ffmpeg` (`brew install poppler ffmpeg`, or your package manager); without them those two files are skipped with a warning. Check the images before committing them, since the demo data and today's date change what they show.
+
 ## Propose a change
 
 1. Check existing issues and pull requests, then open an issue for a substantial feature or bug that has not been discussed.

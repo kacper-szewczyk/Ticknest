@@ -4,6 +4,18 @@
 
 **Otwartoźródłowy system do śledzenia czasu pracy dla małych zespołów, działający w Twoim własnym projekcie Firebase.**
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/pl/timesheet-dark.png">
+  <img src="docs/screenshots/pl/timesheet-light.png" alt="Karta czasu w Ticknest z włączonym licznikiem i wpisami z tygodnia pogrupowanymi według dni">
+</picture>
+
+| Mierzenie czasu                                                                            | Raporty i eksport                                                                      | Zarządzanie zespołem                                                                                        |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| ![Uruchamianie i zatrzymywanie licznika czasu dla projektu](docs/screenshots/pl/timer.gif) | ![Strona raportów z sumami według projektów i osób](docs/screenshots/pl/reports.png)   | ![Lista członków przestrzeni roboczej z rolami i oczekującym zaproszeniem](docs/screenshots/pl/members.png) |
+| ![Karta czasu na telefonie](docs/screenshots/pl/mobile.png)                                | ![Pierwsza strona raportu wyeksportowanego do PDF](docs/screenshots/pl/pdf-export.png) |                                                                                                             |
+
+Wszystkie zrzuty ekranu pokazują dane demo i są generowane poleceniem `npm run screenshots`.
+
 **[Wypróbuj demo](https://ticknest-pi.vercel.app)**: zaloguj się jednym z przykładowych kont pokazanych na ekranie logowania. Dane demo są resetowane co 24 godziny. Interfejs jest dostępny po polsku.
 
 Pełna dokumentacja jest po angielsku: zobacz [README](README.md) i [przewodnik wdrożenia](docs/operations.md).
