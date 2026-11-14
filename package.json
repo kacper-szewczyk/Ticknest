@@ -32,7 +32,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "setup": "node scripts/setup.mjs",
-    "social-preview": "node scripts/social-preview.mjs"
+    "social-preview": "node scripts/social-preview.mjs",
+    "app-icons": "node scripts/app-icons.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
