@@ -10,6 +10,7 @@ import { autoStopNoticeEntry, markAutoStopNoticeSeen, readSeenAutoStopNotice } f
 import type { Catalog } from './lib/catalog'
 import { formatElapsed } from './lib/dates'
 import { readableError } from './lib/errors'
+import { runningTimerTitle } from './lib/tabTitle'
 import {
   type TimeEntry,
   startTimer,
@@ -105,6 +106,22 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   const elapsed = runningEntry?.startAt
     ? Math.max(0, Math.floor(now / 1000 - runningEntry.startAt.toMillis() / 1000))
     : 0
+
+  // Show the running timer in the browser tab, driven by the same one-second clock as the bar. The title that was
+  // there before comes back when the timer stops or the bar unmounts (sign-out, leaving the workspace).
+  const isRunning = runningEntry !== undefined
+  const tabTitle = runningEntry ? runningTimerTitle(elapsed, runningEntry) : null
+  useEffect(() => {
+    if (!isRunning) return
+    const defaultTitle = document.title
+    return () => {
+      document.title = defaultTitle
+    }
+  }, [isRunning])
+  useEffect(() => {
+    if (tabTitle !== null) document.title = tabTitle
+  }, [tabTitle])
+
   const elapsedText = (
     <Typography
       component="span"
