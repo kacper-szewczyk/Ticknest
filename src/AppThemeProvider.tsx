@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import CssBaseline from '@mui/material/CssBaseline'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
@@ -22,10 +22,13 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   const [choice, setChoice] = useState<PaletteChoice>(() => getCachedPaletteChoice() ?? DEFAULT_PALETTE_CHOICE)
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)', { noSsr: true })
   const language = useAppLanguage()
-  const theme = useMemo(
-    () => createTheme(createAppTheme(resolvePalette(choice, prefersDark)), MUI_LOCALES[language]),
-    [choice, prefersDark, language],
-  )
+  const palette = useMemo(() => resolvePalette(choice, prefersDark), [choice, prefersDark])
+  const theme = useMemo(() => createTheme(createAppTheme(palette), MUI_LOCALES[language]), [palette, language])
+
+  // Mobile browsers colour the address and status bars from theme-color; keep it on the page background.
+  useEffect(() => {
+    setThemeColorMeta(palette.background.default)
+  }, [palette])
 
   const applyPalette = useCallback((next: PaletteChoice) => {
     setChoice(next)
@@ -41,4 +44,14 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
       </ThemeProvider>
     </PaletteContext>
   )
+}
+
+function setThemeColorMeta(color: string) {
+  let meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    document.head.append(meta)
+  }
+  meta.content = color
 }
