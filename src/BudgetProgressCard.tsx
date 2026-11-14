@@ -128,7 +128,8 @@ export function BudgetProgressCard({
           spacing={1}
           sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between' }}
         >
-          <div>
+          {/* Only the short week summary is live, so Previous/Next week announces it without reading every day. */}
+          <div aria-live="polite">
             <Typography variant="body2" id={weekHeadingId} sx={{ fontWeight: 600 }}>
               {formatWeekLabel(weekStart, language)}
             </Typography>
@@ -157,7 +158,6 @@ export function BudgetProgressCard({
         </Stack>
         <Box
           component="ol"
-          aria-live="polite"
           sx={{
             display: 'grid',
             gridTemplateColumns: {

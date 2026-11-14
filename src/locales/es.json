@@ -526,6 +526,7 @@
     "chooseWeek": "Elegir una semana",
     "today": "Hoy",
     "weekTotal": "Total de la semana",
+    "weekStatus": "Mostrando {{week}}, {{entries}}",
     "entriesThisWeek_one": "{{count}} registro esta semana",
     "entriesThisWeek_many": "{{count}} registros esta semana",
     "entriesThisWeek_other": "{{count}} registros esta semana",

@@ -119,6 +119,30 @@ export function AutoStoppedChip() {
   return <Chip label={t('common.autoStopped')} color="info" variant="outlined" title={t('common.autoStoppedTitle')} />
 }
 
+// Hides content visually while keeping it available to screen readers.
+const visuallyHiddenSx = {
+  position: 'absolute',
+  // Strings, not numbers: in MUI `sx`, `width: 1` means 100%, not 1px.
+  width: '1px',
+  height: '1px',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  whiteSpace: 'nowrap',
+} as const
+
+/**
+ * A short, visually hidden status message for screen readers. Keep it rendered (even when empty) so changes to it
+ * are announced, and never put a value that ticks, such as a running duration, inside it.
+ */
+export function LiveStatus({ children }: { children: ReactNode }) {
+  return (
+    <Box role="status" sx={visuallyHiddenSx}>
+      {children}
+    </Box>
+  )
+}
+
 export function EmptyText({ children }: { children: ReactNode }) {
   return (
     <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>

@@ -27,7 +27,7 @@ import {
   summarizeDay,
   type DaySummary,
 } from './lib/timesheetSummary'
-import { AutoStoppedChip, BillableChip, EmptyText, FormMessage, SectionCard, SectionHeading } from './ui'
+import { AutoStoppedChip, BillableChip, EmptyText, FormMessage, LiveStatus, SectionCard, SectionHeading } from './ui'
 
 export function TimeEntriesPanel({
   user,
@@ -51,7 +51,8 @@ export function TimeEntriesPanel({
     weekStart: '',
     entries: [],
   })
-  const entries = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart ? entryState.entries : []
+  const isLoaded = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart
+  const entries = isLoaded ? entryState.entries : []
   const [editor, setEditor] = useState<{ entry?: TimeEntry; day: string } | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -196,9 +197,17 @@ export function TimeEntriesPanel({
       />
       {error && <FormMessage severity="error">{error}</FormMessage>}
       {notice && <FormMessage severity="success">{notice}</FormMessage>}
+      {/* The week total and day list tick every second while a timer runs, so they are not live regions; this short
+          message changes only when the week or its number of entries does. */}
+      <LiveStatus>
+        {isLoaded &&
+          t('entries.weekStatus', {
+            week: formatWeekLabel(weekStart, language),
+            entries: t('entries.entryCount', { count: entries.length }),
+          })}
+      </LiveStatus>
       <Paper
         variant="outlined"
-        aria-live="polite"
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -241,7 +250,7 @@ export function TimeEntriesPanel({
           )}
         </Stack>
       </Paper>
-      <Box aria-live="polite" sx={{ mt: 2.25 }}>
+      <Box sx={{ mt: 2.25 }}>
         {weekDays.map((weekDay) => {
           const dayEntries = entriesByDay.get(weekDay) ?? []
           const isExpanded = expandedDays.has(weekDay)
