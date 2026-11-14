@@ -47,6 +47,16 @@ npm run screenshots
 
 It works like `npm run test:e2e` (same emulators, ports, demo reseed and Vite server) but runs `tests/screenshots` with `playwright.screenshots.config.ts`. For English and Polish it saves the Timesheet with a running timer in the light and dark palettes, Reports, the members page, the Timesheet on a phone, the first page of an exported PDF, and a looping GIF of starting and stopping a timer. The PDF page needs Poppler's `pdftoppm` and the GIF needs `ffmpeg` (`brew install poppler ffmpeg`, or your package manager); without them those two files are skipped with a warning. Check the images before committing them, since the demo data and today's date change what they show.
 
+### Demo video
+
+The launch demo video is recorded from the demo data too, against the same emulators and Vite server as the screenshots:
+
+```sh
+npm run demo-video
+```
+
+It runs `tests/demo-video` with `playwright.demo-video.config.ts`. It signs in as the demo owner and records the same 60–90 second walkthrough twice at 1920×1080: starting and stopping a timer, the Timesheet, Reports, a PDF export and inviting a teammate. Into `demo-video/` (gitignored) it writes a clean `ticknest-demo-en.mp4`, English and Polish `.srt` caption files timed against it, and `ticknest-demo-en-captioned.mp4` with the English captions drawn on screen. The caption text is in `tests/demo-video/captions.ts`, one line per step; the timings follow the steps, so you can reword a caption without retiming anything. Set `DEMO_VIDEO_LANGUAGE=pl` to record the Polish UI instead. The MP4 files need `ffmpeg` (`brew install ffmpeg`); without it they are skipped with a warning. Watch the result before uploading it; [docs/launch](docs/launch/README.md#demo-video) says where each file goes.
+
 ### Cost measurement
 
 `npm run measure:costs` measures the Firestore operations of a workday in the real app against the emulators and prints the estimate in [docs/operations.md](docs/operations.md#what-does-it-cost). It uses its own Playwright config (`playwright.costs.config.ts`, port 5175) and reseeds the emulators like the e2e suite. Re-run it when a change adds or widens listeners or queries, commit the updated `docs/costs/firestore-usage.json`, and update the tables and date in the docs. `npm run cost:estimate` re-prints the tables from the committed measurement.

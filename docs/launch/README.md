@@ -7,13 +7,26 @@ Plans and copy for the public launch of Ticknest in English and Polish. Tracked 
 
 ## Links used everywhere
 
-| What                  | URL                                          |
-| --------------------- | -------------------------------------------- |
-| Repository            | https://github.com/kacper-szewczyk/Ticknest  |
-| Landing page (EN)     | https://ticknest-landing.vercel.app          |
-| Landing page (PL)     | https://ticknest-landing.vercel.app/pl/      |
-| Live demo             | https://ticknest-pi.vercel.app               |
-| Screenshots (EN / PL) | `docs/screenshots/en`, `docs/screenshots/pl` |
+| What                  | URL                                             |
+| --------------------- | ----------------------------------------------- |
+| Repository            | https://github.com/kacper-szewczyk/Ticknest     |
+| Landing page (EN)     | https://ticknest-landing.vercel.app             |
+| Landing page (PL)     | https://ticknest-landing.vercel.app/pl/         |
+| Live demo             | https://ticknest-pi.vercel.app                  |
+| Screenshots (EN / PL) | `docs/screenshots/en`, `docs/screenshots/pl`    |
+| Demo video            | Not uploaded yet; see [Demo video](#demo-video) |
+
+## Demo video
+
+A 60–90 second walkthrough of the seeded demo: start a timer on a project, stop it, the Timesheet, Reports, a PDF export and inviting a teammate. `npm run demo-video` records it (see "Demo video" in [CONTRIBUTING.md](../../CONTRIBUTING.md#demo-video)) into the gitignored `demo-video/` folder:
+
+| File                                 | Use it for                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| `ticknest-demo-en.mp4`               | YouTube, with the two caption files below uploaded as English and Polish tracks |
+| `ticknest-demo-en.en.srt`, `.pl.srt` | Caption tracks for the clean video                                              |
+| `ticknest-demo-en-captioned.mp4`     | LinkedIn, X, Bluesky and Mastodon, which autoplay without sound                 |
+
+The Polish captions go with the English UI until the Polish UI is complete; then `DEMO_VIDEO_LANGUAGE=pl npm run demo-video` records a Polish cut (`ticknest-demo-pl*.mp4`) for LinkedIn PL and Wykop. After uploading, put the video link in the table above and in the README.
 
 ## UTM tags
 
