@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.51.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.51.0...ticknest-v1.51.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* translate the CSV file type in the report export save dialog ([#281](https://github.com/kacper-szewczyk/Ticknest/issues/281)) ([ec3b7f7](https://github.com/kacper-szewczyk/Ticknest/commit/ec3b7f7b6552bf3601f9863b81848414e8e9241c)), closes [#271](https://github.com/kacper-szewczyk/Ticknest/issues/271)
+
 ## [1.51.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.50.0...ticknest-v1.51.0) (2026-11-13)
 
 
