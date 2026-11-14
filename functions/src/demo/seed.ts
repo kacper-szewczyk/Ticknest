@@ -1,10 +1,17 @@
-// Demo accounts plus about three months of sample data, shared by the daily reset and `npm run demo:seed`.
+// Demo accounts plus about three months of sample data (entries, budgets, and time off), shared by the daily reset and `npm run demo:seed`.
 // buildDemoData is pure and deterministic for a given `now`; writeDemoData writes its output with the Admin SDK.
 // The Admin SDK bypasses Firestore Rules, so every document mirrors what the callables and the web app write
 // (see docs/firestore-data-model.md).
 import { createHash } from 'node:crypto'
 import type { Auth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore'
+import {
+  allowanceDocumentId,
+  BUILT_IN_LEAVE_TYPES,
+  countLeaveDays,
+  leaveBalance,
+  overAllowanceDays,
+} from '../timeOff/leave'
 import { DEMO_ACCOUNTS, DEMO_INVITEE_EMAIL, type DemoAccount } from './accounts'
 
 /** Stands in for FieldValue.serverTimestamp() so buildDemoData stays free of Firestore values. */
@@ -303,6 +310,7 @@ function buildEntries(
   user: DemoAuthUser,
   account: DemoAccount,
   catalog: Catalog,
+  leaveDays: ReadonlyMap<number, 'full' | 'half'>,
 ): DemoDocument[] {
   const entries: DemoDocument[] = []
   const today = localDayMs(now.getTime(), account.timezone)
@@ -317,11 +325,15 @@ function buildEntries(
   for (let day = firstDay; day <= today; day += DAY_MS) {
     const weekday = new Date(day).getUTCDay()
     if (weekday === 0 || weekday === 6) continue
+    const leave = leaveDays.get(day)
+    if (leave === 'full') continue
     // An occasional day off.
     if (random() < 0.05) continue
 
     let cursor = pickMinutes(random, 8 * 60, 9 * 60 + 30, 15)
-    const target = pickMinutes(random, 6 * 60 + 30, 8 * 60, 15)
+    const fullDay = pickMinutes(random, 6 * 60 + 30, 8 * 60, 15)
+    // Half a day of leave leaves half a day of work.
+    const target = leave === 'half' ? Math.round(fullDay / 30) * 15 : fullDay
     let worked = 0
     let hadLunch = false
     while (worked < target) {
@@ -502,6 +514,234 @@ function buildBudgets(
   })
 }
 
+type LeaveTypeId = keyof typeof BUILT_IN_LEAVE_TYPES
+type LeaveSeedStatus = 'approved' | 'pending' | 'rejected' | 'cancelled'
+
+type LeaveSeed = {
+  typeId: LeaveTypeId
+  /** Offset in days from the user's local today, moved to the weekday on or after it. */
+  startOffset: number
+  /** Monday-to-Friday days the leave spans, counting half days as whole ones. */
+  workingDays: number
+  startHalf?: boolean
+  endHalf?: boolean
+  status: LeaveSeedStatus
+  note: string
+  decisionNote?: string
+}
+
+// Spread over the entry window and the weeks after it, so the calendar, the approval queue, balances, and the
+// leave history all have something to show. Ranges of one account that are pending or approved never overlap.
+const LEAVE: Record<string, LeaveSeed[]> = {
+  'owner@demo.ticknest.app': [
+    { typeId: 'holiday', startOffset: -50, workingDays: 3, status: 'approved', note: 'Long weekend away' },
+    { typeId: 'sick', startOffset: -12, workingDays: 1, status: 'approved', note: 'Migraine' },
+    { typeId: 'holiday', startOffset: 20, workingDays: 5, status: 'approved', note: 'Family visit' },
+  ],
+  'manager@demo.ticknest.app': [
+    { typeId: 'holiday', startOffset: -70, workingDays: 5, status: 'approved', note: 'Hiking trip' },
+    {
+      typeId: 'sick',
+      startOffset: -25,
+      workingDays: 1,
+      startHalf: true,
+      status: 'approved',
+      note: 'Dentist, then home for the afternoon',
+    },
+    { typeId: 'holiday', startOffset: 30, workingDays: 3, status: 'pending', note: 'Friend’s wedding' },
+  ],
+  'alice@demo.ticknest.app': [
+    { typeId: 'holiday', startOffset: -35, workingDays: 5, status: 'approved', note: 'Trip to Lisbon' },
+    { typeId: 'sick', startOffset: -8, workingDays: 2, status: 'approved', note: 'Flu' },
+    { typeId: 'holiday', startOffset: 14, workingDays: 2, status: 'pending', note: 'Moving flat' },
+    {
+      typeId: 'holiday',
+      startOffset: 40,
+      workingDays: 5,
+      status: 'rejected',
+      note: 'Ski week',
+      decisionNote: 'That is the shop launch week. Could you move it a week later?',
+    },
+  ],
+  'ben@demo.ticknest.app': [
+    { typeId: 'sick', startOffset: -40, workingDays: 1, status: 'approved', note: 'Cold' },
+    { typeId: 'holiday', startOffset: -60, workingDays: 2, status: 'cancelled', note: 'Road trip' },
+    { typeId: 'holiday', startOffset: 5, workingDays: 4, status: 'approved', note: 'Visiting family' },
+  ],
+  'chloe@demo.ticknest.app': [
+    { typeId: 'holiday', startOffset: -20, workingDays: 4, status: 'approved', note: 'Edinburgh with friends' },
+    { typeId: 'sick', startOffset: -3, workingDays: 1, status: 'pending', note: 'Stomach bug' },
+    {
+      typeId: 'holiday',
+      startOffset: 25,
+      workingDays: 5,
+      endHalf: true,
+      status: 'pending',
+      note: 'Half day on Friday to catch a flight',
+    },
+  ],
+}
+
+type AllowanceSeed = {
+  typeId: LeaveTypeId
+  allowanceDays: number | null
+  adjustments: { days: number; note: string }[]
+}
+
+// Allowances for the year of the reset day. Everyone else uses the type defaults.
+const ALLOWANCES: Record<string, AllowanceSeed[]> = {
+  'alice@demo.ticknest.app': [
+    { typeId: 'holiday', allowanceDays: null, adjustments: [{ days: 3, note: 'Carried over from last year' }] },
+  ],
+  // Part time, Monday to Thursday.
+  'chloe@demo.ticknest.app': [{ typeId: 'holiday', allowanceDays: 16, adjustments: [] }],
+}
+
+/** Who decides leave in the demo: the manager decides the owner's and members' requests, the owner the manager's. */
+function leaveApprover(requester: DemoAccount, users: readonly DemoAuthUser[]): DemoAuthUser {
+  const role = requester.role === 'manager' ? 'owner' : 'manager'
+  return users[DEMO_ACCOUNTS.findIndex((account) => account.role === role)]
+}
+
+function isWeekendDay(dayMs: number): boolean {
+  const weekday = new Date(dayMs).getUTCDay()
+  return weekday === 0 || weekday === 6
+}
+
+type PlannedLeave = LeaveSeed & { startDay: number; endDay: number; endHalf: boolean }
+
+/** Calendar ranges for an account's leave. A range that would cross the new year ends on the year's last weekday. */
+function planLeave(now: Date, account: DemoAccount): PlannedLeave[] {
+  const today = localDayMs(now.getTime(), account.timezone)
+  return (LEAVE[account.email] ?? []).map((leave) => {
+    let startDay = today + leave.startOffset * DAY_MS
+    while (isWeekendDay(startDay)) startDay += DAY_MS
+    let endDay = startDay
+    for (let counted = 1; counted < leave.workingDays;) {
+      endDay += DAY_MS
+      if (!isWeekendDay(endDay)) counted += 1
+    }
+    let endHalf = leave.endHalf ?? false
+    if (new Date(endDay).getUTCFullYear() !== new Date(startDay).getUTCFullYear()) {
+      endDay = Date.UTC(new Date(startDay).getUTCFullYear(), 11, 31)
+      while (isWeekendDay(endDay)) endDay -= DAY_MS
+      endHalf = false
+    }
+    return { ...leave, startDay, endDay, endHalf }
+  })
+}
+
+/** Weekdays an account is away on pending or approved leave, so no time is logged on them. */
+function leaveDaysFor(planned: readonly PlannedLeave[]): Map<number, 'full' | 'half'> {
+  const days = new Map<number, 'full' | 'half'>()
+  for (const leave of planned) {
+    if (leave.status !== 'approved' && leave.status !== 'pending') continue
+    for (let day = leave.startDay; day <= leave.endDay; day += DAY_MS) {
+      if (isWeekendDay(day)) continue
+      const half = (day === leave.startDay && leave.startHalf) || (day === leave.endDay && leave.endHalf)
+      days.set(day, half ? 'half' : 'full')
+    }
+  }
+  return days
+}
+
+function earliest(...dates: Date[]): Date {
+  return new Date(Math.min(...dates.map((date) => date.getTime())))
+}
+
+function buildLeave(
+  random: Random,
+  now: Date,
+  workspacePath: string,
+  users: readonly DemoAuthUser[],
+  index: number,
+  planned: readonly PlannedLeave[],
+): DemoDocument[] {
+  const account = DEMO_ACCOUNTS[index]
+  const user = users[index]
+  const approver = leaveApprover(account, users)
+  const today = localDayMs(now.getTime(), account.timezone)
+  const year = new Date(today).getUTCFullYear()
+  const documents: DemoDocument[] = []
+  const allowances = new Map<string, { allowanceDays: number | null; adjustments: { days: number }[] }>()
+
+  for (const allowance of ALLOWANCES[account.email] ?? []) {
+    const at = earliest(new Date(Date.UTC(year, 0, 2, 9)), new Date(now.getTime() - 60 * MINUTE_MS))
+    const adjustments = allowance.adjustments.map((adjustment) => ({ ...adjustment, by: approver.uid, at }))
+    allowances.set(`${allowance.typeId}_${year}`, { allowanceDays: allowance.allowanceDays, adjustments })
+    documents.push({
+      path: `${workspacePath}/leaveAllowances/${allowanceDocumentId(user.uid, allowance.typeId, year)}`,
+      data: {
+        uid: user.uid,
+        typeId: allowance.typeId,
+        year,
+        allowanceDays: allowance.allowanceDays,
+        adjustments,
+        updatedBy: approver.uid,
+        createdAt: at,
+        updatedAt: at,
+      },
+    })
+  }
+
+  // Requests submitted so far, per type and year, for the over-allowance check the callables make.
+  const submitted = new Map<string, { status: LeaveSeedStatus; days: number }[]>()
+  for (const leave of planned) {
+    const startDate = calendarDay(leave.startDay)
+    const endDate = calendarDay(leave.endDay)
+    const startHalf = leave.startHalf ?? false
+    const days = countLeaveDays({ startDate, endDate, startHalf, endHalf: leave.endHalf })!
+    const leaveYear = new Date(leave.startDay).getUTCFullYear()
+    const key = `${leave.typeId}_${leaveYear}`
+    const allowance = allowances.get(key)
+    const balance = leaveBalance(
+      allowance?.allowanceDays ?? BUILT_IN_LEAVE_TYPES[leave.typeId].defaultAllowanceDays,
+      allowance?.adjustments ?? [],
+      submitted.get(key) ?? [],
+    )
+    const overDays = overAllowanceDays(balance, days)
+    submitted.set(key, [...(submitted.get(key) ?? []), { status: leave.status, days }])
+
+    // Holiday is booked about three weeks ahead; sick leave on the morning it starts.
+    const leadDays = leave.typeId === 'holiday' ? 21 : 0
+    const createdAt = earliest(
+      zonedInstant(leave.startDay - leadDays * DAY_MS, 9 * 60, account.timezone),
+      new Date(now.getTime() - 2 * DAY_MS),
+    )
+    const decided = leave.status !== 'pending'
+    const decidedAt = decided ? new Date(createdAt.getTime() + DAY_MS) : null
+    const cancelledAt = leave.status === 'cancelled' ? earliest(new Date(decidedAt!.getTime() + 3 * DAY_MS), now) : null
+    documents.push({
+      path: `${workspacePath}/leaveRequests/${createId(random)}`,
+      data: {
+        uid: user.uid,
+        userDisplayName: user.displayName,
+        typeId: leave.typeId,
+        year: leaveYear,
+        startDate,
+        endDate,
+        startHalf,
+        endHalf: leave.endHalf,
+        days,
+        note: leave.note,
+        status: leave.status,
+        overAllowance: overDays > 0,
+        overAllowanceDays: overDays,
+        autoApproved: false,
+        autoApprovedReason: null,
+        decidedBy: decided ? approver.uid : null,
+        decidedAt,
+        decisionNote: leave.decisionNote ?? '',
+        cancelledBy: cancelledAt ? user.uid : null,
+        cancelledAt,
+        createdAt,
+        updatedAt: cancelledAt ?? decidedAt ?? createdAt,
+      },
+    })
+  }
+  return documents
+}
+
 /** Builds the demo Auth users and Firestore documents. Deterministic for a given `now`. */
 export function buildDemoData(now: Date): DemoData {
   const random = createRandom(seedFor(now))
@@ -613,12 +853,18 @@ export function buildDemoData(now: Date): DemoData {
   })
 
   const catalog: Catalog = { clientIds, projectIds, taskIds }
+  const leavePlans = DEMO_ACCOUNTS.map((account) => planLeave(now, account))
   users.forEach((user, index) => {
-    documents.push(...buildEntries(random, now, workspacePath, user, DEMO_ACCOUNTS[index], catalog))
+    const leaveDays = leaveDaysFor(leavePlans[index])
+    documents.push(...buildEntries(random, now, workspacePath, user, DEMO_ACCOUNTS[index], catalog, leaveDays))
   })
   // Budgets come last so adding them leaves the IDs and entries above unchanged.
   users.forEach((user, index) => {
     documents.push(...buildBudgets(random, now, workspacePath, user, DEMO_ACCOUNTS[index], owner.uid, catalog))
+  })
+  // Holiday and sick leave use the built-in types, which need no stored type documents.
+  users.forEach((_, index) => {
+    documents.push(...buildLeave(random, now, workspacePath, users, index, leavePlans[index]))
   })
 
   return { workspaceId, users, documents }

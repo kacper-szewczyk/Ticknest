@@ -5,6 +5,7 @@ import { budgetPhase } from '../../src/lib/budgetForm'
 import { calculateBudgetProgress, groupBudgets, zonedDayString } from '../../src/lib/budgetProgress'
 import type { Budget } from '../../src/lib/budgets'
 import { calendarDayMillis, MAX_BUDGET_DAYS, WEEKDAYS } from '../../src/lib/budgetValidation'
+import { allowanceDocumentId, canDecideLeave, countLeaveDays, type LeaveRequest } from '../../src/lib/leave'
 import { teamBudgetStatus } from '../../src/lib/teamBudgets'
 
 const NOW = new Date('2026-11-04T02:00:00Z')
@@ -313,6 +314,160 @@ describe('buildDemoData', () => {
           teamBudgetStatus(calculateBudgetProgress(group, progressEntries, timezoneOf(group[0].userId), NOW)),
         )
       expect(new Set(statuses)).toEqual(new Set(['behind', 'over']))
+    })
+  })
+  describe('time off', () => {
+    const requests = collection('leaveRequests').map(
+      (document) => ({ id: docId(document), ...document.data }) as unknown as LeaveRequest,
+    )
+    const members = data.users.map((user, index) => ({ uid: user.uid, role: DEMO_ACCOUNTS[index].role }))
+    const timezoneOf = (uid: string) => DEMO_ACCOUNTS[data.users.findIndex((user) => user.uid === uid)].timezone
+
+    it('writes the fields submitLeaveRequest writes', () => {
+      for (const document of collection('leaveRequests')) {
+        expect(Object.keys(document.data).sort()).toEqual(
+          [
+            'autoApproved',
+            'autoApprovedReason',
+            'cancelledAt',
+            'cancelledBy',
+            'createdAt',
+            'days',
+            'decidedAt',
+            'decidedBy',
+            'decisionNote',
+            'endDate',
+            'endHalf',
+            'note',
+            'overAllowance',
+            'overAllowanceDays',
+            'startDate',
+            'startHalf',
+            'status',
+            'typeId',
+            'uid',
+            'updatedAt',
+            'userDisplayName',
+            'year',
+          ].sort(),
+        )
+        expect(document.data.userDisplayName).toBe(
+          data.users.find((user) => user.uid === document.data.uid)?.displayName,
+        )
+      }
+    })
+
+    it('gives every account holiday or sick leave, with every status and both types', () => {
+      for (const user of data.users) expect(requests.some((request) => request.uid === user.uid)).toBe(true)
+      expect(new Set(requests.map((request) => request.typeId))).toEqual(new Set(['holiday', 'sick']))
+      expect(new Set(requests.map((request) => request.status))).toEqual(
+        new Set(['approved', 'pending', 'rejected', 'cancelled']),
+      )
+      expect(requests.some((request) => request.startHalf || request.endHalf)).toBe(true)
+      expect(requests.some((request) => request.status === 'approved' && request.startDate > '2026-11-04')).toBe(true)
+      expect(requests.some((request) => request.status === 'approved' && request.endDate < '2026-11-04')).toBe(true)
+    })
+
+    it('follows the submitLeaveRequest rules', () => {
+      for (const request of requests) {
+        expect(request.startDate <= request.endDate).toBe(true)
+        expect(request.startDate.slice(0, 4)).toBe(request.endDate.slice(0, 4))
+        expect(request.year).toBe(Number(request.startDate.slice(0, 4)))
+        const days = countLeaveDays(request)
+        expect(days).toBe(request.days)
+        expect(days).toBeGreaterThan(0)
+        expect(request.overAllowance).toBe(request.overAllowanceDays > 0)
+      }
+      for (const user of data.users) {
+        const active = requests
+          .filter((request) => request.uid === user.uid && ['pending', 'approved'].includes(request.status))
+          .sort((a, b) => a.startDate.localeCompare(b.startDate))
+        for (let index = 1; index < active.length; index += 1) {
+          expect(active[index].startDate > active[index - 1].endDate).toBe(true)
+        }
+      }
+    })
+
+    it('keeps requests within one year when the reset runs near the new year', () => {
+      // Upcoming leave reaches up to seven weeks ahead, so these push ranges across the new year.
+      for (const day of ['2026-11-20', '2026-12-01', '2026-12-08', '2026-12-17', '2026-12-26', '2026-12-31']) {
+        const resetAt = new Date(`${day}T02:00:00Z`)
+        for (const document of buildDemoData(resetAt).documents) {
+          if (!document.path.includes('/leaveRequests/')) continue
+          const request = document.data as unknown as LeaveRequest
+          expect(request.startDate.slice(0, 4)).toBe(request.endDate.slice(0, 4))
+          expect(countLeaveDays(request)).toBe(request.days)
+          expect(request.days).toBeGreaterThan(0)
+        }
+      }
+    })
+
+    it('records decisions from an eligible approver in order, all before now', () => {
+      for (const request of requests) {
+        const createdAt = request.createdAt as unknown as Date
+        expect(createdAt.getTime()).toBeLessThanOrEqual(NOW.getTime())
+        expect(request.autoApproved).toBe(false)
+        if (request.status === 'pending') {
+          expect(request.decidedBy).toBeNull()
+          expect(request.decidedAt).toBeNull()
+        } else {
+          const approver = members.find((member) => member.uid === request.decidedBy)
+          expect(canDecideLeave(approver, request.uid)).toBe(true)
+          const decidedAt = request.decidedAt as unknown as Date
+          expect(decidedAt.getTime()).toBeGreaterThan(createdAt.getTime())
+          expect(decidedAt.getTime()).toBeLessThanOrEqual(NOW.getTime())
+        }
+        if (request.status === 'cancelled') {
+          expect(request.cancelledBy).toBe(request.uid)
+          expect((request.cancelledAt as unknown as Date).getTime()).toBeLessThanOrEqual(NOW.getTime())
+        } else {
+          expect(request.cancelledBy).toBeNull()
+          expect(request.cancelledAt).toBeNull()
+        }
+        if (request.status === 'rejected') expect(request.decisionNote.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('logs no time on full days of pending or approved leave', () => {
+      for (const request of requests) {
+        if (request.status !== 'approved' && request.status !== 'pending') continue
+        const timezone = timezoneOf(request.uid)
+        const userEntries = entries.filter((entry) => entry.data.userId === request.uid)
+        const start = calendarDayMillis(request.startDate)!
+        const end = calendarDayMillis(request.endDate)!
+        for (let day = start; day <= end; day += DAY_MS) {
+          const isHalf = (day === start && request.startHalf) || (day === end && request.endHalf)
+          const date = new Date(day).toISOString().slice(0, 10)
+          const logged = userEntries
+            .filter((entry) => zonedDayString((entry.data.startAt as Date).getTime(), timezone) === date)
+            .reduce(
+              (sum, entry) => sum + ((entry.data.endAt as Date).getTime() - (entry.data.startAt as Date).getTime()),
+              0,
+            )
+          expect(logged).toBeLessThanOrEqual(isHalf ? 4 * 60 * 60 * 1000 : 0)
+        }
+      }
+    })
+
+    it('writes allowances with the fields the leave callables write', () => {
+      const allowances = collection('leaveAllowances')
+      expect(allowances.length).toBeGreaterThan(0)
+      for (const document of allowances) {
+        expect(Object.keys(document.data).sort()).toEqual(
+          ['adjustments', 'allowanceDays', 'createdAt', 'typeId', 'uid', 'updatedAt', 'updatedBy', 'year'].sort(),
+        )
+        const { uid, typeId, year } = document.data as { uid: string; typeId: string; year: number }
+        expect(docId(document)).toBe(allowanceDocumentId(uid, typeId, year))
+        for (const adjustment of document.data.adjustments as { days: number; by: string; at: Date }[]) {
+          expect(
+            canDecideLeave(
+              members.find((member) => member.uid === adjustment.by),
+              uid,
+            ),
+          ).toBe(true)
+          expect(adjustment.at.getTime()).toBeLessThanOrEqual(NOW.getTime())
+        }
+      }
     })
   })
 })
