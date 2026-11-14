@@ -135,6 +135,7 @@ export function TeamTimeOffPanel({
     <SectionCard labelledBy="team-time-off-heading" sx={{ maxWidth: 1240 }}>
       <SectionHeading
         id="team-time-off-heading"
+        level={1}
         kicker={t('timeOff.team.kicker')}
         title={t('timeOff.team.title')}
         action={

@@ -206,6 +206,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     <SectionCard labelledBy="members-heading">
       <SectionHeading
         id="members-heading"
+        level={1}
         kicker="TEAM ACCESS"
         title="Workspace members"
         action={<Chip label={`${activeMembers.length} ${activeMembers.length === 1 ? 'member' : 'members'}`} />}

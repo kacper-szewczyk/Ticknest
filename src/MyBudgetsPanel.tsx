@@ -95,6 +95,7 @@ export function MyBudgetsPanel({
     <SectionCard labelledBy="my-budgets-heading">
       <SectionHeading
         id="my-budgets-heading"
+        level={1}
         kicker="YOUR HOUR TARGETS"
         title="My budgets"
         action={

@@ -13,10 +13,11 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { type Theme, alpha } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
-import { type ChangeEvent, type FormEvent, lazy, Suspense, useEffect, useState } from 'react'
+import { type ChangeEvent, type FormEvent, lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { deleteCurrentAccount, getReauthMethod, sendVerificationEmail, signOutUser } from './lib/auth'
 import { type Catalog, subscribeToCatalog } from './lib/catalog'
 import { localeWeekStart, type WeekStart } from './lib/dates'
+import { setPageTitle } from './lib/documentTitle'
 import { readableError } from './lib/errors'
 import { isFeatureEnabled } from './lib/featureFlags'
 import { usePendingLeaveCount } from './usePendingLeaveCount'
@@ -55,6 +56,7 @@ import { TimesheetDashboard } from './TimesheetDashboard'
 import { WorkspaceSettingsPanel } from './WorkspaceSettingsPanel'
 import { FormMessage, LoadingState } from './ui'
 import { useEmailVerified } from './useEmailVerified'
+import { useFocusViewHeading } from './useFocusViewHeading'
 
 // Reports, budgets, and member management are visited less often, so they load on demand to keep the initial bundle small.
 const ReportsPanel = lazy(() => import('./ReportsPanel').then((module) => ({ default: module.ReportsPanel })))
@@ -88,6 +90,9 @@ function mainMaxWidth(view: WorkspaceView | null): number {
   return 960
 }
 
+// Target of the "Skip to main content" link.
+const MAIN_ID = 'main-content'
+
 // The current page lives in the URL hash so refreshes and the back button keep it.
 // A view may carry its own state after a '?', e.g. #reports?group=client.
 function viewFromHash(): WorkspaceView | null {
@@ -120,9 +125,17 @@ export function WorkspaceScreen({ user }: { user: User }) {
   const [team, setTeam] = useState<TeamSize | undefined>()
   const [dismissedReminders, setDismissedReminders] = useState<string[]>([])
   const [view, setView] = useState<WorkspaceView>(() => viewFromHash() ?? (inviteLink ? 'settings' : DEFAULT_VIEW))
+  // Bumped on every navigation (not on first load), which moves focus to the new view's heading.
+  const [navigationCount, setNavigationCount] = useState(0)
+  const mainRef = useRef<HTMLElement>(null)
+  useFocusViewHeading(mainRef, navigationCount)
 
   useEffect(() => {
-    const syncView = () => setView(viewFromHash() ?? DEFAULT_VIEW)
+    // Back and forward buttons; navigate() below also changes the hash, which lands here as well.
+    const syncView = () => {
+      setView(viewFromHash() ?? DEFAULT_VIEW)
+      setNavigationCount((count) => count + 1)
+    }
     window.addEventListener('hashchange', syncView)
     return () => window.removeEventListener('hashchange', syncView)
   }, [])
@@ -327,7 +340,17 @@ export function WorkspaceScreen({ user }: { user: User }) {
     setSetupWorkspaceId(null)
     window.location.hash = next
     setView(next)
+    setNavigationCount((count) => count + 1)
   }
+
+  const isShowingView = activeWorkspace !== undefined && setupWorkspaceId !== activeWorkspace.id
+  const viewLabel = isShowingView ? allNavItems.find((item) => item.value === currentView)?.label : undefined
+  const documentTitle =
+    viewLabel && activeWorkspace ? t('shell.documentTitle', { view: viewLabel, workspace: activeWorkspace.name }) : null
+  useEffect(() => {
+    setPageTitle(documentTitle)
+  }, [documentTitle])
+  useEffect(() => () => setPageTitle(null), [])
 
   const setupItems: SetupItem[] =
     activeWorkspace && catalogReady ? setupItemsLeft(activeWorkspace.role, catalog, team) : []
@@ -613,10 +636,16 @@ export function WorkspaceScreen({ user }: { user: User }) {
       compactBrand={<Brand tone="light" compact />}
       compactHeader={compactWorkspaceSwitcher}
       compactFooter={compactSidebarFooter}
+      mainId={MAIN_ID}
     >
       <Box
         component="main"
+        id={MAIN_ID}
+        ref={mainRef}
+        tabIndex={-1}
         sx={{
+          // Focus lands here (and on the view's h1) only from the skip link or after navigating, never by Tab.
+          '&:focus, & h1:focus': { outline: 'none' },
           width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 36px)', md: 'calc(100% - 64px)' },
           maxWidth: mainMaxWidth(activeWorkspace ? currentView : null),
           mx: 'auto',
@@ -765,7 +794,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
                   <Typography variant="overline" component="p">
                     YOUR WORKSPACE
                   </Typography>
-                  <Typography variant="h2" sx={{ my: 1, overflowWrap: 'anywhere' }}>
+                  <Typography variant="h2" component="h1" sx={{ my: 1, overflowWrap: 'anywhere' }}>
                     {activeWorkspace.name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
@@ -1053,7 +1082,8 @@ function SetupReminder({
         </Button>
       }
     >
-      <Typography component="h2" sx={{ fontWeight: 700, fontSize: 'inherit', mb: 0.75 }}>
+      {/* Not a heading: the reminder sits above the view's h1, which has to lead the outline. */}
+      <Typography component="p" sx={{ fontWeight: 700, fontSize: 'inherit', mb: 0.75 }}>
         Finish setup
       </Typography>
       <Box component="ul" sx={{ display: 'grid', gap: 1, m: 0, p: 0, listStyle: 'none' }}>
