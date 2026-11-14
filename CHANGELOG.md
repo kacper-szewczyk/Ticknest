@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.54.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.53.0...ticknest-v1.54.0) (2026-11-14)
+
+
+### Features
+
+* translate the timer bar and timesheet into Spanish and Polish ([#294](https://github.com/kacper-szewczyk/Ticknest/issues/294)) ([2e79ae4](https://github.com/kacper-szewczyk/Ticknest/commit/2e79ae404f40852e0139e6eb3996bad8c23b59ec))
+
 ## [1.53.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.52.0...ticknest-v1.53.0) (2026-11-14)
 
 
