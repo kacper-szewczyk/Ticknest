@@ -61,6 +61,16 @@ npm run social-preview
 
 It only needs Playwright's Chromium (`npx playwright install chromium`), not the emulators. GitHub has no API for the social preview, so upload the new PNG by hand under **Settings → General → Social preview**.
 
+### Home-screen icons
+
+`public/apple-touch-icon.png` (iOS) and the `icon-*.png` files listed in `public/manifest.webmanifest` (Android and other browsers that install web apps) are rendered from `public/favicon.svg`. Regenerate them after changing the favicon:
+
+```sh
+npm run app-icons
+```
+
+Like the social preview, it only needs Playwright's Chromium. The apple-touch icon and the maskable icon fill the whole square, because the operating system rounds the corners itself.
+
 ## Propose a change
 
 1. Check existing issues and pull requests, then open an issue for a substantial feature or bug that has not been discussed. The issue templates ask for what we need. Questions and open-ended ideas go to [GitHub Discussions](https://github.com/kacper-szewczyk/Ticknest/discussions). Looking for something to pick up? Try issues labelled `good first issue` or `help wanted`.
