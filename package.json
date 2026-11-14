@@ -15,6 +15,7 @@
     "test:emulators": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"vitest run --project emulator && node --test --test-concurrency=1 functions/test/*.test.mjs\"",
     "test:e2e": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"playwright test\"",
     "screenshots": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"playwright test -c playwright.screenshots.config.ts\"",
+    "demo-video": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"playwright test -c playwright.demo-video.config.ts\"",
     "demo:seed": "npm --prefix functions run build && node functions/lib/demo/seed-emulators.js",
     "demo:load-test": "npm --prefix functions run build && node scripts/demo-load-test.mjs",
     "measure:costs": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-ticknest \"playwright test --config playwright.costs.config.ts\" && node scripts/cost-estimate.mjs",

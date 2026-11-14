@@ -25,6 +25,9 @@ ui-debug.log
 playwright-report/
 test-results/
 
+# Demo video output (npm run demo-video); the uploaded copy is the canonical one
+/demo-video/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
