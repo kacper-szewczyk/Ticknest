@@ -6,6 +6,7 @@ import type { User } from 'firebase/auth'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '../../src/lib/catalog'
 import type { TimeEntry } from '../../src/lib/timeEntries'
+import { changeAppLanguage } from '../../src/i18n'
 import { PALETTES } from '../../src/palettes'
 import { createAppTheme } from '../../src/theme'
 import { TimeEntriesPanel } from '../../src/TimeEntriesPanel'
@@ -213,5 +214,32 @@ describe('TimeEntriesPanel over-24h warning', () => {
     const rows = within(dayEntries('Tuesday')).getAllByRole('article')
     const overlaps = rows.map((row) => within(row).queryByText('Overlaps') !== null)
     expect(overlaps).toEqual([true, true, false])
+  })
+})
+
+describe('TimeEntriesPanel in Polish', () => {
+  beforeEach(async () => {
+    await changeAppLanguage('pl')
+  })
+  afterEach(async () => {
+    await changeAppLanguage('en')
+  })
+
+  it('uses Polish plurals, weekday names, and the week range', () => {
+    weeks.set('2026-11-02', [
+      ...Array.from({ length: 5 }, (_, index) =>
+        timeEntry(`m${index}`, `2026-11-02T0${index}:00`, `2026-11-02T0${index}:30`),
+      ),
+      timeEntry('t1', '2026-11-03T09:00', '2026-11-03T10:00'),
+      timeEntry('t2', '2026-11-03T10:00', '2026-11-03T11:00'),
+    ])
+    renderPanel()
+    expect(screen.getByRole('heading', { name: 'Karta czasu' })).toBeTruthy()
+    expect(screen.getByText('7 wpisów w tym tygodniu')).toBeTruthy()
+    expect(screen.getByText('2–8 listopada 2026')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Poniedziałek/ })).toBeTruthy()
+    expect(within(daySection('Monday')).getByText('5 wpisów · Bez klienta i projektu 2:30')).toBeTruthy()
+    expect(within(daySection('Tuesday')).getByText('2 wpisy · Bez klienta i projektu 2:00')).toBeTruthy()
+    expect(within(daySection('Wednesday')).getByText('Brak wpisów')).toBeTruthy()
   })
 })

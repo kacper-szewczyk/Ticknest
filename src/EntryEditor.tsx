@@ -6,6 +6,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import TextField from '@mui/material/TextField'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from './i18n'
 import type { Catalog } from './lib/catalog'
 import { localDateTimeValue } from './lib/dates'
 import { readableError } from './lib/errors'
@@ -31,6 +32,7 @@ export function EntryEditor({
   /** Called after a save with the day the entry was saved on, which the date field may have changed. */
   onSaved: (message: string, day: string) => void
 }) {
+  const { t } = useTranslation()
   const [description, setDescription] = useState(entry?.description ?? '')
   const [work, setWork] = useState<WorkDetails>(() =>
     entry
@@ -74,7 +76,7 @@ export function EntryEditor({
         },
         entry?.id,
       )
-      onSaved(entry ? 'Time entry updated.' : 'Time entry added.', date)
+      onSaved(entry ? t('entryEditor.updated') : t('entryEditor.added'), date)
     } catch (requestError) {
       if (!showFieldError(requestError)) setError(readableError(requestError))
       setPending(false)
@@ -92,12 +94,12 @@ export function EntryEditor({
     >
       <Box component="form" onSubmit={handleSubmit} aria-busy={pending}>
         <DialogTitle id="entry-editor-title" sx={{ fontWeight: 650 }}>
-          {entry ? 'Edit time entry' : 'Add time entry'}
+          {entry ? t('entryEditor.editTitle') : t('entryEditor.addTitle')}
         </DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
           {error && <FormMessage severity="error">{error}</FormMessage>}
           <TextField
-            label="Description"
+            label={t('entryEditor.description')}
             value={description}
             onChange={(event) => {
               setDescription(event.target.value)
@@ -109,7 +111,7 @@ export function EntryEditor({
           />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr' }, gap: 1.5 }}>
             <TextField
-              label="Date"
+              label={t('entryEditor.date')}
               type="date"
               value={date}
               onChange={(event) => {
@@ -121,7 +123,7 @@ export function EntryEditor({
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
-              label="Start"
+              label={t('entryEditor.start')}
               type="time"
               value={startTime}
               onChange={(event) => {
@@ -134,7 +136,7 @@ export function EntryEditor({
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
-              label="End"
+              label={t('entryEditor.end')}
               type="time"
               value={endTime}
               onChange={(event) => {
@@ -155,10 +157,10 @@ export function EntryEditor({
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={onClose} disabled={pending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="contained" type="submit" disabled={pending}>
-            {pending ? 'Saving…' : entry ? 'Save changes' : 'Add entry'}
+            {pending ? t('common.saving') : entry ? t('entryEditor.saveChanges') : t('entryEditor.addEntry')}
           </Button>
         </DialogActions>
       </Box>

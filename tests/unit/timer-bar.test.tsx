@@ -7,6 +7,7 @@ import { Timestamp } from 'firebase/firestore'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '../../src/lib/catalog'
 import type { TimeEntry } from '../../src/lib/timeEntries'
+import { changeAppLanguage } from '../../src/i18n'
 import { PALETTES } from '../../src/palettes'
 import { createAppTheme } from '../../src/theme'
 import { TimerBar } from '../../src/TimerBar'
@@ -145,5 +146,29 @@ describe('TimerBar', () => {
     entries = []
     renderBar()
     expect((screen.getByRole('textbox', { name: 'What are you working on?' }) as HTMLInputElement).maxLength).toBe(500)
+  })
+})
+
+describe('TimerBar in Spanish', () => {
+  beforeEach(async () => {
+    await changeAppLanguage('es')
+  })
+  afterEach(async () => {
+    await changeAppLanguage('en')
+  })
+
+  it('labels the idle and running timer in Spanish', async () => {
+    renderBar()
+    expect(screen.getByRole('textbox', { name: '¿En qué estás trabajando?' })).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Proyecto / tarea' })).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'Iniciar' }))
+    expect(startTimer).toHaveBeenCalled()
+
+    cleanup()
+    entries = [runningEntry('')]
+    renderBar()
+    const description = screen.getByRole('textbox', { name: 'Descripción del temporizador en marcha' })
+    expect((description as HTMLInputElement).placeholder).toBe('Registro sin título')
+    expect(screen.getByRole('button', { name: 'Detener' })).toBeTruthy()
   })
 })

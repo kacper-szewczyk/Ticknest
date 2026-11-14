@@ -82,16 +82,18 @@ describe('shiftDayString', () => {
 })
 
 describe('formatWeekLabel', () => {
+  // Intl puts thin spaces around the range dash in some languages; compare with plain spaces.
+  const plain = (text: string) => text.replace(/[   ]/g, ' ')
+
   it('names the month once when the week stays in one month', () => {
-    const month = new Date(2026, 9, 12).toLocaleDateString(undefined, { month: 'long' })
-    expect(formatWeekLabel('2026-10-12')).toBe(`${month} 12–18, 2026`)
+    expect(plain(formatWeekLabel('2026-10-12', 'en'))).toBe('October 12 – 18, 2026')
+    expect(plain(formatWeekLabel('2026-10-12', 'es'))).toBe('12–18 de octubre de 2026')
+    expect(plain(formatWeekLabel('2026-10-12', 'pl'))).toBe('12–18 października 2026')
   })
 
   it('shows both ends when the week spans two months or years', () => {
-    const label = formatWeekLabel('2026-12-28')
-    const start = new Date(2026, 11, 28).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    const end = new Date(2027, 0, 3).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    expect(label).toBe(`${start} – ${end}`)
+    expect(plain(formatWeekLabel('2026-12-28', 'en'))).toBe('Dec 28, 2026 – Jan 3, 2027')
+    expect(plain(formatWeekLabel('2026-12-28', 'pl'))).toBe('28 gru 2026–3 sty 2027')
   })
 })
 

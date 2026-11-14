@@ -11,6 +11,7 @@ export type SummaryEntry = {
   endAt: { toMillis(): number } | null
 }
 
+/** `label` is "Client · Project", or empty for entries with neither, which the UI names in the active language. */
 export type SummaryGroup = { label: string; seconds: number }
 
 export type DaySummary = {
@@ -25,12 +26,6 @@ export type DaySummary = {
 }
 
 export const DAY_SECONDS = 24 * 60 * 60
-export const OVER_DAY_MESSAGE =
-  'Entries on this day add up to more than 24 hours. Check for overlapping or mistyped entries.'
-export const OVER_WEEK_MESSAGE =
-  'Entries this week add up to more than 24 hours a day. Check for overlapping or mistyped entries.'
-
-const NO_PROJECT_LABEL = 'No client or project'
 
 function endMillis(entry: SummaryEntry, nowMs: number): number {
   return entry.endAt ? entry.endAt.toMillis() : nowMs
@@ -48,7 +43,7 @@ function secondsWithin(entry: SummaryEntry, fromMs: number, toMs: number, nowMs:
 }
 
 function groupLabel(entry: SummaryEntry): string {
-  return [entry.clientName, entry.projectName].filter(Boolean).join(' · ') || NO_PROJECT_LABEL
+  return [entry.clientName, entry.projectName].filter(Boolean).join(' · ')
 }
 
 /** Totals, billable time, running state, and the top client/project groups for one day's entries. */
