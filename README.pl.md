@@ -1,6 +1,6 @@
 # Ticknest
 
-[English](README.md) | **Polski**
+[English](README.md) | [Español](README.es.md) | **Polski**
 
 **Otwartoźródłowy system do śledzenia czasu pracy dla małych zespołów, działający w Twoim własnym projekcie Firebase.**
 
