@@ -498,5 +498,10 @@
     "reportNotSent_many": "{{count}} registros no se enviaron.",
     "reportNotSent_other": "{{count}} registros no se enviaron.",
     "importAnother": "Importar otro archivo"
+  },
+  "reports": {
+    "export": {
+      "csvFileType": "Archivo CSV"
+    }
   }
 }

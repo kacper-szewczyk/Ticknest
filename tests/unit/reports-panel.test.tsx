@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event'
 import type { User } from 'firebase/auth'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { changeAppLanguage } from '../../src/i18n'
 import type { Catalog } from '../../src/lib/catalog'
 import type { TimeEntry } from '../../src/lib/timeEntries'
 import type { WorkspaceMember } from '../../src/lib/workspaces'
@@ -306,6 +307,26 @@ describe('ReportsPanel export', () => {
     expect(notice.textContent).toBe('Exported 3 entries.')
     expect(precedes(notice, screen.getByLabelText('From'))).toBe(true)
     expect(screen.getByRole('button', { name: 'Export CSV' }).hasAttribute('disabled')).toBe(false)
+  })
+
+  it('names the CSV file type in the save dialog in the interface language', async () => {
+    const events = userEvent.setup()
+    const write = vi.fn(async () => {})
+    const close = vi.fn(async () => {})
+    const showSaveFilePicker = vi.fn(async (_options: { types: { description: string }[] }) => ({
+      createWritable: async () => ({ write, close, abort: async () => {} }),
+    }))
+    vi.stubGlobal('showSaveFilePicker', showSaveFilePicker)
+    vi.mocked(streamReportCsv).mockResolvedValue(1)
+    await changeAppLanguage('pl')
+    try {
+      renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+      await events.click(screen.getByRole('button', { name: 'Export CSV' }))
+      await waitFor(() => expect(showSaveFilePicker).toHaveBeenCalled())
+      expect(showSaveFilePicker.mock.calls[0][0].types[0].description).toBe('Plik CSV')
+    } finally {
+      await changeAppLanguage('en')
+    }
   })
 
   it('disables Export CSV when the date range is invalid', () => {
