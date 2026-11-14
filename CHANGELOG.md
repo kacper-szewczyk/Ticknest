@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.54.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.54.0...ticknest-v1.54.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* point the contact email at the project mailbox ([#296](https://github.com/kacper-szewczyk/Ticknest/issues/296)) ([a62a97e](https://github.com/kacper-szewczyk/Ticknest/commit/a62a97ea9e0015ef3d88101fb2dfa410bcb85792))
+
 ## [1.54.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.53.0...ticknest-v1.54.0) (2026-11-14)
 
 
