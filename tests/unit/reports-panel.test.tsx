@@ -303,8 +303,9 @@ describe('ReportsPanel export', () => {
     expect(progress.hasAttribute('disabled')).toBe(true)
 
     finish(3)
-    const notice = await screen.findByRole('status')
-    expect(notice.textContent).toBe('Exported 3 entries.')
+    // The report summary is a status message too, so pick the export notice by its text.
+    const notice = (await screen.findByText('Exported 3 entries.')).closest('[role="status"]') as HTMLElement
+    expect(notice).toBeTruthy()
     expect(precedes(notice, screen.getByLabelText('From'))).toBe(true)
     expect(screen.getByRole('button', { name: 'Export CSV' }).hasAttribute('disabled')).toBe(false)
   })

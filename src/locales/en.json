@@ -511,6 +511,7 @@
     "chooseWeek": "Choose a week",
     "today": "Today",
     "weekTotal": "Week total",
+    "weekStatus": "Showing {{week}}, {{entries}}",
     "entriesThisWeek_one": "{{count}} entry this week",
     "entriesThisWeek_other": "{{count}} entries this week",
     "entryCount_one": "{{count}} entry",

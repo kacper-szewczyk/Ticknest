@@ -541,6 +541,7 @@
     "chooseWeek": "Wybierz tydzień",
     "today": "Dzisiaj",
     "weekTotal": "Suma tygodnia",
+    "weekStatus": "Tydzień {{week}}, {{entries}}",
     "entriesThisWeek_one": "{{count}} wpis w tym tygodniu",
     "entriesThisWeek_few": "{{count}} wpisy w tym tygodniu",
     "entriesThisWeek_many": "{{count}} wpisów w tym tygodniu",

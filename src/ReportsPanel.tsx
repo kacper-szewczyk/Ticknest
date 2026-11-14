@@ -45,7 +45,16 @@ import {
   type GroupBy,
   type ReportGroup,
 } from './lib/reportGroups'
-import { BillableChip, EmptyText, FormMessage, ListRow, SectionCard, SectionHeading, SelectField } from './ui'
+import {
+  BillableChip,
+  EmptyText,
+  FormMessage,
+  ListRow,
+  LiveStatus,
+  SectionCard,
+  SectionHeading,
+  SelectField,
+} from './ui'
 
 type CsvWritable = {
   write(data: string): Promise<void>
@@ -436,8 +445,13 @@ export function ReportsPanel({
         </SelectField>
       </Box>
       {error && <FormMessage severity="error">{error}</FormMessage>}
+      {/* One short summary instead of live tiles and a live tab panel, which read out the whole report on every
+          change. */}
+      <LiveStatus>
+        {!summaryLoading &&
+          `Report updated: ${formatElapsed(totalSeconds)} total, ${formatElapsed(billableSeconds)} billable, ${summaryEntries.length} ${summaryEntries.length === 1 ? 'entry' : 'entries'}`}
+      </LiveStatus>
       <Box
-        aria-live="polite"
         sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 0.75, sm: 1.25 }, mt: 2.5 }}
       >
         {[
@@ -487,13 +501,7 @@ export function ReportsPanel({
           />
         ))}
       </Tabs>
-      <Box
-        role="tabpanel"
-        id="report-group-panel"
-        aria-labelledby={`report-group-tab-${groupBy}`}
-        aria-live="polite"
-        sx={{ mt: 0.5 }}
-      >
+      <Box role="tabpanel" id="report-group-panel" aria-labelledby={`report-group-tab-${groupBy}`} sx={{ mt: 0.5 }}>
         {groups.length === 0 && !summaryLoading ? (
           <EmptyText>No completed entries match these filters.</EmptyText>
         ) : (

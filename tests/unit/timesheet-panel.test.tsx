@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ThemeProvider } from '@mui/material/styles'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { User } from 'firebase/auth'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -186,6 +186,39 @@ describe('TimeEntriesPanel day sections', () => {
     await user.click(screen.getByRole('button', { name: 'Save entry for 2026-11-02' }))
     expect(monday.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByText('Time entry added.')).toBeTruthy()
+  })
+})
+
+// Everything a screen reader announces on its own when it changes.
+function liveRegionTexts(): string[] {
+  return [...document.querySelectorAll('[aria-live], [role="status"], [role="alert"]')]
+    .filter((element) => element.getAttribute('aria-live') !== 'off')
+    .map((element) => element.textContent ?? '')
+}
+
+describe('TimeEntriesPanel screen reader announcements', () => {
+  it('keeps live regions quiet while a timer runs', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date('2026-11-04T12:00:00'))
+    renderPanel()
+    const weekTotal = screen.getByText('Week total').parentElement as HTMLElement
+    const totalBefore = weekTotal.textContent
+    const announcedBefore = liveRegionTexts()
+
+    act(() => vi.advanceTimersByTime(5000))
+
+    // The running entry keeps the visible week total ticking…
+    expect(weekTotal.textContent).not.toBe(totalBefore)
+    // …but nothing a screen reader would announce has changed.
+    expect(liveRegionTexts()).toEqual(announcedBefore)
+  })
+
+  it('announces the week and its entry count, and updates it on week change', async () => {
+    const user = userEvent.setup()
+    renderPanel()
+    expect(screen.getByRole('status').textContent).toMatch(/^Showing .+, 3 entries$/)
+    await user.click(screen.getByRole('button', { name: 'Next week' }))
+    expect(screen.getByRole('status').textContent).toMatch(/^Showing .+, 1 entry$/)
   })
 })
 
