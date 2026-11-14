@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.55.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.54.2...ticknest-v1.55.0) (2026-11-14)
+
+
+### Features
+
+* script the launch demo video with English and Polish captions ([#307](https://github.com/kacper-szewczyk/Ticknest/issues/307)) ([db3bdfb](https://github.com/kacper-szewczyk/Ticknest/commit/db3bdfbbfaab0c9b01af3d02a5eac44c75552f4a))
+
+
+### Bug Fixes
+
+* stop live regions announcing every second while a timer runs ([#308](https://github.com/kacper-szewczyk/Ticknest/issues/308)) ([50360b9](https://github.com/kacper-szewczyk/Ticknest/commit/50360b9f753f587c0faab44b81475beb00b620ae)), closes [#304](https://github.com/kacper-szewczyk/Ticknest/issues/304)
+
 ## [1.54.2](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.54.1...ticknest-v1.54.2) (2026-11-14)
 
 
