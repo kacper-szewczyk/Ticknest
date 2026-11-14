@@ -142,17 +142,17 @@ async function walkthrough(page: Page, catalog: Catalog, { captioned }: Take, re
   }
 
   await signInAs(page, catalog, 'owner')
-  await expandAllDays(page)
+  await expandAllDays(page, catalog)
   await page.evaluate(() => document.fonts.ready)
   await page.mouse.move(VIEWPORT.width * 0.6, VIEWPORT.height * 0.6)
   await page.waitForTimeout(800)
   clipStart = (Date.now() - recordingStarted) / 1000
 
-  const timer = page.getByRole('region', { name: 'Timer' })
+  const timer = page.getByRole('region', { name: catalog.timer.region })
 
   await step('intro', 4)
   await step('startTimer', 6, async () => {
-    const description = timer.getByRole('textbox', { name: 'What are you working on?' })
+    const description = timer.getByRole('textbox', { name: catalog.timer.placeholder })
     await glideAndClick(page, description)
     await description.pressSequentially(
       language === 'pl' ? 'Przegląd makiet strony głównej' : 'Homepage wireframe review',
@@ -162,13 +162,13 @@ async function walkthrough(page: Page, catalog: Catalog, { captioned }: Take, re
     await glideAndClick(page, picker)
     await picker.pressSequentially('Website', { delay: 60 })
     await glideAndClick(page, page.getByRole('option').filter({ hasText: 'Website redesign' }).first())
-    await glideAndClick(page, timer.getByRole('button', { name: 'Start' }))
-    await expect(timer.getByRole('button', { name: 'Stop' })).toBeVisible()
+    await glideAndClick(page, timer.getByRole('button', { name: catalog.timer.start }))
+    await expect(timer.getByRole('button', { name: catalog.timer.stop })).toBeVisible()
   })
   await step('running', 5)
   await step('stopTimer', 5, async () => {
-    await glideAndClick(page, timer.getByRole('button', { name: 'Stop' }))
-    await expect(timer.getByRole('button', { name: 'Start' })).toBeVisible()
+    await glideAndClick(page, timer.getByRole('button', { name: catalog.timer.stop }))
+    await expect(timer.getByRole('button', { name: catalog.timer.start })).toBeVisible()
   })
   await step('timesheet', 7, async () => {
     await page.waitForTimeout(1_000)

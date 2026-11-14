@@ -17,6 +17,8 @@ export type Catalog = {
   nav: Record<string, string>
   shell: { openNavigation: string; mainNavigation: string }
   demo: { useAccount: string }
+  timer: { region: string; placeholder: string; start: string; stop: string }
+  entries: { expandAll: string; collapseAll: string }
 }
 export const LANGUAGES = ['en', 'pl'] as const
 export type Language = (typeof LANGUAGES)[number]
@@ -66,7 +68,7 @@ export async function signInAs(page: Page, catalog: Catalog, role: DemoAccountRo
     .filter({ hasText: demoAccount(role).email })
     .getByRole('button', { name: catalog.demo.useAccount })
     .click()
-  await expect(page.getByRole('region', { name: 'Timer' })).toBeVisible()
+  await expect(page.getByRole('region', { name: catalog.timer.region })).toBeVisible()
 }
 
 export async function navigateTo(page: Page, catalog: Catalog, label: string): Promise<void> {
@@ -79,21 +81,21 @@ export async function navigateTo(page: Page, catalog: Catalog, label: string): P
 }
 
 /** Waits for this week's entries and expands every day, so the Timesheet shows them all. */
-export async function expandAllDays(page: Page): Promise<void> {
-  const expandAll = page.getByRole('button', { name: 'Expand all' })
-  const collapseAll = page.getByRole('button', { name: 'Collapse all' })
+export async function expandAllDays(page: Page, catalog: Catalog): Promise<void> {
+  const expandAll = page.getByRole('button', { name: catalog.entries.expandAll })
+  const collapseAll = page.getByRole('button', { name: catalog.entries.collapseAll })
   await expect(expandAll.or(collapseAll)).toBeVisible()
   if (await expandAll.isVisible()) await expandAll.click()
   await expect(collapseAll).toBeVisible()
 }
 
-export async function startTimer(page: Page, description: string, project: string): Promise<void> {
-  const timer = page.getByRole('region', { name: 'Timer' })
-  await timer.getByRole('textbox', { name: 'What are you working on?' }).pressSequentially(description, { delay: 35 })
+export async function startTimer(page: Page, catalog: Catalog, description: string, project: string): Promise<void> {
+  const timer = page.getByRole('region', { name: catalog.timer.region })
+  await timer.getByRole('textbox', { name: catalog.timer.placeholder }).pressSequentially(description, { delay: 35 })
   const picker = timer.getByRole('combobox')
   await picker.click()
   await picker.pressSequentially(project, { delay: 35 })
   await page.getByRole('option').filter({ hasText: project }).first().click()
-  await timer.getByRole('button', { name: 'Start' }).click()
-  await expect(timer.getByRole('button', { name: 'Stop' })).toBeVisible()
+  await timer.getByRole('button', { name: catalog.timer.start }).click()
+  await expect(timer.getByRole('button', { name: catalog.timer.stop })).toBeVisible()
 }

@@ -86,11 +86,12 @@ for (const language of LANGUAGES) {
         const context = await newContext(browser, language)
         const page = await context.newPage()
         await signInAs(page, catalog, 'manager')
-        await expandAllDays(page)
+        await expandAllDays(page, catalog)
         // The timer started for the light capture keeps running, so the dark one shows it too.
         if (suffix === 'light') {
           await startTimer(
             page,
+            catalog,
             language === 'pl' ? 'Przegląd makiet strony głównej' : 'Homepage wireframe review',
             'Website redesign',
           )
@@ -154,7 +155,7 @@ for (const language of LANGUAGES) {
       })
       const page = await context.newPage()
       await signInAs(page, catalog, 'member')
-      await expandAllDays(page)
+      await expandAllDays(page, catalog)
       await capture(page, `${language}/mobile.png`)
       await context.close()
     })
@@ -169,16 +170,21 @@ for (const language of LANGUAGES) {
         const recordingStarted = Date.now()
         const page = await context.newPage()
         await signInAs(page, catalog, 'member')
-        await expandAllDays(page)
+        await expandAllDays(page, catalog)
         await page.evaluate(() => document.fonts.ready)
         await page.waitForTimeout(500)
 
         // Only the part from here on goes into the GIF.
         const clipStart = (Date.now() - recordingStarted) / 1000
-        await startTimer(page, language === 'pl' ? 'Poprawki po przeglądzie' : 'Review fixes', 'Loyalty app')
+        await startTimer(page, catalog, language === 'pl' ? 'Poprawki po przeglądzie' : 'Review fixes', 'Loyalty app')
         await page.waitForTimeout(3_000)
-        await page.getByRole('region', { name: 'Timer' }).getByRole('button', { name: 'Stop' }).click()
-        await expect(page.getByRole('region', { name: 'Timer' }).getByRole('button', { name: 'Start' })).toBeVisible()
+        await page
+          .getByRole('region', { name: catalog.timer.region })
+          .getByRole('button', { name: catalog.timer.stop })
+          .click()
+        await expect(
+          page.getByRole('region', { name: catalog.timer.region }).getByRole('button', { name: catalog.timer.start }),
+        ).toBeVisible()
         await page.waitForTimeout(1_500)
 
         const video = page.video()
