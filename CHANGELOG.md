@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.53.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.52.0...ticknest-v1.53.0) (2026-11-14)
+
+
+### Features
+
+* add an apple-touch-icon and a web app manifest ([#285](https://github.com/kacper-szewczyk/Ticknest/issues/285)) ([f6b371b](https://github.com/kacper-szewczyk/Ticknest/commit/f6b371b8de6d39948856ac493a3a6d3314076406)), closes [#274](https://github.com/kacper-szewczyk/Ticknest/issues/274)
+* show the running timer in the browser tab title ([#289](https://github.com/kacper-szewczyk/Ticknest/issues/289)) ([af46ea4](https://github.com/kacper-szewczyk/Ticknest/commit/af46ea4e9653ecc50b3cf9b0a4e47c84685da9df)), closes [#276](https://github.com/kacper-szewczyk/Ticknest/issues/276)
+
+
+### Bug Fixes
+
+* match the initial theme-color to the default palette background ([#288](https://github.com/kacper-szewczyk/Ticknest/issues/288)) ([fcb851e](https://github.com/kacper-szewczyk/Ticknest/commit/fcb851eb5086dc1fff1d461afb59f111ef25fc04))
+
 ## [1.52.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.51.1...ticknest-v1.52.0) (2026-11-14)
 
 
