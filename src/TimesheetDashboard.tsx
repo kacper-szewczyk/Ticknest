@@ -271,7 +271,7 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
           <Typography variant="overline" component="p">
             {canSeeAllEntries ? 'TEAM TIMESHEET' : 'YOUR TIMESHEET'}
           </Typography>
-          <Typography variant="h2" id="dashboard-heading" sx={{ fontSize: 32 }}>
+          <Typography variant="h2" component="h1" id="dashboard-heading" sx={{ fontSize: 32 }}>
             Timesheet dashboard
           </Typography>
           <Typography variant="body2" color="text.secondary">

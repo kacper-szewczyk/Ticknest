@@ -326,6 +326,7 @@ export function ReportsPanel({
     <SectionCard labelledBy="reports-heading" sx={{ maxWidth: 'none' }}>
       <SectionHeading
         id="reports-heading"
+        level={1}
         kicker="WORKSPACE INSIGHTS"
         title="Reports"
         description={`Dates in ${timezone}`}

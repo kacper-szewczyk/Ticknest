@@ -144,7 +144,9 @@
     "expandSidebar": "Expandir la barra lateral",
     "collapseSidebar": "Contraer la barra lateral",
     "openNavigation": "Abrir la navegación",
-    "mainNavigation": "Navegación principal"
+    "mainNavigation": "Navegación principal",
+    "skipToContent": "Saltar al contenido principal",
+    "documentTitle": "{{view}} · {{workspace}} · Ticknest"
   },
   "common": {
     "billable": "Facturable",

@@ -146,6 +146,7 @@ export function BudgetsPanel({ workspaceId, catalog }: { workspaceId: string; ca
     <SectionCard labelledBy="budgets-heading">
       <SectionHeading
         id="budgets-heading"
+        level={1}
         kicker="HOUR TARGETS"
         title="Budgets"
         action={

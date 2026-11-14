@@ -179,6 +179,7 @@ export function TeamBudgetsPanel({
     <SectionCard labelledBy="team-budgets-heading" sx={{ maxWidth: 1120 }}>
       <SectionHeading
         id="team-budgets-heading"
+        level={1}
         kicker="TEAM HOUR TARGETS"
         title="Budget progress"
         action={

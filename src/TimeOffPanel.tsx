@@ -100,6 +100,7 @@ export function TimeOffPanel({
     <SectionCard labelledBy="time-off-heading" sx={{ maxWidth: 900 }}>
       <SectionHeading
         id="time-off-heading"
+        level={1}
         kicker={t('timeOff.mine.kicker')}
         title={t('timeOff.mine.title')}
         action={

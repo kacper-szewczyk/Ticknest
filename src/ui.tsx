@@ -40,12 +40,15 @@ export function SectionHeading({
   title,
   description,
   action,
+  level = 2,
 }: {
   id: string
   kicker: string
   title: string
   description?: ReactNode
   action?: ReactNode
+  /** 1 for the view's own title (one per view, focused after navigating); 2 for further sections. */
+  level?: 1 | 2
 }) {
   return (
     <Stack
@@ -56,7 +59,7 @@ export function SectionHeading({
         <Typography variant="overline" component="p" sx={{ display: 'block' }}>
           {kicker}
         </Typography>
-        <Typography variant="h2" id={id}>
+        <Typography variant="h2" component={level === 1 ? 'h1' : 'h2'} id={id}>
           {title}
         </Typography>
         {description && (

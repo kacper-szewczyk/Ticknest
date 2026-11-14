@@ -146,6 +146,7 @@ export function TimeEntriesPanel({
     <SectionCard labelledBy="entries-heading" sx={{ mb: { xs: 10, sm: 12 } }}>
       <SectionHeading
         id="entries-heading"
+        level={1}
         kicker={t('entries.kicker')}
         title={t('entries.title')}
         action={

@@ -35,8 +35,11 @@ function renderShell(onNavigate = vi.fn()) {
         compactBrand={<span>Mark</span>}
         compactHeader={<CompactHeader />}
         compactFooter={<span>Compact footer</span>}
+        mainId="main-content"
       >
-        <p>Page content</p>
+        <main id="main-content" tabIndex={-1}>
+          <p>Page content</p>
+        </main>
       </AppShell>
     </ThemeProvider>,
   )
@@ -134,5 +137,36 @@ describe('AppShell desktop sidebar', () => {
     expect(within(drawer).getByText('Full brand')).toBeTruthy()
     expect(within(drawer).getByText('Workspace switcher')).toBeTruthy()
     expect(within(drawer).queryByRole('button', { name: 'Collapse sidebar', hidden: true })).toBeNull()
+  })
+
+  it('names the small-screen drawer and points the menu button at it', async () => {
+    renderShell()
+    const menuButton = screen.getByRole('button', { name: 'Open navigation', hidden: true })
+    await userEvent.click(menuButton)
+    const drawer = screen.getByRole('dialog', { name: 'Main navigation', hidden: true })
+    expect(menuButton.getAttribute('aria-controls')).toBe(drawer.id)
+    expect(menuButton.getAttribute('aria-expanded')).toBe('true')
+  })
+})
+
+describe('AppShell skip link and outline', () => {
+  it('offers a skip link as the first stop and moves focus into main', async () => {
+    renderShell()
+    await userEvent.tab()
+    const skipLink = screen.getByRole('link', { name: 'Skip to main content' })
+    expect(document.activeElement).toBe(skipLink)
+    const hashBefore = window.location.hash
+    await userEvent.click(skipLink)
+    expect(document.activeElement).toBe(screen.getByRole('main'))
+    // The hash holds the current view, so the link must not change it.
+    expect(window.location.hash).toBe(hashBefore)
+  })
+
+  it('labels the navigation groups without adding headings to the sidebar', () => {
+    const { sidebar } = renderShell()
+    expect(within(sidebar).queryAllByRole('heading')).toHaveLength(0)
+    const track = within(sidebar).getByRole('list', { name: 'TRACK' })
+    expect(within(track).getByRole('button', { name: 'Home' })).toBeTruthy()
+    expect(within(sidebar).getByRole('list', { name: 'ANALYZE' })).toBeTruthy()
   })
 })

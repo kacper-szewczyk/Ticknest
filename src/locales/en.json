@@ -143,7 +143,9 @@
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "openNavigation": "Open navigation",
-    "mainNavigation": "Main navigation"
+    "mainNavigation": "Main navigation",
+    "skipToContent": "Skip to main content",
+    "documentTitle": "{{view}} · {{workspace}} · Ticknest"
   },
   "common": {
     "billable": "Billable",
