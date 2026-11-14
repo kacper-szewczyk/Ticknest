@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.52.0](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.51.1...ticknest-v1.52.0) (2026-11-14)
+
+
+### Features
+
+* match the browser theme-color to the active palette ([#283](https://github.com/kacper-szewczyk/Ticknest/issues/283)) ([f3a2f78](https://github.com/kacper-szewczyk/Ticknest/commit/f3a2f786ec8991f649b1f194fe438b7a12ab784a))
+
 ## [1.51.1](https://github.com/kacper-szewczyk/Ticknest/compare/ticknest-v1.51.0...ticknest-v1.51.1) (2026-11-14)
 
 
