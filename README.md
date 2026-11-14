@@ -1,6 +1,6 @@
 # Ticknest
 
-**English** | [Polski](README.pl.md)
+**English** | [Español](README.es.md) | [Polski](README.pl.md)
 
 **Open-source time tracking for small teams, running in a Firebase project you own.**
 
