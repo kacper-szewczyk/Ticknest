@@ -14,12 +14,11 @@ import { type ReactNode, useEffect, useState } from 'react'
 import type { Catalog } from './lib/catalog'
 import { NavIcon } from './AppShell'
 import { EntryEditor } from './EntryEditor'
+import { useAppLanguage, useTranslation } from './i18n'
 import { dayDate, formatElapsed, formatWeekLabel, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
 import { readableError } from './lib/errors'
 import { type TimeEntry, continueTimer, deleteTimeEntry, subscribeToEntriesForRange } from './lib/timeEntries'
 import {
-  OVER_DAY_MESSAGE,
-  OVER_WEEK_MESSAGE,
   entrySeconds,
   formatHoursMinutes,
   isDayOverLimit,
@@ -43,6 +42,8 @@ export function TimeEntriesPanel({
   weekStartsOn: number
   catalog: Catalog
 }) {
+  const { t } = useTranslation()
+  const language = useAppLanguage()
   const [today] = useState(() => localDayString(new Date()))
   const [weekStart, setWeekStart] = useState(() => startOfWeekString(today, weekStartsOn))
   const [entryState, setEntryState] = useState<{ workspaceId: string; weekStart: string; entries: TimeEntry[] }>({
@@ -82,13 +83,14 @@ export function TimeEntriesPanel({
   }
 
   async function handleDelete(entry: TimeEntry) {
-    if (!window.confirm(`Delete “${entry.description || 'Untitled entry'}”?`)) return
+    if (!window.confirm(t('entries.confirmDelete', { description: entry.description || t('common.untitledEntry') })))
+      return
     setPending(true)
     setError('')
     setNotice('')
     try {
       await deleteTimeEntry(workspaceId, entry)
-      setNotice('Time entry deleted.')
+      setNotice(t('entries.deleted'))
     } catch (requestError) {
       setError(readableError(requestError))
     } finally {
@@ -144,18 +146,18 @@ export function TimeEntriesPanel({
     <SectionCard labelledBy="entries-heading" sx={{ mb: { xs: 10, sm: 12 } }}>
       <SectionHeading
         id="entries-heading"
-        kicker="YOUR TIME"
-        title="Timesheet"
+        kicker={t('entries.kicker')}
+        title={t('entries.title')}
         action={
           <Stack
             direction="row"
-            aria-label="Timesheet week navigation"
+            aria-label={t('entries.weekNavigation')}
             spacing={1}
             sx={{ alignItems: 'center', width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}
           >
             <Button
               variant="outlined"
-              aria-label="Previous week"
+              aria-label={t('entries.previousWeek')}
               onClick={() => changeWeek(shiftDayString(weekStart, -7))}
               sx={{ minWidth: 44, px: 1 }}
             >
@@ -163,7 +165,7 @@ export function TimeEntriesPanel({
             </Button>
             <Stack sx={{ alignItems: 'center', flex: { xs: 1, sm: 'none' } }}>
               <Typography variant="body2" sx={{ fontWeight: 650 }}>
-                {formatWeekLabel(weekStart)}
+                {formatWeekLabel(weekStart, language)}
               </Typography>
               <TextField
                 variant="standard"
@@ -172,7 +174,7 @@ export function TimeEntriesPanel({
                 onChange={(event) => changeWeek(event.target.value)}
                 fullWidth={false}
                 slotProps={{
-                  htmlInput: { 'aria-label': 'Choose a week', style: { fontSize: 12, padding: 0 } },
+                  htmlInput: { 'aria-label': t('entries.chooseWeek'), style: { fontSize: 12, padding: 0 } },
                   input: { disableUnderline: true },
                 }}
                 sx={{ width: 130 }}
@@ -180,14 +182,14 @@ export function TimeEntriesPanel({
             </Stack>
             <Button
               variant="outlined"
-              aria-label="Next week"
+              aria-label={t('entries.nextWeek')}
               onClick={() => changeWeek(shiftDayString(weekStart, 7))}
               sx={{ minWidth: 44, px: 1 }}
             >
               →
             </Button>
             <Button size="small" onClick={() => changeWeek(today)}>
-              Today
+              {t('entries.today')}
             </Button>
           </Stack>
         }
@@ -212,7 +214,7 @@ export function TimeEntriesPanel({
       >
         <Box sx={{ display: 'grid', gap: 0.5 }}>
           <Typography variant="caption" color="text.secondary">
-            Week total
+            {t('entries.weekTotal')}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Typography
@@ -225,16 +227,16 @@ export function TimeEntriesPanel({
             >
               {formatElapsed(weekTotal)}
             </Typography>
-            {isWeekOver && <OverLimitChip label="Over 24h a day" message={OVER_WEEK_MESSAGE} />}
+            {isWeekOver && <OverLimitChip label={t('entries.overWeek')} message={t('entries.overWeekMessage')} />}
           </Stack>
         </Box>
         <Stack spacing={0.5} sx={{ alignItems: 'flex-end' }}>
           <Typography variant="caption" color="text.secondary">
-            {entries.length} {entries.length === 1 ? 'entry' : 'entries'} this week
+            {t('entries.entriesThisWeek', { count: entries.length })}
           </Typography>
           {daysWithEntries.length > 0 && (
             <Button size="small" onClick={() => setExpandedDays(new Set(isAllExpanded ? [] : daysWithEntries))}>
-              {isAllExpanded ? 'Collapse all' : 'Expand all'}
+              {isAllExpanded ? t('entries.collapseAll') : t('entries.expandAll')}
             </Button>
           )}
         </Stack>
@@ -279,22 +281,22 @@ export function TimeEntriesPanel({
                   >
                     <Box sx={{ display: 'grid', gap: 0.5, fontVariantNumeric: 'tabular-nums' }}>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {entry.startAt.toDate().toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {entry.endAt
-                          ? entry.endAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : 'Running'}
+                          ? entry.endAt.toDate().toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })
+                          : t('common.running')}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
                       <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                        {entry.description || 'Untitled entry'}
+                        {entry.description || t('common.untitledEntry')}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" noWrap>
                         {[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
-                          'No client, project, or task'}
-                        {entry.userId !== user.uid && ' · Workspace member'}
+                          t('entries.noWork')}
+                        {entry.userId !== user.uid && ` · ${t('entries.workspaceMember')}`}
                       </Typography>
                     </Box>
                     <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 650 }}>
@@ -310,15 +312,15 @@ export function TimeEntriesPanel({
                         gridColumn: { xs: '1 / -1', sm: 'auto' },
                       }}
                     >
-                      {entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}
+                      {entry.endAt === null && <Chip label={t('common.running')} color="warning" variant="outlined" />}
                       {entry.autoStopped === true && <AutoStoppedChip />}
                       {overlapping.has(entry.id) && (
-                        <Chip label="Overlaps" color="warning" title="Overlaps another of this person's entries" />
+                        <Chip label={t('entries.overlaps')} color="warning" title={t('entries.overlapsTitle')} />
                       )}
                       {entry.billable && <BillableChip />}
                       {entry.endAt !== null && entry.userId === user.uid && (
                         <Button size="small" onClick={() => void handleContinue(entry)} disabled={pending}>
-                          Continue
+                          {t('entries.continue')}
                         </Button>
                       )}
                       <Button
@@ -326,7 +328,7 @@ export function TimeEntriesPanel({
                         onClick={() => openEditor(weekDay, entry)}
                         disabled={pending || entry.endAt === null}
                       >
-                        Edit
+                        {t('entries.edit')}
                       </Button>
                       <Button
                         size="small"
@@ -334,7 +336,7 @@ export function TimeEntriesPanel({
                         onClick={() => void handleDelete(entry)}
                         disabled={pending || entry.endAt === null}
                       >
-                        Delete
+                        {t('entries.delete')}
                       </Button>
                     </Stack>
                   </Box>
@@ -344,7 +346,7 @@ export function TimeEntriesPanel({
         })}
       </Box>
       <SpeedDial
-        ariaLabel="Add time"
+        ariaLabel={t('entries.addTime')}
         icon={<SpeedDialIcon />}
         sx={{ position: 'fixed', right: { xs: 16, sm: 32 }, bottom: { xs: 16, sm: 32 } }}
       >
@@ -354,7 +356,7 @@ export function TimeEntriesPanel({
               <path d="M4 7h16M4 12h10M4 17h7M17 14v6M14 17h6" />
             </NavIcon>
           }
-          slotProps={{ tooltip: { title: 'Add manual entry', open: true } }}
+          slotProps={{ tooltip: { title: t('entries.addManualEntry'), open: true } }}
           onClick={() => openEditor(weekDays.includes(today) ? today : weekStart)}
         />
       </SpeedDial>
@@ -375,6 +377,11 @@ export function TimeEntriesPanel({
       )}
     </SectionCard>
   )
+}
+
+// Spanish and Polish write weekday names in lower case; they start the day heading here.
+function capitalize(text: string, language: string): string {
+  return text.charAt(0).toLocaleUpperCase(language) + text.slice(1)
 }
 
 function WarningIcon() {
@@ -407,15 +414,18 @@ function OverLimitChip({ label, message }: { label: string; message: string }) {
 }
 
 function DaySummaryLine({ summary }: { summary: DaySummary }) {
+  const { t } = useTranslation()
   const parts = [
-    `${summary.count} ${summary.count === 1 ? 'entry' : 'entries'}`,
-    summary.billableSeconds > 0 && `${formatHoursMinutes(summary.billableSeconds)} billable`,
-    ...summary.topGroups.map((group) => `${group.label} ${formatHoursMinutes(group.seconds)}`),
-    summary.moreGroups > 0 && `+${summary.moreGroups} more`,
+    t('entries.entryCount', { count: summary.count }),
+    summary.billableSeconds > 0 && t('entries.billableTime', { time: formatHoursMinutes(summary.billableSeconds) }),
+    ...summary.topGroups.map(
+      (group) => `${group.label || t('entries.noClientOrProject')} ${formatHoursMinutes(group.seconds)}`,
+    ),
+    summary.moreGroups > 0 && t('entries.moreGroups', { count: summary.moreGroups }),
   ].filter(Boolean)
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0, pb: 1.25, pl: 3.5 }}>
-      {summary.isRunning && <Chip size="small" label="Running" color="warning" variant="outlined" />}
+      {summary.isRunning && <Chip size="small" label={t('common.running')} color="warning" variant="outlined" />}
       <Typography variant="caption" color="text.secondary" noWrap>
         {parts.join(' · ')}
       </Typography>
@@ -440,15 +450,17 @@ function DaySection({
   onAdd: () => void
   children: ReactNode
 }) {
+  const { t } = useTranslation()
+  const language = useAppLanguage()
   const date = dayDate(day)
   const headingId = `timesheet-${day}`
   const panelId = `timesheet-${day}-entries`
   const hasEntries = summary.count > 0
   const label = (
     <>
-      <span>{date.toLocaleDateString(undefined, { weekday: 'long' })}</span>
+      <span>{capitalize(date.toLocaleDateString(language, { weekday: 'long' }), language)}</span>
       <Typography component="time" variant="caption" color="text.secondary" dateTime={day}>
-        {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+        {date.toLocaleDateString(language, { month: 'short', day: 'numeric' })}
       </Typography>
     </>
   )
@@ -522,7 +534,7 @@ function DaySection({
           )}
         </Typography>
         <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}>
-          {isOverLimit && <OverLimitChip label="Over 24h" message={OVER_DAY_MESSAGE} />}
+          {isOverLimit && <OverLimitChip label={t('entries.overDay')} message={t('entries.overDayMessage')} />}
           <Typography
             variant="body2"
             sx={{
@@ -540,7 +552,7 @@ function DaySection({
               onAdd()
             }}
           >
-            Add entry
+            {t('entries.addEntry')}
           </Button>
         </Stack>
       </Stack>
@@ -553,7 +565,7 @@ function DaySection({
         </>
       ) : (
         <Box sx={{ pl: 3.5 }}>
-          <EmptyText>No entries</EmptyText>
+          <EmptyText>{t('entries.noEntries')}</EmptyText>
         </Box>
       )}
     </Box>

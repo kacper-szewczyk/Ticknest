@@ -120,13 +120,18 @@ export function workOptionLabel(option: WorkOption): string {
 
 /**
  * Matches every search word against the client, project, and task names. A matching task keeps its
- * project row visible so the result still reads as a tree.
+ * project row visible so the result still reads as a tree. `noClientLabel` is what the picker shows for projects
+ * without a client, so searching for it finds them.
  */
-export function filterWorkOptions(options: WorkOption[], query: string): WorkOption[] {
+export function filterWorkOptions(
+  options: WorkOption[],
+  query: string,
+  noClientLabel: string = NO_CLIENT_GROUP,
+): WorkOption[] {
   const words = query.toLocaleLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return options
   const matches = (option: WorkOption) => {
-    const haystack = [option.clientName ?? NO_CLIENT_GROUP, option.projectName, option.taskName]
+    const haystack = [option.clientName ?? noClientLabel, option.projectName, option.taskName]
       .filter(Boolean)
       .join(' ')
       .toLocaleLowerCase()

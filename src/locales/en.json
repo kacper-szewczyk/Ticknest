@@ -149,7 +149,10 @@
     "billable": "Billable",
     "autoStopped": "Auto-stopped",
     "autoStoppedTitle": "This timer ran past midnight, so it was stopped at the end of the day it started.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "untitledEntry": "Untitled entry",
+    "saving": "Saving…",
+    "running": "Running"
   },
   "setup": {
     "kicker": "SET UP {{workspace}}",
@@ -488,5 +491,78 @@
     "export": {
       "csvFileType": "CSV file"
     }
+  },
+  "timer": {
+    "region": "Timer",
+    "placeholder": "What are you working on?",
+    "runningDescription": "Description of the running timer",
+    "elapsed": "Elapsed time {{time}}",
+    "start": "Start",
+    "starting": "Starting…",
+    "stop": "Stop",
+    "autoStopped": "Your timer “{{description}}” ran past midnight, so it was stopped at the end of the day it started. Edit the entry if you worked later."
+  },
+  "entries": {
+    "kicker": "YOUR TIME",
+    "title": "Timesheet",
+    "weekNavigation": "Timesheet week navigation",
+    "previousWeek": "Previous week",
+    "nextWeek": "Next week",
+    "chooseWeek": "Choose a week",
+    "today": "Today",
+    "weekTotal": "Week total",
+    "entriesThisWeek_one": "{{count}} entry this week",
+    "entriesThisWeek_other": "{{count}} entries this week",
+    "entryCount_one": "{{count}} entry",
+    "entryCount_other": "{{count}} entries",
+    "billableTime": "{{time}} billable",
+    "moreGroups": "+{{count}} more",
+    "noClientOrProject": "No client or project",
+    "noWork": "No client, project, or task",
+    "workspaceMember": "Workspace member",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "overDay": "Over 24h",
+    "overWeek": "Over 24h a day",
+    "overDayMessage": "Entries on this day add up to more than 24 hours. Check for overlapping or mistyped entries.",
+    "overWeekMessage": "Entries this week add up to more than 24 hours a day. Check for overlapping or mistyped entries.",
+    "overlaps": "Overlaps",
+    "overlapsTitle": "Overlaps another of this person's entries",
+    "continue": "Continue",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete “{{description}}”?",
+    "deleted": "Time entry deleted.",
+    "addEntry": "Add entry",
+    "noEntries": "No entries",
+    "addTime": "Add time",
+    "addManualEntry": "Add manual entry"
+  },
+  "entryEditor": {
+    "addTitle": "Add time entry",
+    "editTitle": "Edit time entry",
+    "description": "Description",
+    "date": "Date",
+    "start": "Start",
+    "end": "End",
+    "saveChanges": "Save changes",
+    "addEntry": "Add entry",
+    "added": "Time entry added.",
+    "updated": "Time entry updated.",
+    "descriptionTooLong": "Descriptions must be 500 characters or fewer.",
+    "invalidStart": "Enter a valid start date and time.",
+    "invalidEnd": "Enter a valid end date and time.",
+    "endBeforeStart": "The end time must be later than the start time."
+  },
+  "workPicker": {
+    "label": "Project / task",
+    "placeholder": "Search client, project, or task",
+    "noOptions": "No matching projects or tasks",
+    "noClient": "No client",
+    "clientOnly": "Client only",
+    "archived": "(archived)",
+    "client": "Client",
+    "project": "Project",
+    "task": "Task"
   }
 }

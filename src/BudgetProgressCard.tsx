@@ -5,6 +5,7 @@ import Chip from '@mui/material/Chip'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import { useAppLanguage } from './i18n'
 import type { Budget } from './lib/budgets'
 import { WEEKDAY_LABELS } from './lib/budgetForm'
 import type { BudgetDayProgress, BudgetDayStatus, BudgetProgress } from './lib/budgetProgress'
@@ -45,6 +46,7 @@ export function BudgetProgressCard({
   today: string
   weekStartsOn: number
 }) {
+  const language = useAppLanguage()
   const { target } = progress
   const [startDay, endDay] = budgetGroupRange(group)
   const [weekStart, setWeekStart] = useState(() => initialBudgetWeek(progress.days, today, weekStartsOn))
@@ -128,7 +130,7 @@ export function BudgetProgressCard({
         >
           <div>
             <Typography variant="body2" id={weekHeadingId} sx={{ fontWeight: 600 }}>
-              {formatWeekLabel(weekStart)}
+              {formatWeekLabel(weekStart, language)}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {formatBudgetMinutes(weekActual)} of {formatBudgetMinutes(weekExpected)} this week

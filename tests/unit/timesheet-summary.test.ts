@@ -77,9 +77,9 @@ describe('summarizeDay', () => {
     expect(summary.moreGroups).toBe(1)
   })
 
-  it('labels entries with no client or project', () => {
+  it('gives entries with no client or project an empty label', () => {
     const summary = summarizeDay([entry({ start: at(day, '09:00'), end: at(day, '10:00') })], 0)
-    expect(summary.topGroups).toEqual([{ label: 'No client or project', seconds: 3600 }])
+    expect(summary.topGroups).toEqual([{ label: '', seconds: 3600 }])
     expect(summary.moreGroups).toBe(0)
   })
 

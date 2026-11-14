@@ -32,16 +32,21 @@ export function shiftDayString(day: string, days: number): string {
   return localDayString(date)
 }
 
-export function formatWeekLabel(startDay: string): string {
+/**
+ * The week starting on `startDay`, as a date range in `locale` ("October 12 – 18, 2026", "12–18 października 2026").
+ * The month is spelled out when the week stays in one month and abbreviated when it spans two.
+ */
+export function formatWeekLabel(startDay: string, locale: string): string {
   const start = dayDate(startDay)
   const end = new Date(start)
   end.setDate(end.getDate() + 6)
   const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()
-  if (sameMonth)
-    return `${start.toLocaleDateString(undefined, { month: 'long' })} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`
-  const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const endLabel = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-  return `${startLabel} – ${endLabel}`
+  const format = new Intl.DateTimeFormat(locale, {
+    month: sameMonth ? 'long' : 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  return format.formatRange(start, end)
 }
 
 export function localDateTimeValue(date: Date): string {

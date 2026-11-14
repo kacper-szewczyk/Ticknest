@@ -5,6 +5,7 @@ import { alpha } from '@mui/material/styles'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useMemo } from 'react'
+import { useTranslation } from './i18n'
 import type { Catalog } from './lib/catalog'
 import {
   buildWorkOptions,
@@ -24,7 +25,7 @@ export function WorkPicker({
   onChange,
   size,
   disabled,
-  label = 'Project / task',
+  label,
 }: {
   catalog: Catalog
   value: WorkSelection
@@ -33,6 +34,8 @@ export function WorkPicker({
   disabled?: boolean
   label?: string
 }) {
+  const { t } = useTranslation()
+  const noClientLabel = t('workPicker.noClient')
   // Options keep the stored selection visible even after it was archived.
   const { clientId, projectId, taskId } = value
   const options = useMemo(
@@ -49,12 +52,12 @@ export function WorkPicker({
       options={options}
       value={selected}
       onChange={(_, option) => onChange(workDetails(option))}
-      groupBy={(option) => option.group}
+      groupBy={(option) => option.clientName ?? noClientLabel}
       getOptionLabel={workOptionLabel}
       isOptionEqualToValue={(option, current) => option.key === current.key}
-      filterOptions={(items, state) => filterWorkOptions(items, state.inputValue)}
+      filterOptions={(items, state) => filterWorkOptions(items, state.inputValue, noClientLabel)}
       getOptionDisabled={(option) => option.archived && option.key !== selectedKey}
-      noOptionsText="No matching projects or tasks"
+      noOptionsText={t('workPicker.noOptions')}
       autoHighlight
       openOnFocus
       renderGroup={(params) => (
@@ -73,7 +76,7 @@ export function WorkPicker({
             }}
           >
             <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 'inherit', fontSize: 10 }}>
-              Client
+              {t('workPicker.client')}
             </Typography>
             <Typography variant="body2" component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
               {params.group}
@@ -127,12 +130,12 @@ export function WorkPicker({
               sx={{ flex: 1, fontWeight: isTask ? 400 : 650 }}
               color={isTask ? 'text.secondary' : 'text.primary'}
             >
-              {isTask ? option.taskName : option.kind === 'project' ? option.projectName : 'Client only'}
-              {option.archived ? ' (archived)' : ''}
+              {isTask ? option.taskName : option.kind === 'project' ? option.projectName : t('workPicker.clientOnly')}
+              {option.archived ? ` ${t('workPicker.archived')}` : ''}
             </Typography>
             {option.billable && (
               <Typography variant="caption" color="success.main" sx={{ flexShrink: 0 }}>
-                Billable
+                {t('common.billable')}
               </Typography>
             )}
             <Typography
@@ -140,7 +143,11 @@ export function WorkPicker({
               color="text.disabled"
               sx={{ flexShrink: 0, width: 52, textAlign: 'right', fontSize: 10, lineHeight: 1 }}
             >
-              {isTask ? 'Task' : option.kind === 'project' ? 'Project' : 'Client'}
+              {isTask
+                ? t('workPicker.task')
+                : option.kind === 'project'
+                  ? t('workPicker.project')
+                  : t('workPicker.client')}
             </Typography>
           </Box>
         )
@@ -148,8 +155,8 @@ export function WorkPicker({
       renderInput={(params) => (
         <TextField
           {...params}
-          label={label}
-          placeholder="Search client, project, or task"
+          label={label ?? t('workPicker.label')}
+          placeholder={t('workPicker.placeholder')}
           slotProps={{ ...params.slotProps, inputLabel: { ...params.slotProps?.inputLabel, shrink: true } }}
         />
       )}

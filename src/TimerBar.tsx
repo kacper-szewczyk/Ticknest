@@ -6,6 +6,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from './i18n'
 import { autoStopNoticeEntry, markAutoStopNoticeSeen, readSeenAutoStopNotice } from './lib/autoStopNotice'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed } from './lib/dates'
@@ -25,6 +26,7 @@ import { WorkPicker } from './WorkPicker'
 
 // Always-visible timer at the top of every workspace page.
 export function TimerBar({ user, workspaceId, catalog }: { user: User; workspaceId: string; catalog: Catalog }) {
+  const { t } = useTranslation()
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [description, setDescription] = useState('')
   const [work, setWork] = useState<WorkDetails>(() => workDetails(null))
@@ -125,7 +127,7 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   const elapsedText = (
     <Typography
       component="span"
-      aria-label={`Elapsed time ${formatElapsed(elapsed)}`}
+      aria-label={t('timer.elapsed', { time: formatElapsed(elapsed) })}
       sx={{
         color: runningEntry ? 'primary.main' : 'text.secondary',
         fontVariantNumeric: 'tabular-nums',
@@ -140,7 +142,7 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   )
 
   return (
-    <Box component="section" aria-label="Timer" sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25 }}>
+    <Box component="section" aria-label={t('timer.region')} sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25 }}>
       {error && <FormMessage severity="error">{error}</FormMessage>}
       <Snackbar
         open={isAutoStopNoticeOpen}
@@ -153,8 +155,7 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
           onClose={() => setDismissedAutoStopId(autoStoppedEntryId ?? null)}
           sx={{ width: '100%' }}
         >
-          Your timer “{autoStoppedEntry?.description || 'Untitled entry'}” ran past midnight, so it was stopped at the
-          end of the day it started. Edit the entry if you worked later.
+          {t('timer.autoStopped', { description: autoStoppedEntry?.description || t('common.untitledEntry') })}
         </Alert>
       </Snackbar>
       {runningEntry ? (
@@ -198,7 +199,7 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
             disabled={pending}
             sx={{ flexShrink: 0 }}
           >
-            {pending ? 'Saving…' : 'Stop'}
+            {pending ? t('common.saving') : t('timer.stop')}
           </Button>
         </Box>
       ) : (
@@ -221,8 +222,8 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
             size="small"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="What are you working on?"
-            slotProps={{ htmlInput: { maxLength: 500, 'aria-label': 'What are you working on?' } }}
+            placeholder={t('timer.placeholder')}
+            slotProps={{ htmlInput: { maxLength: 500, 'aria-label': t('timer.placeholder') } }}
           />
           <Box sx={{ gridColumn: { xs: '1 / -1', lg: 'auto' }, gridRow: { xs: 2, lg: 'auto' }, minWidth: 0 }}>
             <WorkPicker size="small" catalog={catalog} value={work} onChange={setWork} disabled={pending} />
@@ -230,7 +231,7 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{work.billable && <BillableChip />}</Box>
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{elapsedText}</Box>
           <Button variant="contained" type="submit" disabled={pending} sx={{ flexShrink: 0 }}>
-            {pending ? 'Starting…' : 'Start'}
+            {pending ? t('timer.starting') : t('timer.start')}
           </Button>
         </Box>
       )}
@@ -247,6 +248,7 @@ function RunningDescriptionField({
   savedDescription: string
   onSave: (description: string) => Promise<void>
 }) {
+  const { t } = useTranslation()
   const [draft, setDraft] = useState(savedDescription)
   const [lastSaved, setLastSaved] = useState(savedDescription)
   const [saving, setSaving] = useState(false)
@@ -288,10 +290,10 @@ function RunningDescriptionField({
           window.setTimeout(() => input?.blur())
         }
       }}
-      placeholder="Untitled entry"
+      placeholder={t('common.untitledEntry')}
       disabled={saving}
       slotProps={{
-        htmlInput: { maxLength: 500, 'aria-label': 'Description of the running timer' },
+        htmlInput: { maxLength: 500, 'aria-label': t('timer.runningDescription') },
       }}
       sx={{ '& .MuiInputBase-input': { fontWeight: 600 } }}
     />

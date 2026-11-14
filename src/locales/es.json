@@ -150,7 +150,10 @@
     "billable": "Facturable",
     "autoStopped": "Detenido automáticamente",
     "autoStoppedTitle": "Este temporizador siguió en marcha pasada la medianoche, así que se detuvo al final del día en que empezó.",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "untitledEntry": "Registro sin título",
+    "saving": "Guardando…",
+    "running": "En marcha"
   },
   "setup": {
     "kicker": "CONFIGURA {{workspace}}",
@@ -503,5 +506,80 @@
     "export": {
       "csvFileType": "Archivo CSV"
     }
+  },
+  "timer": {
+    "region": "Temporizador",
+    "placeholder": "¿En qué estás trabajando?",
+    "runningDescription": "Descripción del temporizador en marcha",
+    "elapsed": "Tiempo transcurrido {{time}}",
+    "start": "Iniciar",
+    "starting": "Iniciando…",
+    "stop": "Detener",
+    "autoStopped": "Tu temporizador «{{description}}» siguió en marcha pasada la medianoche, así que se detuvo al final del día en que empezó. Edita el registro si trabajaste más tarde."
+  },
+  "entries": {
+    "kicker": "TU TIEMPO",
+    "title": "Hoja de horas",
+    "weekNavigation": "Navegación por semanas de la hoja de horas",
+    "previousWeek": "Semana anterior",
+    "nextWeek": "Semana siguiente",
+    "chooseWeek": "Elegir una semana",
+    "today": "Hoy",
+    "weekTotal": "Total de la semana",
+    "entriesThisWeek_one": "{{count}} registro esta semana",
+    "entriesThisWeek_many": "{{count}} registros esta semana",
+    "entriesThisWeek_other": "{{count}} registros esta semana",
+    "entryCount_one": "{{count}} registro",
+    "entryCount_many": "{{count}} registros",
+    "entryCount_other": "{{count}} registros",
+    "billableTime": "{{time}} facturable",
+    "moreGroups": "+{{count}} más",
+    "noClientOrProject": "Sin cliente ni proyecto",
+    "noWork": "Sin cliente, proyecto ni tarea",
+    "workspaceMember": "Miembro del espacio de trabajo",
+    "expandAll": "Desplegar todo",
+    "collapseAll": "Contraer todo",
+    "overDay": "Más de 24 h",
+    "overWeek": "Más de 24 h al día",
+    "overDayMessage": "Los registros de este día suman más de 24 horas. Comprueba si hay registros solapados o mal introducidos.",
+    "overWeekMessage": "Los registros de esta semana suman más de 24 horas al día. Comprueba si hay registros solapados o mal introducidos.",
+    "overlaps": "Se solapa",
+    "overlapsTitle": "Se solapa con otro registro de esta persona",
+    "continue": "Continuar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar «{{description}}»?",
+    "deleted": "Registro de tiempo eliminado.",
+    "addEntry": "Añadir registro",
+    "noEntries": "Sin registros",
+    "addTime": "Añadir tiempo",
+    "addManualEntry": "Añadir registro manual"
+  },
+  "entryEditor": {
+    "addTitle": "Añadir registro de tiempo",
+    "editTitle": "Editar registro de tiempo",
+    "description": "Descripción",
+    "date": "Fecha",
+    "start": "Inicio",
+    "end": "Fin",
+    "saveChanges": "Guardar cambios",
+    "addEntry": "Añadir registro",
+    "added": "Registro de tiempo añadido.",
+    "updated": "Registro de tiempo actualizado.",
+    "descriptionTooLong": "La descripción debe tener 500 caracteres como máximo.",
+    "invalidStart": "Introduce una fecha y hora de inicio válidas.",
+    "invalidEnd": "Introduce una fecha y hora de fin válidas.",
+    "endBeforeStart": "La hora de fin debe ser posterior a la de inicio."
+  },
+  "workPicker": {
+    "label": "Proyecto / tarea",
+    "placeholder": "Buscar cliente, proyecto o tarea",
+    "noOptions": "Ningún proyecto ni tarea coincide",
+    "noClient": "Sin cliente",
+    "clientOnly": "Solo cliente",
+    "archived": "(archivado)",
+    "client": "Cliente",
+    "project": "Proyecto",
+    "task": "Tarea"
   }
 }
