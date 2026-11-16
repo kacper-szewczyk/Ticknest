@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
 import interRegularUrl from '@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf?url'
 import interSemiBoldUrl from '@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf?url'
+import { i18n } from '../i18n'
 import type { ReportPdfModel } from './reportPdf'
 
 const FONT = 'Inter'
@@ -25,7 +26,7 @@ function toBase64(buffer: ArrayBuffer) {
 
 async function loadFont(url: string) {
   const response = await fetch(url)
-  if (!response.ok) throw new Error('Could not load the PDF font. Check your connection and try again.')
+  if (!response.ok) throw new Error(i18n.t('reports.export.fontFailed'))
   return toBase64(await response.arrayBuffer())
 }
 
@@ -94,7 +95,8 @@ export async function renderReportPdf(model: ReportPdfModel): Promise<Blob> {
     ...tableStyles,
     startY: lastY(doc, y) + 32,
     head: [model.summaryHead],
-    body: model.summaryBody.length > 0 ? model.summaryBody.map((row) => row.cells) : [['No entries', '', '', '', '']],
+    body:
+      model.summaryBody.length > 0 ? model.summaryBody.map((row) => row.cells) : [[model.noEntries, '', '', '', '']],
     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
     didParseCell: (data) => {
       if (data.section !== 'body') return
@@ -109,14 +111,13 @@ export async function renderReportPdf(model: ReportPdfModel): Promise<Blob> {
     },
   })
 
-  sectionTitle(doc, 'Detailed entries (newest first)', lastY(doc, y) + 24)
-  const durationColumn = model.entriesHead.indexOf('Duration')
+  sectionTitle(doc, model.entriesTitle, lastY(doc, y) + 24)
   autoTable(doc, {
     ...tableStyles,
     startY: lastY(doc, y) + 32,
     head: [model.entriesHead],
-    body: model.entriesBody.length > 0 ? model.entriesBody : [['No entries']],
-    columnStyles: { [durationColumn]: { halign: 'right', fontStyle: 'bold' } },
+    body: model.entriesBody.length > 0 ? model.entriesBody : [[model.noEntries]],
+    columnStyles: { [model.durationColumn]: { halign: 'right', fontStyle: 'bold' } },
     showHead: 'everyPage',
   })
 
@@ -128,7 +129,7 @@ export async function renderReportPdf(model: ReportPdfModel): Promise<Blob> {
     doc.setTextColor(MUTED)
     const pageHeight = doc.internal.pageSize.getHeight()
     doc.text(`${model.title} · ${model.subtitle}`, MARGIN, pageHeight - 20)
-    doc.text(`Page ${page} of ${pages}`, pageWidth - MARGIN, pageHeight - 20, { align: 'right' })
+    doc.text(model.pageLabel(page, pages), pageWidth - MARGIN, pageHeight - 20, { align: 'right' })
   }
 
   return doc.output('blob')

@@ -109,7 +109,7 @@ for (const language of LANGUAGES) {
       await signInAs(page, catalog, 'manager')
       await navigateTo(page, catalog, catalog.nav.reports)
 
-      const exportPdf = page.getByRole('button', { name: 'Export PDF' })
+      const exportPdf = page.getByRole('button', { name: catalog.reports.export.pdf })
       await expect(exportPdf).toBeEnabled()
       await capture(page, `${language}/reports.png`)
 
@@ -138,7 +138,7 @@ for (const language of LANGUAGES) {
       const page = await context.newPage()
       await signInAs(page, catalog, 'owner')
       await navigateTo(page, catalog, catalog.nav.members)
-      await expect(page.getByText('People with access')).toBeVisible()
+      await expect(page.getByText(catalog.members.peopleWithAccess)).toBeVisible()
       await expect(page.getByText(demoAccount('member').email).first()).toBeVisible()
       await capture(page, `${language}/members.png`)
       await context.close()

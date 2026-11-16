@@ -322,9 +322,24 @@ describe('ReportsPanel export', () => {
     await changeAppLanguage('pl')
     try {
       renderPanel(true, { uid: 'manager', displayName: 'Manager' })
-      await events.click(screen.getByRole('button', { name: 'Export CSV' }))
+      await events.click(screen.getByRole('button', { name: 'Eksportuj CSV' }))
       await waitFor(() => expect(showSaveFilePicker).toHaveBeenCalled())
       expect(showSaveFilePicker.mock.calls[0][0].types[0].description).toBe('Plik CSV')
+    } finally {
+      await changeAppLanguage('en')
+    }
+  })
+
+  it('shows the filters, totals and summary tabs in the interface language', async () => {
+    await changeAppLanguage('pl')
+    try {
+      renderPanel(true, { uid: 'manager', displayName: 'Manager' })
+      expect(screen.getByRole('heading', { name: 'Raporty' })).toBeTruthy()
+      expect(screen.getByLabelText('Od')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Eksportuj CSV' })).toBeTruthy()
+      expect(screen.getByText('Łączny czas')).toBeTruthy()
+      expect(screen.getByRole('tab', { name: 'Dzień' })).toBeTruthy()
+      expect(screen.getByRole('tab', { name: 'Osoba' })).toBeTruthy()
     } finally {
       await changeAppLanguage('en')
     }
