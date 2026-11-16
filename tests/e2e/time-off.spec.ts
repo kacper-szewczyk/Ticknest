@@ -7,7 +7,10 @@ function dayString(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-/** Monday to Wednesday of a week in the current year: two weeks ahead, or earlier in the year near New Year. */
+/**
+ * Monday to Wednesday of a week in the current year: two weeks ahead, or earlier in the year near New Year.
+ * All three days fall in one month, so the team calendar shows them in a single table.
+ */
 function leaveWeek(): { start: string; end: string; year: number } {
   const now = new Date()
   const year = now.getUTCFullYear()
@@ -16,6 +19,10 @@ function leaveWeek(): { start: string; end: string; year: number } {
   if (monday.getUTCFullYear() !== year || monday.getUTCMonth() === 11) monday.setUTCDate(monday.getUTCDate() - 42)
   const wednesday = new Date(monday)
   wednesday.setUTCDate(monday.getUTCDate() + 2)
+  if (wednesday.getUTCMonth() !== monday.getUTCMonth()) {
+    monday.setUTCDate(monday.getUTCDate() - 7)
+    wednesday.setUTCDate(wednesday.getUTCDate() - 7)
+  }
   return { start: dayString(monday), end: dayString(wednesday), year }
 }
 
