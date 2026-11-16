@@ -550,10 +550,11 @@ const LEAVE: Record<string, LeaveSeed[]> = {
     },
     { typeId: 'holiday', startOffset: 30, workingDays: 3, status: 'pending', note: 'Friend’s wedding' },
   ],
+  // The end-to-end time-off test books Alice's holiday one to three weeks ahead (or about a month back in
+  // December) and approves it as the manager, so she has nothing pending and nothing near those weeks.
   'alice@demo.ticknest.app': [
-    { typeId: 'holiday', startOffset: -35, workingDays: 5, status: 'approved', note: 'Trip to Lisbon' },
+    { typeId: 'holiday', startOffset: -60, workingDays: 5, status: 'approved', note: 'Trip to Lisbon' },
     { typeId: 'sick', startOffset: -8, workingDays: 2, status: 'approved', note: 'Flu' },
-    { typeId: 'holiday', startOffset: 14, workingDays: 2, status: 'pending', note: 'Moving flat' },
     {
       typeId: 'holiday',
       startOffset: 40,
