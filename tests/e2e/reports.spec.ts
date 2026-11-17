@@ -25,7 +25,7 @@ for (const role of ROLES) {
     await exportPdf.click()
     const download = await downloadEvent
 
-    expect(download.suggestedFilename()).toBe(`ticknest-report-${startDay}-to-${endDay}.pdf`)
+    expect(download.suggestedFilename()).toBe(`tickness-report-${startDay}-to-${endDay}.pdf`)
     const contents = await readFile(await download.path())
     expect(contents.subarray(0, 5).toString('latin1')).toBe('%PDF-')
     await expect(page.getByText(/^Exported [\d,]+ entr(y|ies) to PDF\.$/)).toBeVisible()
@@ -76,7 +76,7 @@ test('a member filters the report by date range and exports it as CSV', async ({
     await page.getByRole('button', { name: 'Export CSV' }).click()
     const download = await downloadEvent
 
-    expect(download.suggestedFilename()).toBe(`ticknest-report-${startDay}-to-${endDay}.csv`)
+    expect(download.suggestedFilename()).toBe(`tickness-report-${startDay}-to-${endDay}.csv`)
     const [header, ...rows] = (await readFile(await download.path(), 'utf8')).replace(/^﻿/, '').split('\r\n')
     expect(header).toBe(
       'Date,User,Description,Client,Project,Task,Start (Europe/Warsaw),End (Europe/Warsaw),Duration,Billable',

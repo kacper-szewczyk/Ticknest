@@ -369,7 +369,7 @@ describe('ReportsPanel PDF export', () => {
 
     expect(await screen.findByText('Exported 1 entry to PDF.')).toBeTruthy()
     expect(downloads).toHaveLength(1)
-    expect(downloads[0]).toMatch(/^ticknest-report-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.pdf$/)
+    expect(downloads[0]).toMatch(/^tickness-report-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.pdf$/)
     const model = renderReportPdf.mock.calls[0][0] as { title: string; entriesHead: string[]; entriesBody: string[][] }
     expect(model.title).toBe('Northwind Studio')
     expect(model.entriesHead).toContain('User')

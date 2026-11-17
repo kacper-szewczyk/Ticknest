@@ -6,7 +6,7 @@ export function Brand({ tone = 'dark', compact = false }: { tone?: 'dark' | 'lig
   return (
     <Link
       href="/"
-      aria-label="Ticknest home"
+      aria-label="Tickness home"
       underline="none"
       sx={{
         display: 'inline-flex',
@@ -39,13 +39,15 @@ export function Brand({ tone = 'dark', compact = false }: { tone?: 'dark' | 'lig
             stroke: (theme) => (tone === 'light' ? theme.palette.app.sidebar.bg : theme.palette.primary.contrastText),
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
-            strokeWidth: 2.5,
+            strokeWidth: 2.25,
           }}
         >
-          <path d="M5 13.5 9.2 18 19 6" />
+          <circle cx="12" cy="12.5" r="7.5" />
+          <path d="M12 3v2.5" />
+          <path d="m8.75 12.75 2.5 2.5 4.5-5.5" />
         </Box>
       </Box>
-      {!compact && <span>ticknest</span>}
+      {!compact && <span>tickness</span>}
     </Link>
   )
 }

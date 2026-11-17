@@ -265,7 +265,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
               </p>
             ) : (
               <p>
-                {isSignUp ? t('auth.haveAccount') : t('auth.newToTicknest')}{' '}
+                {isSignUp ? t('auth.haveAccount') : t('auth.newToTickness')}{' '}
                 <Button
                   size="small"
                   onClick={() => {

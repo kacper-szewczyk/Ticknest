@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Ticknest is released continuously from `main`. Security fixes go into the next release, so only the [latest release](https://github.com/kacper-szewczyk/Ticknest/releases/latest) is supported. Update your deployment to it before reporting a problem.
+Tickness is released continuously from `main`. Security fixes go into the next release, so only the [latest release](https://github.com/kacper-szewczyk/Ticknest/releases/latest) is supported. Update your deployment to it before reporting a problem.
 
 ## Reporting a vulnerability
 
@@ -18,7 +18,7 @@ Do not test against other people's deployments, and do not access, change or del
 
 ## What to expect
 
-Ticknest is maintained by one person in their spare time, so responses are best effort. You should hear back within a week. Once a fix is released, the advisory is published with credit to you, unless you would rather stay anonymous.
+Tickness is maintained by one person in their spare time, so responses are best effort. You should hear back within a week. Once a fix is released, the advisory is published with credit to you, unless you would rather stay anonymous.
 
 ## Scope
 

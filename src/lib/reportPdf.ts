@@ -55,7 +55,7 @@ export type ReportPdfModel = {
 }
 
 export function reportPdfFileName(filters: Pick<ReportFilters, 'startDay' | 'endDay'>) {
-  return `ticknest-report-${filters.startDay}-to-${filters.endDay}.pdf`
+  return `tickness-report-${filters.startDay}-to-${filters.endDay}.pdf`
 }
 
 /** Names the active filters for the PDF header. Never includes raw IDs. */
@@ -153,7 +153,7 @@ export function buildReportPdfModel(input: ReportPdfInput): ReportPdfModel {
   ]
   return {
     fileName: reportPdfFileName(input.filters),
-    title: input.workspaceName.trim() || 'Ticknest',
+    title: input.workspaceName.trim() || 'Tickness',
     subtitle: t('reports.pdf.subtitle', { start: input.filters.startDay, end: input.filters.endDay }),
     details: [
       t('reports.pdf.timeZone', { timeZone: input.timeZone }),

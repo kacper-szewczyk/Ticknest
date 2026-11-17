@@ -2,7 +2,7 @@ blank_issues_enabled: true
 contact_links:
   - name: Ask a question
     url: https://github.com/kacper-szewczyk/Ticknest/discussions/categories/q-a
-    about: Questions about setting up, deploying or using Ticknest.
+    about: Questions about setting up, deploying or using Tickness.
   - name: Report a security vulnerability
     url: https://github.com/kacper-szewczyk/Ticknest/security/advisories/new
     about: Report it privately. Please do not open a public issue.

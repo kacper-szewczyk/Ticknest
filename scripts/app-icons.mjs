@@ -1,4 +1,4 @@
-// Renders the home-screen icons in public/ from public/favicon.svg (the check mark on the dark green square):
+// Renders the home-screen icons in public/ from public/favicon.svg (a clock dial whose hands form a check mark, on the dark green square):
 // - apple-touch-icon.png (180×180) and icon-maskable-512.png: full-bleed squares with the mark inside the safe zone,
 //   because iOS and Android's maskable icons apply their own rounded mask;
 // - icon-192.png and icon-512.png: the rounded favicon as-is, for launchers that show the icon unmasked.

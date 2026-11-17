@@ -20,7 +20,7 @@ export type CaptionLanguage = 'en' | 'pl'
 
 export const CAPTIONS: Record<CaptionLanguage, Record<CaptionStep, string>> = {
   en: {
-    intro: 'Ticknest: free, open-source time tracking for small teams.',
+    intro: 'Tickness: free, open-source time tracking for small teams.',
     startTimer: 'Say what you are working on, pick a project, and start the timer.',
     running: 'The timer keeps running across tabs and devices.',
     stopTimer: 'Stop it when you are done. The entry lands in your timesheet.',
@@ -32,7 +32,7 @@ export const CAPTIONS: Record<CaptionLanguage, Record<CaptionStep, string>> = {
     outro: 'Try the public demo or host it yourself. Link in the description.',
   },
   pl: {
-    intro: 'Ticknest: darmowa, otwarta aplikacja do mierzenia czasu dla małych zespołów.',
+    intro: 'Tickness: darmowa, otwarta aplikacja do mierzenia czasu dla małych zespołów.',
     startTimer: 'Wpisz, nad czym pracujesz, wybierz projekt i uruchom stoper.',
     running: 'Stoper działa dalej w innych kartach i na innych urządzeniach.',
     stopTimer: 'Zatrzymaj go po skończonej pracy. Wpis trafia do karty czasu.',

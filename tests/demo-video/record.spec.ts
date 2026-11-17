@@ -223,7 +223,7 @@ test.beforeEach(reseedEmulators)
 for (const captioned of [false, true]) {
   test(`${language} demo video, ${captioned ? 'with captions' : 'clean'}`, async ({ browser }) => {
     const catalog = await loadCatalog(language)
-    const videoDir = await mkdtemp(path.join(tmpdir(), 'ticknest-demo-video-'))
+    const videoDir = await mkdtemp(path.join(tmpdir(), 'tickness-demo-video-'))
     try {
       const context = await newContext(browser, language, {
         viewport: VIEWPORT,
@@ -238,7 +238,7 @@ for (const captioned of [false, true]) {
       await context.close()
       if (!video) throw new Error('The browser did not record a video.')
 
-      const name = `ticknest-demo-${language}${captioned ? '-captioned' : ''}`
+      const name = `tickness-demo-${language}${captioned ? '-captioned' : ''}`
       // The .srt files are timed against the clean take, the one uploaded with separate captions.
       if (!captioned) {
         for (const captionLanguage of ['en', 'pl'] as const) {

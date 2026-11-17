@@ -11,7 +11,7 @@ import { PALETTES } from '../../src/palettes'
 import { createAppTheme } from '../../src/theme'
 import { TimerBar } from '../../src/TimerBar'
 
-const DEFAULT_TITLE = 'Ticknest — time tracking, on your terms'
+const DEFAULT_TITLE = 'Tickness — time tracking, on your terms'
 
 let entries: TimeEntry[]
 let emitEntries: (entries: TimeEntry[]) => void = () => {}
@@ -57,21 +57,21 @@ function renderBar() {
 describe('runningTimerTitle', () => {
   it('shows the elapsed time and the description', () => {
     expect(runningTimerTitle(2533, { description: 'Homepage wireframe review', projectName: 'Website' })).toBe(
-      '0:42:13 · Homepage wireframe review — Ticknest',
+      '0:42:13 · Homepage wireframe review — Tickness',
     )
   })
 
   it('falls back to the project name when there is no description', () => {
-    expect(runningTimerTitle(3600, { description: '  ', projectName: 'Website' })).toBe('1:00:00 · Website — Ticknest')
+    expect(runningTimerTitle(3600, { description: '  ', projectName: 'Website' })).toBe('1:00:00 · Website — Tickness')
   })
 
   it('shows just the time when there is no description or project', () => {
-    expect(runningTimerTitle(5, { description: '', projectName: null })).toBe('0:00:05 — Ticknest')
+    expect(runningTimerTitle(5, { description: '', projectName: null })).toBe('0:00:05 — Tickness')
   })
 
   it('does not wrap hours past a day or show negative time', () => {
-    expect(runningTimerTitle(100 * 3600 + 61, { description: '' })).toBe('100:01:01 — Ticknest')
-    expect(runningTimerTitle(-3, { description: '' })).toBe('0:00:00 — Ticknest')
+    expect(runningTimerTitle(100 * 3600 + 61, { description: '' })).toBe('100:01:01 — Tickness')
+    expect(runningTimerTitle(-3, { description: '' })).toBe('0:00:00 — Tickness')
   })
 })
 
@@ -96,26 +96,26 @@ describe('TimerBar tab title', () => {
   it('shows the running timer and keeps it up to date every second', () => {
     entries = [entry({ description: 'Homepage wireframe review' })]
     renderBar()
-    expect(document.title).toBe('0:42:13 · Homepage wireframe review — Ticknest')
+    expect(document.title).toBe('0:42:13 · Homepage wireframe review — Tickness')
     act(() => void vi.advanceTimersByTime(1000))
-    expect(document.title).toBe('0:42:14 · Homepage wireframe review — Ticknest')
+    expect(document.title).toBe('0:42:14 · Homepage wireframe review — Tickness')
     act(() => void vi.advanceTimersByTime(2000))
-    expect(document.title).toBe('0:42:16 · Homepage wireframe review — Ticknest')
+    expect(document.title).toBe('0:42:16 · Homepage wireframe review — Tickness')
   })
 
   it('follows a changed description and falls back to the project name', () => {
     entries = [entry({ description: 'Before' })]
     renderBar()
     act(() => emitEntries([entry({ description: 'After' })]))
-    expect(document.title).toBe('0:42:13 · After — Ticknest')
+    expect(document.title).toBe('0:42:13 · After — Tickness')
     act(() => emitEntries([entry({ description: '', projectName: 'Website' })]))
-    expect(document.title).toBe('0:42:13 · Website — Ticknest')
+    expect(document.title).toBe('0:42:13 · Website — Tickness')
   })
 
   it('starts showing the timer when one is started', () => {
     renderBar()
     act(() => emitEntries([entry({ description: 'New work', startAt: Timestamp.fromMillis(Date.now()) })]))
-    expect(document.title).toBe('0:00:00 · New work — Ticknest')
+    expect(document.title).toBe('0:00:00 · New work — Tickness')
   })
 
   it('restores the default title when the timer stops', () => {

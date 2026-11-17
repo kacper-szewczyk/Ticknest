@@ -1,6 +1,6 @@
 # Coding Standards
 
-These standards apply to all application code and contributions to Ticknest. They describe the expected practices for the Firebase-hosted, open-source time tracker in [SPEC.md](./SPEC.md). If a future framework or tool choice requires an adjustment, update this document with the implementation rather than silently diverging from it.
+These standards apply to all application code and contributions to Tickness. They describe the expected practices for the Firebase-hosted, open-source time tracker in [SPEC.md](./SPEC.md). If a future framework or tool choice requires an adjustment, update this document with the implementation rather than silently diverging from it.
 
 ## 1. General principles
 

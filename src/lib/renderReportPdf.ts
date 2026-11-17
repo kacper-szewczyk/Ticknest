@@ -61,7 +61,7 @@ const tableStyles = {
 export async function renderReportPdf(model: ReportPdfModel): Promise<Blob> {
   const doc: DocWithTable = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
   await registerFonts(doc)
-  doc.setProperties({ title: `${model.title} – ${model.subtitle}`, creator: 'Ticknest' })
+  doc.setProperties({ title: `${model.title} – ${model.subtitle}`, creator: 'Tickness' })
 
   doc.setFont(FONT, 'bold')
   doc.setFontSize(18)

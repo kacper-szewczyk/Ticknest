@@ -59,7 +59,7 @@ test('an owner previews and imports a Clockify export, and re-importing it adds 
     await panel.getByRole('radio', { name: 'Import them as my entries' }).check()
     await panel.getByRole('button', { name: 'Import 3 entries' }).click()
     await expect(panel.getByText('0 entries imported, 00:00:00 in total.')).toBeVisible()
-    await expect(panel.getByText('Line 2: it overlaps an entry already in Ticknest.')).toBeVisible()
+    await expect(panel.getByText('Line 2: it overlaps an entry already in Tickness.')).toBeVisible()
   })
 
   expect(consoleErrors).toEqual([])

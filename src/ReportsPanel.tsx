@@ -229,7 +229,7 @@ export function ReportsPanel({
     let fileParts: BlobPart[] = []
     let bufferedRows = 0
     try {
-      const suggestedName = `ticknest-report-${filters.startDay}-to-${filters.endDay}.csv`
+      const suggestedName = `tickness-report-${filters.startDay}-to-${filters.endDay}.csv`
       const picker = (window as unknown as { showSaveFilePicker?: SaveFilePicker }).showSaveFilePicker
       if (picker) {
         const handle = await picker.call(window, {
