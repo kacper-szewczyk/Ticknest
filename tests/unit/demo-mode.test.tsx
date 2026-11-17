@@ -26,7 +26,7 @@ function render(element: ReactElement): string {
 function renderShell(): string {
   return render(
     <AppShell
-      brand="Ticknest"
+      brand="Tickness"
       items={[{ value: 'home', label: 'Home', icon: null, section: 'Track' }]}
       active="home"
       onNavigate={() => {}}
@@ -152,7 +152,7 @@ describe('DemoAccountsPanel', () => {
     vi.stubEnv('VITE_DEMO_MODE', 'true')
     const html = render(<DemoAccountsPanel onUse={() => {}} />)
     expect(html).toContain(`href="${DEMO_LANDING_URL}/?utm_source=demo&amp;utm_medium=sign-in"`)
-    expect(html).toContain('What is Ticknest?')
+    expect(html).toContain('What is Tickness?')
     expect(demoLandingUrl('pl')).toBe(`${DEMO_LANDING_URL}/pl/?utm_source=demo&utm_medium=sign-in`)
     expect(demoLandingUrl('es')).toBe(`${DEMO_LANDING_URL}/?utm_source=demo&utm_medium=sign-in`)
   })
@@ -191,7 +191,7 @@ describe('DemoPausedPage', () => {
   it('explains the pause and links to the source and support pages', () => {
     vi.stubEnv('VITE_DEMO_MODE', 'true')
     const html = render(<DemoPausedPage />)
-    expect(html).toContain('The Ticknest demo is paused')
+    expect(html).toContain('The Tickness demo is paused')
     expect(html).toContain(`href="${DEMO_SOURCE_URL}"`)
     expect(html).toContain(`href="${DEMO_SUPPORT_URL}"`)
   })

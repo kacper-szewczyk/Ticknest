@@ -1,6 +1,6 @@
-# Contributing to Ticknest
+# Contributing to Tickness
 
-Thanks for helping improve Ticknest. Keep changes focused and follow the [coding standards](CODING_STANDARDS.md).
+Thanks for helping improve Tickness. Keep changes focused and follow the [coding standards](CODING_STANDARDS.md).
 
 ## Set up the project
 
@@ -55,7 +55,7 @@ The launch demo video is recorded from the demo data too, against the same emula
 npm run demo-video
 ```
 
-It runs `tests/demo-video` with `playwright.demo-video.config.ts`. It signs in as the demo owner and records the same 60–90 second walkthrough twice at 1920×1080: starting and stopping a timer, the Timesheet, Reports, a PDF export and inviting a teammate. Into `demo-video/` (gitignored) it writes a clean `ticknest-demo-en.mp4`, English and Polish `.srt` caption files timed against it, and `ticknest-demo-en-captioned.mp4` with the English captions drawn on screen. The caption text is in `tests/demo-video/captions.ts`, one line per step; the timings follow the steps, so you can reword a caption without retiming anything. Set `DEMO_VIDEO_LANGUAGE=pl` to record the Polish UI instead. The MP4 files need `ffmpeg` (`brew install ffmpeg`); without it they are skipped with a warning. Watch the result before uploading it; [docs/launch](docs/launch/README.md#demo-video) says where each file goes.
+It runs `tests/demo-video` with `playwright.demo-video.config.ts`. It signs in as the demo owner and records the same 60–90 second walkthrough twice at 1920×1080: starting and stopping a timer, the Timesheet, Reports, a PDF export and inviting a teammate. Into `demo-video/` (gitignored) it writes a clean `tickness-demo-en.mp4`, English and Polish `.srt` caption files timed against it, and `tickness-demo-en-captioned.mp4` with the English captions drawn on screen. The caption text is in `tests/demo-video/captions.ts`, one line per step; the timings follow the steps, so you can reword a caption without retiming anything. Set `DEMO_VIDEO_LANGUAGE=pl` to record the Polish UI instead. The MP4 files need `ffmpeg` (`brew install ffmpeg`); without it they are skipped with a warning. Watch the result before uploading it; [docs/launch](docs/launch/README.md#demo-video) says where each file goes.
 
 ### Cost measurement
 

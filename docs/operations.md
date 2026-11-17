@@ -1,10 +1,10 @@
 # Self-hosting and operations
 
-Ticknest is software you deploy and operate in your own Firebase project. The repository maintainers do not receive application data through a Ticknest-operated backend. When you self-host, your Firebase project, Google Cloud configuration, domains, and notices to your users are your responsibility.
+Tickness is software you deploy and operate in your own Firebase project. The repository maintainers do not receive application data through a Tickness-operated backend. When you self-host, your Firebase project, Google Cloud configuration, domains, and notices to your users are your responsibility.
 
 ## Guided setup
 
-**Before you start:** Ticknest needs the Firebase **Blaze (pay-as-you-go) plan** with a Cloud Billing account, because Cloud Functions do not deploy on the free Spark plan. A small team usually stays within the no-cost quotas, but usage beyond them is billed (see [Costs](#costs)).
+**Before you start:** Tickness needs the Firebase **Blaze (pay-as-you-go) plan** with a Cloud Billing account, because Cloud Functions do not deploy on the free Spark plan. A small team usually stays within the no-cost quotas, but usage beyond them is billed (see [Costs](#costs)).
 
 You need Node.js 22.12+, 24 or 26 and a Google account. The [gcloud CLI](https://cloud.google.com/sdk/docs/install) is optional; with it, the script can link the billing account for you. From a clone of the repository, run:
 
@@ -318,7 +318,7 @@ Run `npm run test:emulators` to build the functions, start the Auth, Firestore, 
 
 The Firebase project operator is responsible for the data stored in that project, end-user notices, access, retention, and applicable legal obligations. Firebase and Google Cloud process data under the operator's project and their own service terms.
 
-Ticknest stores or processes the following application data in Firebase:
+Tickness stores or processes the following application data in Firebase:
 
 - Firebase Authentication account identifiers, email addresses, verification state, and sign-in provider data.
 - User profile fields such as display name, email, and timezone.
@@ -334,7 +334,7 @@ Firestore rules deny access by default and scope workspace data to active member
 
 The in-app account deletion flow first reauthenticates the user with their linked provider — a Google popup for accounts linked to Google, otherwise their email and password — and only then deletes the signed-in Firebase Authentication identity and its `/users/{uid}` profile document. If reauthentication fails or is cancelled, nothing is deleted. Deleting that identity does not delete workspace documents, memberships, time entries, invitations, or other shared data. Removing a member in the app does not erase their historical time entries.
 
-Before removing a user or workspace's data, export a backup. To remove all data in a self-hosted project, an owner can delete the Firebase/Google Cloud project from Firebase project settings. This affects every app and resource in that project, not just Ticknest. Review the project and backup first; follow the current [Firebase project deletion guidance](https://firebase.google.com/docs/projects/learn-more). A shared Cloud Billing account can serve multiple projects, so do not close it unless you intend to affect them all.
+Before removing a user or workspace's data, export a backup. To remove all data in a self-hosted project, an owner can delete the Firebase/Google Cloud project from Firebase project settings. This affects every app and resource in that project, not just Tickness. Review the project and backup first; follow the current [Firebase project deletion guidance](https://firebase.google.com/docs/projects/learn-more). A shared Cloud Billing account can serve multiple projects, so do not close it unless you intend to affect them all.
 
 ## Costs
 
@@ -392,8 +392,8 @@ Function compute time was not measured. Each run is short, so a few thousand run
 A budget sends you an email when spending reaches a threshold. It does not stop spending or turn anything off.
 
 1. Open [Billing → Budgets & alerts](https://console.cloud.google.com/billing/budgets) in the Google Cloud console and choose the billing account linked to your Firebase project.
-2. Select **Create budget** and name it, for example `Ticknest`.
-3. Under **Scope**, choose your Ticknest project (or leave all projects selected to watch the whole billing account).
+2. Select **Create budget** and name it, for example `Tickness`.
+3. Under **Scope**, choose your Tickness project (or leave all projects selected to watch the whole billing account).
 4. Under **Amount**, choose **Specified amount** and enter a small monthly figure, for example $5.
 5. Under **Actions**, keep the alerts at 50%, 90% and 100% of actual spend and add one at 100% of forecasted spend. Leave **Email alerts to billing admins and users** on.
 6. Select **Finish**.

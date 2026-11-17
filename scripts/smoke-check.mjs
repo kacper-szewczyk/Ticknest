@@ -87,5 +87,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.error(`Smoke check failed for ${siteUrl}: ${problems.join('; ')}`)
     process.exit(1)
   }
-  console.log(`Smoke check passed: ${siteUrl} serves Ticknest v${expectedVersion}.`)
+  console.log(`Smoke check passed: ${siteUrl} serves Tickness v${expectedVersion}.`)
 }

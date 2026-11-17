@@ -143,7 +143,7 @@ describe('readClockifyRows', () => {
     })
   })
 
-  it('empties Clockify’s placeholder description and shortens text Ticknest cannot store', () => {
+  it('empties Clockify’s placeholder description and shortens text Tickness cannot store', () => {
     const { rows } = read([
       `${'P'.repeat(130)},,(Without Description),,Ada,,ada@example.com,,No,23/06/2026,09:00,23/06/2026,10:00,,`,
     ])

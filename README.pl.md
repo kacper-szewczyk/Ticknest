@@ -1,4 +1,4 @@
-# Ticknest
+# Tickness
 
 [English](README.md) | [Español](README.es.md) | **Polski**
 
@@ -6,7 +6,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/pl/timesheet-dark.png">
-  <img src="docs/screenshots/pl/timesheet-light.png" alt="Karta czasu w Ticknest z włączonym licznikiem i wpisami z tygodnia pogrupowanymi według dni">
+  <img src="docs/screenshots/pl/timesheet-light.png" alt="Karta czasu w Tickness z włączonym licznikiem i wpisami z tygodnia pogrupowanymi według dni">
 </picture>
 
 | Mierzenie czasu                                                                            | Raporty i eksport                                                                      | Zarządzanie zespołem                                                                                        |
@@ -18,7 +18,7 @@ Wszystkie zrzuty ekranu pokazują dane demo i są generowane poleceniem `npm run
 
 **[Wypróbuj demo](https://ticknest-pi.vercel.app)**: zaloguj się jednym z przykładowych kont pokazanych na ekranie logowania. Dane demo są resetowane co 24 godziny. Interfejs jest dostępny po polsku.
 
-Pierwszy raz tutaj? **[Strona projektu](https://ticknest-landing.vercel.app/pl/?utm_source=github&utm_medium=readme)** w skrócie pokazuje, co potrafi Ticknest i jak wypada na tle innych trackerów czasu.
+Pierwszy raz tutaj? **[Strona projektu](https://ticknest-landing.vercel.app/pl/?utm_source=github&utm_medium=readme)** w skrócie pokazuje, co potrafi Tickness i jak wypada na tle innych trackerów czasu.
 
 Pełna dokumentacja jest po angielsku: zobacz [README](README.md) i [przewodnik wdrożenia](docs/operations.md).
 
@@ -33,7 +33,7 @@ Pełna dokumentacja jest po angielsku: zobacz [README](README.md) i [przewodnik 
 - **Import z Clockify**: przenieś historię z pliku CSV raportu szczegółowego, z podglądem przed zapisem.
 - **Interfejs po angielsku, hiszpańsku i polsku**, jasne i ciemne palety kolorów, działa na telefonach.
 
-## Dlaczego Ticknest
+## Dlaczego Tickness
 
 - **Dane należą do Ciebie.** Wszystko jest w Twoim projekcie Firebase; autorzy nie prowadzą żadnego serwera i nie widzą Twoich wpisów.
 - **Bez opłat za użytkownika.** Płacisz tylko za zużycie Firebase.
@@ -59,4 +59,4 @@ Pytania, pomysły i własne wdrożenia możesz zgłaszać w [GitHub Discussions]
 
 ## Licencja
 
-Ticknest jest udostępniany na [licencji MIT](LICENSE).
+Tickness jest udostępniany na [licencji MIT](LICENSE).

@@ -8,20 +8,20 @@ Use these unless a platform needs something shorter or longer. Swap the link for
 
 **Short (about 160 characters), EN:**
 
-> Building Ticknest, open-source time tracking for small teams that runs in your own Firebase project. https://ticknest-landing.vercel.app/?utm_source=x&utm_medium=profile
+> Building Tickness, open-source time tracking for small teams that runs in your own Firebase project. https://ticknest-landing.vercel.app/?utm_source=x&utm_medium=profile
 
 **Short, PL:**
 
-> Tworzę Ticknest: otwartoźródłowy tracker czasu pracy dla małych zespołów, działający w Twoim własnym projekcie Firebase. https://ticknest-landing.vercel.app/pl/?utm_source=wykop&utm_medium=profile
+> Tworzę Tickness: otwartoźródłowy tracker czasu pracy dla małych zespołów, działający w Twoim własnym projekcie Firebase. https://ticknest-landing.vercel.app/pl/?utm_source=wykop&utm_medium=profile
 
 **Long, EN:**
 
-> Software developer. I'm building Ticknest, an open-source (MIT) time tracker for small teams: timer, timesheet, reports with CSV and PDF export, team roles and budgets. It runs in a Firebase project you own, with no seat fees and no monitoring.
+> Software developer. I'm building Tickness, an open-source (MIT) time tracker for small teams: timer, timesheet, reports with CSV and PDF export, team roles and budgets. It runs in a Firebase project you own, with no seat fees and no monitoring.
 > Repo: https://github.com/kacper-szewczyk/Ticknest · Demo: https://ticknest-pi.vercel.app
 
 **Long, PL:**
 
-> Programista. Tworzę Ticknest, otwartoźródłowy (MIT) tracker czasu pracy dla małych zespołów: timer, karta czasu, raporty z eksportem do CSV i PDF, role w zespole i budżety. Działa w Twoim własnym projekcie Firebase, bez opłat za użytkownika i bez monitorowania.
+> Programista. Tworzę Tickness, otwartoźródłowy (MIT) tracker czasu pracy dla małych zespołów: timer, karta czasu, raporty z eksportem do CSV i PDF, role w zespole i budżety. Działa w Twoim własnym projekcie Firebase, bez opłat za użytkownika i bez monitorowania.
 > Repo: https://github.com/kacper-szewczyk/Ticknest · Demo: https://ticknest-pi.vercel.app
 
 ## Channels
@@ -29,7 +29,7 @@ Use these unless a platform needs something shorter or longer. Swap the link for
 ### Hacker News
 
 - [ ] Account exists, with the short EN bio in "about".
-- [ ] Some comment history before T-0: a few useful comments a week from T-14, on topics you know. No links to Ticknest.
+- [ ] Some comment history before T-0: a few useful comments a week from T-14, on topics you know. No links to Tickness.
 - [ ] Read the [Show HN guidelines](https://news.ycombinator.com/showhn.html).
 
 ### Reddit
@@ -46,12 +46,12 @@ Use these unless a platform needs something shorter or longer. Swap the link for
 ### Product Hunt
 
 - [ ] Maker profile with the long EN bio and a photo.
-- [ ] Upcoming launch page for Ticknest: name, tagline, thumbnail, gallery from `docs/screenshots/en`, the timer GIF.
+- [ ] Upcoming launch page for Tickness: name, tagline, thumbnail, gallery from `docs/screenshots/en`, the timer GIF.
 - [ ] Supporters list (people who said they'd like to hear about the launch). Message them on T-7 and on T-0 with the link to the launch page, asking for feedback, not for votes.
 
 ### LinkedIn
 
-- [ ] Profile headline and "About" updated with the long EN bio. Add Ticknest under "Projects" or "Featured" with the landing page link.
+- [ ] Profile headline and "About" updated with the long EN bio. Add Tickness under "Projects" or "Featured" with the landing page link.
 - [ ] EN and PL launch posts drafted (see the checklist). Post them as two separate posts, or as one with the PL version below the EN one.
 
 ### X, Bluesky and Mastodon
@@ -83,4 +83,4 @@ Personal account on each, used for build-in-public posts.
 ### Indie Hackers
 
 - [ ] Profile with the long EN bio.
-- [ ] Ticknest added as a product, with the landing page and the repository.
+- [ ] Tickness added as a product, with the landing page and the repository.

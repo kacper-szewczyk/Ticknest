@@ -44,7 +44,7 @@ describe('isValidProjectId', () => {
     expect(isValidProjectId('a'.repeat(31))).toBe(false)
     expect(isValidProjectId('1ticknest')).toBe(false)
     expect(isValidProjectId('ticknest-')).toBe(false)
-    expect(isValidProjectId('Ticknest')).toBe(false)
+    expect(isValidProjectId('Tickness')).toBe(false)
     expect(isValidProjectId('tick_nest')).toBe(false)
   })
 })
