@@ -5,7 +5,7 @@ import Snackbar from '@mui/material/Snackbar'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
-import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from './i18n'
 import { autoStopNoticeEntry, markAutoStopNoticeSeen, readSeenAutoStopNotice } from './lib/autoStopNotice'
 import type { Catalog } from './lib/catalog'
@@ -34,6 +34,13 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   const [now, setNow] = useState(() => Date.now())
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  // A short status message for screen readers ("Timer started"); never the ticking time.
+  const [announcement, setAnnouncement] = useState('')
+  // Where focus goes once the layout switches after this bar's own Start or Stop. Changes made elsewhere (another
+  // tab, another device, the midnight auto-stop) leave it null, so they never move focus.
+  const focusAfterSwitch = useRef<'stop' | 'description' | null>(null)
+  const stopButtonRef = useRef<HTMLButtonElement>(null)
+  const descriptionInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(
     () => subscribeToTimeEntries(workspaceId, user.uid, setEntries, (loadError) => setError(readableError(loadError))),
@@ -61,11 +68,15 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
     event.preventDefault()
     setPending(true)
     setError('')
+    // Set before the request: the running layout can render from the local write before the request resolves.
+    focusAfterSwitch.current = 'stop'
     try {
       await startTimer(user, workspaceId, { description: description.trim(), ...work })
       setDescription('')
       setWork(workDetails(null))
+      setAnnouncement(t('timer.started'))
     } catch (requestError) {
+      focusAfterSwitch.current = null
       setError(readableError(requestError))
     } finally {
       setPending(false)
@@ -94,12 +105,16 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
     }
   }
 
-  async function handleStop(entryId: string) {
+  async function handleStop(entryId: string, startedAt: number | null) {
     setPending(true)
     setError('')
+    focusAfterSwitch.current = 'description'
     try {
       await stopTimer(user, workspaceId, entryId)
+      const seconds = startedAt === null ? 0 : Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
+      setAnnouncement(t('timer.stopped', { duration: spokenDuration(seconds, t) }))
     } catch (requestError) {
+      focusAfterSwitch.current = null
       setError(readableError(requestError))
     } finally {
       setPending(false)
@@ -118,10 +133,24 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   }, [tabTitle])
   useEffect(() => () => setTimerTitle(null), [])
 
+  // Move focus into the new layout after a Start or Stop from this bar, once its controls are enabled again.
+  const isRunning = runningEntry !== undefined
+  useEffect(() => {
+    if (pending) return
+    const target =
+      focusAfterSwitch.current === 'stop' && isRunning
+        ? stopButtonRef.current
+        : focusAfterSwitch.current === 'description' && !isRunning
+          ? descriptionInputRef.current
+          : null
+    if (!target) return
+    focusAfterSwitch.current = null
+    target.focus()
+  }, [isRunning, pending])
+
   const elapsedText = (
     <Typography
       component="span"
-      aria-label={t('timer.elapsed', { time: formatElapsed(elapsed) })}
       sx={{
         color: runningEntry ? 'primary.main' : 'text.secondary',
         fontVariantNumeric: 'tabular-nums',
@@ -131,6 +160,9 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
         flexShrink: 0,
       }}
     >
+      <Box component="span" sx={visuallyHiddenSx}>
+        {t('timer.elapsedLabel')}{' '}
+      </Box>
       {formatElapsed(elapsed)}
     </Typography>
   )
@@ -138,6 +170,9 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
   return (
     <Box component="section" aria-label={t('timer.region')} sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25 }}>
       {error && <FormMessage severity="error">{error}</FormMessage>}
+      <Box role="status" sx={visuallyHiddenSx}>
+        {announcement}
+      </Box>
       <Snackbar
         open={isAutoStopNoticeOpen}
         onClose={(_event, reason) => reason !== 'clickaway' && setDismissedAutoStopId(autoStoppedEntryId ?? null)}
@@ -189,7 +224,8 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
           <Button
             variant="contained"
             color="error"
-            onClick={() => void handleStop(runningEntry.id)}
+            ref={stopButtonRef}
+            onClick={() => void handleStop(runningEntry.id, runningEntry.startAt?.toMillis() ?? null)}
             disabled={pending}
             sx={{ flexShrink: 0 }}
           >
@@ -216,6 +252,7 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
             size="small"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
+            inputRef={descriptionInputRef}
             placeholder={t('timer.placeholder')}
             slotProps={{ htmlInput: { maxLength: 500, 'aria-label': t('timer.placeholder') } }}
           />
@@ -234,7 +271,8 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
 }
 
 // The running timer's description, edited in place. It saves when the field loses focus or Enter is pressed;
-// Escape puts back the saved description.
+// Escape puts back the saved description. Enter saves without leaving the field, and the field stays focusable
+// while saving, so a failed save leaves the user where they were. The error itself shows above the bar.
 function RunningDescriptionField({
   savedDescription,
   onSave,
@@ -246,22 +284,30 @@ function RunningDescriptionField({
   const [draft, setDraft] = useState(savedDescription)
   const [lastSaved, setLastSaved] = useState(savedDescription)
   const [saving, setSaving] = useState(false)
+  const [failed, setFailed] = useState(false)
+  // The last value this field saved, until the saved description catches up, so a blur after Enter does not save
+  // the same text twice.
+  const [justSaved, setJustSaved] = useState<string | null>(null)
 
   // Follow changes saved elsewhere (another tab or device) unless the user has unsaved edits.
   if (savedDescription !== lastSaved) {
     setLastSaved(savedDescription)
+    setJustSaved(null)
     if (draft.trim() === lastSaved.trim()) setDraft(savedDescription)
   }
 
   async function save() {
     const nextDescription = draft.trim()
     setDraft(nextDescription)
-    if (nextDescription === savedDescription.trim() || saving) return
+    if (nextDescription === (justSaved ?? savedDescription.trim()) || saving) return
     setSaving(true)
+    setFailed(false)
     try {
       await onSave(nextDescription)
+      setJustSaved(nextDescription)
     } catch {
-      setDraft(savedDescription)
+      setDraft(justSaved ?? savedDescription)
+      setFailed(true)
     } finally {
       setSaving(false)
     }
@@ -271,25 +317,51 @@ function RunningDescriptionField({
     <TextField
       size="small"
       value={draft}
-      onChange={(event) => setDraft(event.target.value)}
+      onChange={(event) => {
+        if (saving) return
+        setDraft(event.target.value)
+        setFailed(false)
+      }}
       onBlur={() => void save()}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
           event.preventDefault()
-          event.currentTarget.querySelector('input')?.blur()
+          void save()
         } else if (event.key === 'Escape') {
-          setDraft(savedDescription)
+          setDraft(justSaved ?? savedDescription)
+          setFailed(false)
           // Blur after the revert has rendered so the blur handler sees the saved value.
           const input = event.currentTarget.querySelector('input')
           window.setTimeout(() => input?.blur())
         }
       }}
       placeholder={t('common.untitledEntry')}
-      disabled={saving}
       slotProps={{
-        htmlInput: { maxLength: 500, 'aria-label': t('timer.runningDescription') },
+        htmlInput: {
+          maxLength: 500,
+          'aria-label': t('timer.runningDescription'),
+          readOnly: saving,
+          'aria-busy': saving,
+          'aria-invalid': failed,
+        },
       }}
       sx={{ '& .MuiInputBase-input': { fontWeight: 600 } }}
     />
   )
 }
+
+// Hours and minutes for the "timer stopped" announcement, such as "1 h 12 min".
+function spokenDuration(seconds: number, t: ReturnType<typeof useTranslation>['t']): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return hours > 0 ? t('timer.durationHours', { hours, minutes }) : t('timer.durationMinutes', { minutes })
+}
+
+const visuallyHiddenSx = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const
