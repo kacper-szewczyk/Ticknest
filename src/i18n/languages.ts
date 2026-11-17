@@ -1,4 +1,4 @@
-// The languages Ticknest's UI is translated into. English is the source catalog and the fallback.
+// The languages Tickness's UI is translated into. English is the source catalog and the fallback.
 // Kept free of i18next so it can be unit-tested and imported by data-access code.
 
 export const SUPPORTED_LANGUAGES = ['en', 'es', 'pl'] as const

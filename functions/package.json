@@ -1,5 +1,5 @@
 {
-  "name": "ticknest-functions",
+  "name": "tickness-functions",
   "private": true,
   "main": "lib/index.js",
   "type": "commonjs",

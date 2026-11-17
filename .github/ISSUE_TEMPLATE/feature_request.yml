@@ -17,7 +17,7 @@ body:
     id: proposal
     attributes:
       label: Proposal
-      description: How you would like Ticknest to handle it.
+      description: How you would like Tickness to handle it.
     validations:
       required: true
   - type: textarea

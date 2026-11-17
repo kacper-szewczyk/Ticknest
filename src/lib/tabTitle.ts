@@ -1,6 +1,6 @@
 // The browser tab title while a timer runs, so the elapsed time is visible when the tab is in the background.
 
-const APP_NAME = 'Ticknest'
+const APP_NAME = 'Tickness'
 
 /** Elapsed time for the tab title: hours without padding, for example `0:42:13`. */
 function formatTabElapsed(seconds: number): string {
@@ -13,7 +13,7 @@ function formatTabElapsed(seconds: number): string {
 }
 
 /**
- * The tab title for a running timer: `0:42:13 · Homepage wireframe review — Ticknest`. The label is the entry's
+ * The tab title for a running timer: `0:42:13 · Homepage wireframe review — Tickness`. The label is the entry's
  * description, or its project name when there is none; with neither, the title is just the time and the app name.
  */
 export function runningTimerTitle(

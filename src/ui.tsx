@@ -153,7 +153,7 @@ export function EmptyText({ children }: { children: ReactNode }) {
 
 const stopwatchSweep = keyframes`to { transform: rotate(360deg); }`
 
-// Ticknest's loading indicator: a stopwatch whose hand sweeps the dial (frozen by the global reduced-motion rule).
+// Tickness's loading indicator: a stopwatch whose hand sweeps the dial (frozen by the global reduced-motion rule).
 export function StopwatchLoader({ size = 28 }: { size?: number }) {
   return (
     <Box

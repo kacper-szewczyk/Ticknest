@@ -48,21 +48,21 @@ If a subreddit's rules allow only one self-promotion post, or need a specific da
 
 ## Product Hunt
 
-**Name:** Ticknest
+**Name:** Tickness
 
 **Tagline (60 characters max):** Open-source time tracking for teams, in your own Firebase
 
 **Description:**
 
-> Ticknest is an open-source time tracker for small teams. It covers the core of a hosted tracker (timer, timesheet, clients, projects and tasks, reports with CSV and PDF export, team roles and optional budgets), but it runs in a Firebase project you own.
+> Tickness is an open-source time tracker for small teams. It covers the core of a hosted tracker (timer, timesheet, clients, projects and tasks, reports with CSV and PDF export, team roles and optional budgets), but it runs in a Firebase project you own.
 >
 > No seat fees, no screenshots or activity monitoring, and no analytics in the app. For a team of 5 to 25 people, the measured usage usually stays within Firebase's no-cost quotas. MIT licensed. Interface in English, Spanish and Polish.
 
 **Maker's first comment:**
 
-> Hi everyone, I'm Kacper, and I built Ticknest.
+> Hi everyone, I'm Kacper, and I built Tickness.
 >
-> I wanted a time tracker for a small team where the data lives in our own cloud project and the bill doesn't grow with every person we add. Ticknest is the result: a React app on top of Firebase (Auth, Firestore and Cloud Functions), which you deploy to Vercel or Firebase Hosting with a step-by-step guide in the README.
+> I wanted a time tracker for a small team where the data lives in our own cloud project and the bill doesn't grow with every person we add. Tickness is the result: a React app on top of Firebase (Auth, Firestore and Cloud Functions), which you deploy to Vercel or Firebase Hosting with a step-by-step guide in the README.
 >
 > What it doesn't do yet: integrations, a public API, invoicing and a native mobile app.
 >
@@ -72,13 +72,13 @@ If a subreddit's rules allow only one self-promotion post, or need a specific da
 
 ## Hacker News
 
-**Title:** Show HN: Ticknest – open-source time tracker for small teams, on your own Firebase
+**Title:** Show HN: Tickness – open-source time tracker for small teams, on your own Firebase
 
 **URL:** https://github.com/kacper-szewczyk/Ticknest
 
 **First comment (post it right after submitting):**
 
-> Hi HN, I built Ticknest, a time tracker for small teams that runs in a Firebase project you own.
+> Hi HN, I built Tickness, a time tracker for small teams that runs in a Firebase project you own.
 >
 > Why: hosted trackers charge per seat and keep your team's data on their servers. I wanted the core features (timer, timesheet, reports with CSV/PDF export, roles, budgets) with the data in my own project and no per-person pricing.
 >
@@ -98,9 +98,9 @@ Use the flair each subreddit asks for and add any disclosure its rules require. 
 
 ### r/selfhosted
 
-**Title:** I made Ticknest, an open-source time tracker for small teams that runs in your own Firebase project
+**Title:** I made Tickness, an open-source time tracker for small teams that runs in your own Firebase project
 
-> Hi r/selfhosted, I'm the developer of Ticknest.
+> Hi r/selfhosted, I'm the developer of Tickness.
 >
 > Honest note first: it isn't self-hosted in the "runs on my box" sense. It runs in a Firebase project you own (Auth, Firestore, Cloud Functions), with the web app on Vercel or Firebase Hosting. So you own the data and the bill, but Google runs the servers. You can run all of it locally against the Firebase emulators.
 >
@@ -113,9 +113,9 @@ Use the flair each subreddit asks for and add any disclosure its rules require. 
 
 ### r/opensource
 
-**Title:** Ticknest: an MIT-licensed time tracker for small teams, built on Firebase
+**Title:** Tickness: an MIT-licensed time tracker for small teams, built on Firebase
 
-> I've just released Ticknest, an open-source alternative to hosted time trackers for small teams. It runs in a Firebase project you own, so there's no seat fee and no third party holding your data.
+> I've just released Tickness, an open-source alternative to hosted time trackers for small teams. It runs in a Firebase project you own, so there's no seat fee and no third party holding your data.
 >
 > Features: timer, timesheet, reports with CSV/PDF export, team roles, budgets, and an interface in English, Spanish and Polish.
 >
@@ -128,7 +128,7 @@ Use the flair each subreddit asks for and add any disclosure its rules require. 
 
 **Title:** I built an open-source time tracker for small teams with no seat fees
 
-> Ticknest started because I didn't want to pay per person to track time for a small team, or keep that data with someone else. It's now a full time tracker: timer, timesheet, reports with CSV/PDF export, roles and budgets, running in your own Firebase project.
+> Tickness started because I didn't want to pay per person to track time for a small team, or keep that data with someone else. It's now a full time tracker: timer, timesheet, reports with CSV/PDF export, roles and budgets, running in your own Firebase project.
 >
 > Stack: React, TypeScript, Firebase (Auth, Firestore, Functions), Vercel. MIT licensed.
 >
@@ -139,11 +139,11 @@ Use the flair each subreddit asks for and add any disclosure its rules require. 
 
 ### r/freelance
 
-Check the rules first: many freelance subreddits don't allow tool promotion at all. If they don't, skip this post and answer questions about time tracking in comments instead, mentioning Ticknest only where it really fits.
+Check the rules first: many freelance subreddits don't allow tool promotion at all. If they don't, skip this post and answer questions about time tracking in comments instead, mentioning Tickness only where it really fits.
 
 **Title:** I made a free, open-source time tracker. What would you need from it as a freelancer?
 
-> I'm the developer of Ticknest, an open-source time tracker built for small teams that also works for one person. It has a timer, a timesheet, clients/projects/tasks and reports you can export to CSV or PDF for a client.
+> I'm the developer of Tickness, an open-source time tracker built for small teams that also works for one person. It has a timer, a timesheet, clients/projects/tasks and reports you can export to CSV or PDF for a client.
 >
 > It runs in your own Firebase project, so the data is yours and, at freelancer scale, it costs nothing to run. It doesn't do invoicing or billable rates yet.
 >
@@ -155,7 +155,7 @@ Check the rules first: many freelance subreddits don't allow tool promotion at a
 
 **Launch post (fits 280 characters):**
 
-> Ticknest is out: an open-source time tracker for small teams that runs in your own Firebase project.
+> Tickness is out: an open-source time tracker for small teams that runs in your own Firebase project.
 >
 > Timer, timesheet, reports with CSV/PDF, roles, budgets. No seat fees, no monitoring. MIT.
 >
@@ -175,16 +175,16 @@ Attach `docs/screenshots/en/timer.gif`. Pin the post. On Mastodon add `#opensour
 
 - > Working on an open-source time tracker for small teams. The rule I set myself: no screenshots, no activity tracking, no telemetry. It records the time people enter, and that's it.
 - > Measured what a 25-person team would cost on Firebase by replaying a workday against the emulators. About 37% of the free daily Firestore reads. Writing it up next.
-- > Ticknest now has a team time-off calendar, and budget targets drop on approved leave. Small thing, but it's what made the budgets feel fair.
+- > Tickness now has a team time-off calendar, and budget targets drop on approved leave. Small thing, but it's what made the budgets feel fair.
 - > Added Polish and Spanish to the interface. Launching soon in English and Polish.
 
 ## LinkedIn
 
 ### EN
 
-> I've just launched Ticknest, an open-source time tracker for small teams.
+> I've just launched Tickness, an open-source time tracker for small teams.
 >
-> Most time trackers charge per person and keep your team's data on their servers. Ticknest runs in a Firebase project you own instead: no seat fees, no screenshots or activity monitoring, and no analytics in the app.
+> Most time trackers charge per person and keep your team's data on their servers. Tickness runs in a Firebase project you own instead: no seat fees, no screenshots or activity monitoring, and no analytics in the app.
 >
 > It covers the core: a timer, a timesheet, clients, projects and tasks, reports with CSV and PDF export, team roles and optional budgets. For a team of 5 to 25 people, the measured usage usually stays within Firebase's free quotas.
 >
@@ -199,9 +199,9 @@ Attach `docs/screenshots/en/timer.gif`. Pin the post. On Mastodon add `#opensour
 
 ### PL
 
-> Właśnie wypuściłem Ticknest, otwartoźródłowy tracker czasu pracy dla małych zespołów.
+> Właśnie wypuściłem Tickness, otwartoźródłowy tracker czasu pracy dla małych zespołów.
 >
-> Większość trackerów pobiera opłatę za każdą osobę i trzyma dane zespołu na swoich serwerach. Ticknest działa w Twoim własnym projekcie Firebase: bez opłat za użytkownika, bez zrzutów ekranu i monitorowania aktywności, bez analityki w aplikacji.
+> Większość trackerów pobiera opłatę za każdą osobę i trzyma dane zespołu na swoich serwerach. Tickness działa w Twoim własnym projekcie Firebase: bez opłat za użytkownika, bez zrzutów ekranu i monitorowania aktywności, bez analityki w aplikacji.
 >
 > Ma to, co najważniejsze: timer, kartę czasu pracy, klientów, projekty i zadania, raporty z eksportem do CSV i PDF, role w zespole i opcjonalne budżety. Dla zespołu od 5 do 25 osób zmierzone zużycie zwykle mieści się w darmowych limitach Firebase.
 >
@@ -223,7 +223,7 @@ Add it as a link to the PL landing page (or the repository, if the rules prefer 
 
 **Description:**
 
-> Ticknest to darmowy, otwartoźródłowy (MIT) tracker czasu: timer, karta czasu, raporty z eksportem do CSV i PDF, role w zespole i budżety. Działa w Twoim własnym projekcie Firebase, więc dane są Twoje i nie płacisz za każdego użytkownika. Interfejs po polsku. Jestem autorem, chętnie odpowiem na pytania.
+> Tickness to darmowy, otwartoźródłowy (MIT) tracker czasu: timer, karta czasu, raporty z eksportem do CSV i PDF, role w zespole i budżety. Działa w Twoim własnym projekcie Firebase, więc dane są Twoje i nie płacisz za każdego użytkownika. Interfejs po polsku. Jestem autorem, chętnie odpowiem na pytania.
 
 **Tags:** #programowanie #opensource #webdev #firebase #javascript
 
@@ -231,11 +231,11 @@ Add it as a link to the PL landing page (or the repository, if the rules prefer 
 
 Post in the forum section for your own projects.
 
-**Title:** Ticknest – otwartoźródłowy tracker czasu pracy (React, TypeScript, Firebase)
+**Title:** Tickness – otwartoźródłowy tracker czasu pracy (React, TypeScript, Firebase)
 
 > Cześć, chciałbym pokazać projekt, nad którym ostatnio pracuję.
 >
-> Ticknest to tracker czasu pracy dla małych zespołów, na licencji MIT. Działa w projekcie Firebase należącym do użytkownika, więc nie ma opłat za osobę ani zewnętrznego serwisu, który trzyma dane.
+> Tickness to tracker czasu pracy dla małych zespołów, na licencji MIT. Działa w projekcie Firebase należącym do użytkownika, więc nie ma opłat za osobę ani zewnętrznego serwisu, który trzyma dane.
 >
 > Funkcje: timer w nagłówku, karta czasu pogrupowana po dniach, klienci, projekty i zadania, raporty z eksportem do CSV i PDF (generowanym w przeglądarce), role Owner/Manager/Member, opcjonalne budżety i kalendarz urlopów. Interfejs po polsku, angielsku i hiszpańsku.
 >
@@ -257,7 +257,7 @@ Write these by T-7 and publish them on T-0. Link each from its channel's posts.
 **Outline:**
 
 1. Why: seat fees, data ownership, no monitoring.
-2. What Ticknest does, with the screenshots from `docs/screenshots/en`.
+2. What Tickness does, with the screenshots from `docs/screenshots/en`.
 3. Architecture: React SPA, Firebase Auth, Firestore rules for roles, Cloud Functions.
 4. Measuring the cost: replaying a workday against the emulators, the 5- and 25-person numbers, and the caveats.
 5. What's missing and where help is welcome.
@@ -273,9 +273,9 @@ Same outline as the dev.to article, using `docs/screenshots/pl` and the PL landi
 
 ## Indie Hackers
 
-**Post title:** Launching Ticknest: an open-source time tracker with no seat fees
+**Post title:** Launching Tickness: an open-source time tracker with no seat fees
 
-> Today I launched Ticknest, an open-source time tracker for small teams that runs in the customer's own Firebase project.
+> Today I launched Tickness, an open-source time tracker for small teams that runs in the customer's own Firebase project.
 >
 > The bet: small teams would rather own their data and pay Firebase's usage costs (usually $0 at 5 to 25 people) than pay a per-seat subscription. The code is MIT licensed; the project is funded by donations and paid help with setup and custom features.
 >

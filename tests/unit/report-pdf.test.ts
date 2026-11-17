@@ -79,7 +79,7 @@ function input(overrides: Partial<ReportPdfInput> = {}): ReportPdfInput {
 
 describe('reportPdfFileName', () => {
   it('follows the CSV naming convention', () => {
-    expect(reportPdfFileName(FILTERS)).toBe('ticknest-report-2026-10-01-to-2026-10-31.pdf')
+    expect(reportPdfFileName(FILTERS)).toBe('tickness-report-2026-10-01-to-2026-10-31.pdf')
   })
 })
 

@@ -222,7 +222,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
       return
     }
     const confirmed = window.confirm(
-      `Delete this Ticknest account? This will sign you out. Workspace data is retained in the Firebase project.\n\n${method === 'google' ? 'You’ll be asked to confirm with Google next.' : 'You’ll be asked for your password next.'}`,
+      `Delete this Tickness account? This will sign you out. Workspace data is retained in the Firebase project.\n\n${method === 'google' ? 'You’ll be asked to confirm with Google next.' : 'You’ll be asked for your password next.'}`,
     )
     if (!confirmed) return
     let password: string | undefined
@@ -592,7 +592,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
         Sign out
       </Button>
       <Typography variant="caption" sx={{ px: 1, color: 'app.sidebar.faint' }}>
-        Ticknest v{__APP_VERSION__}
+        Tickness v{__APP_VERSION__}
       </Typography>
     </Stack>
   )

@@ -51,7 +51,7 @@ const html = `<!doctype html>
   </head>
   <body>
     <div class="copy">
-      <div class="brand"><img src="${logo}" alt="" /><span>Ticknest</span></div>
+      <div class="brand"><img src="${logo}" alt="" /><span>Tickness</span></div>
       <h1>Open-source, self&#8209;hosted Clockify alternative</h1>
       <p>Runs in a Firebase project you own.<br />No seats, no paywalls, no tracking.</p>
       <div class="meta">MIT licence · Free to self-host</div>

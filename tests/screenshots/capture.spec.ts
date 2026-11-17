@@ -119,7 +119,7 @@ for (const language of LANGUAGES) {
 
       // The first page of the PDF, rendered with Poppler's pdftoppm. The download is copied out first, since closing
       // the context deletes it.
-      const workDir = await mkdtemp(path.join(tmpdir(), 'ticknest-pdf-'))
+      const workDir = await mkdtemp(path.join(tmpdir(), 'tickness-pdf-'))
       try {
         const pdfPath = path.join(workDir, 'report.pdf')
         await download.saveAs(pdfPath)
@@ -161,7 +161,7 @@ for (const language of LANGUAGES) {
     })
 
     test('timer GIF', async ({ browser }) => {
-      const videoDir = await mkdtemp(path.join(tmpdir(), 'ticknest-video-'))
+      const videoDir = await mkdtemp(path.join(tmpdir(), 'tickness-video-'))
       try {
         const context = await newContext(browser, language, {
           viewport: GIF_VIEWPORT,
