@@ -1,7 +1,7 @@
 {
-  "name": "Ticknest",
-  "short_name": "Ticknest",
-  "description": "Ticknest is an open-source, self-hosted time tracker.",
+  "name": "Tickness",
+  "short_name": "Tickness",
+  "description": "Tickness is an open-source, self-hosted time tracker.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

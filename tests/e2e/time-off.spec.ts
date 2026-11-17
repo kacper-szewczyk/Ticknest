@@ -7,16 +7,20 @@ function dayString(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-/** Monday to Wednesday of a week in the current year: two weeks ahead, or earlier in the year near New Year. */
+/**
+ * Monday to Wednesday of a week in the current year, all in one month so the team calendar shows all three days:
+ * two weeks ahead (one week ahead when those days would straddle a month boundary), or earlier in the year near
+ * New Year.
+ */
 function leaveWeek(): { start: string; end: string; year: number } {
   const now = new Date()
   const year = now.getUTCFullYear()
   const monday = new Date(Date.UTC(year, now.getUTCMonth(), now.getUTCDate()))
   monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7) + 14)
+  const wednesdayOf = (day: Date) => new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 2))
+  if (wednesdayOf(monday).getUTCMonth() !== monday.getUTCMonth()) monday.setUTCDate(monday.getUTCDate() - 7)
   if (monday.getUTCFullYear() !== year || monday.getUTCMonth() === 11) monday.setUTCDate(monday.getUTCDate() - 42)
-  const wednesday = new Date(monday)
-  wednesday.setUTCDate(monday.getUTCDate() + 2)
-  return { start: dayString(monday), end: dayString(wednesday), year }
+  return { start: dayString(monday), end: dayString(wednesdayOf(monday)), year }
 }
 
 async function switchAccount(page: Page): Promise<void> {
@@ -59,8 +63,8 @@ test('a member requests holiday, a manager approves it, and the balance goes dow
     await page.getByRole('button', { name: 'Request time off' }).click()
     const dialog = page.getByRole('dialog', { name: 'Request time off' })
     await dialog.getByLabel('Leave type').selectOption({ label: 'Holiday' })
-    await dialog.getByLabel('First day').fill(start)
-    await dialog.getByLabel('Last day').fill(end)
+    await dialog.getByRole('textbox', { name: 'First day' }).fill(start)
+    await dialog.getByRole('textbox', { name: 'Last day' }).fill(end)
     await expect(dialog.getByText(`Uses 3 days. Balance after: ${formatDays(before.available - 3)}.`)).toBeVisible()
     await dialog.getByRole('button', { name: 'Send request' }).click()
     await expect(page.getByText('Request sent. It is pending approval.')).toBeVisible()

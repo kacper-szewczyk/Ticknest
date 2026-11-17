@@ -1,6 +1,6 @@
 # Firestore data model
 
-Ticknest stores each workspace's business data under its workspace document. Firestore Rules and callable functions use the workspace ID as the authorization boundary.
+Tickness stores each workspace's business data under its workspace document. Firestore Rules and callable functions use the workspace ID as the authorization boundary.
 
 ## Collections
 

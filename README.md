@@ -1,4 +1,4 @@
-# Ticknest
+# Tickness
 
 **English** | [Español](README.es.md) | [Polski](README.pl.md)
 
@@ -11,7 +11,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/en/timesheet-dark.png">
-  <img src="docs/screenshots/en/timesheet-light.png" alt="The Ticknest Timesheet with a running timer and a week of time entries grouped by day">
+  <img src="docs/screenshots/en/timesheet-light.png" alt="The Tickness Timesheet with a running timer and a week of time entries grouped by day">
 </picture>
 
 | Track time                                                                   | Report and export                                                                    | Manage the team                                                                                    |
@@ -23,7 +23,7 @@ Screenshots in Polish are in [docs/screenshots/pl](docs/screenshots/pl). All of 
 
 **[Try the live demo](https://ticknest-pi.vercel.app)** with one of the sample accounts on the sign-in screen. Demo data resets every 24 hours.
 
-New here? The **[landing page](https://ticknest-landing.vercel.app/?utm_source=github&utm_medium=readme)** sums up what Ticknest does and how it compares with other time trackers.
+New here? The **[landing page](https://ticknest-landing.vercel.app/?utm_source=github&utm_medium=readme)** sums up what Tickness does and how it compares with other time trackers.
 
 ## Features
 
@@ -39,7 +39,7 @@ New here? The **[landing page](https://ticknest-landing.vercel.app/?utm_source=g
 
 ## Why not Clockify?
 
-Ticknest covers the core of a hosted time tracker, with different trade-offs:
+Tickness covers the core of a hosted time tracker, with different trade-offs:
 
 - **You own the data.** Everything lives in your own Firebase project. The maintainers run no backend and never see your entries.
 - **No seat fees.** There are no per-user plans. You pay only Firebase's usage-based charges.
@@ -50,7 +50,7 @@ Ticknest covers the core of a hosted time tracker, with different trade-offs:
 
 For a team of 5 to 25 people tracking time every workday, **usually $0 a month**: the measured usage stays within Firebase's no-cost quotas (5 people use about 6% of the daily Firestore reads, 25 people about 37%). Firebase still needs the Blaze plan and a billing account for Cloud Functions, so [set a budget alert](docs/operations.md#set-a-budget-alert). The [measured estimate](docs/operations.md#what-does-it-cost) gives the assumptions, prices for europe-west1 and us-central1, and the date it was measured. It is an estimate, not a guarantee.
 
-## What Ticknest doesn't do (yet)
+## What Tickness doesn't do (yet)
 
 - No integrations with other tools (calendars, issue trackers, invoicing).
 - No public API.
@@ -79,7 +79,7 @@ The **[full setup guide](docs/operations.md)** covers each step in detail, plus 
 
 ## Quick start
 
-Run Ticknest locally against the Firebase emulators.
+Run Tickness locally against the Firebase emulators.
 
 Requirements: Node.js 22.12+, 24.x, or 26.x, npm, and Java JDK 11+ for the Firebase emulators.
 
@@ -97,13 +97,13 @@ In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
 **Questions, ideas or something to show?** Join [GitHub Discussions](https://github.com/kacper-szewczyk/Ticknest/discussions): ask in [Q&A](https://github.com/kacper-szewczyk/Ticknest/discussions/categories/q-a), suggest features in [Ideas](https://github.com/kacper-szewczyk/Ticknest/discussions/categories/ideas), or share your setup in [Show and tell](https://github.com/kacper-szewczyk/Ticknest/discussions/categories/show-and-tell). Found a bug? [Open an issue](https://github.com/kacper-szewczyk/Ticknest/issues/new/choose). Contributions are welcome: issues labelled [good first issue](https://github.com/kacper-szewczyk/Ticknest/labels/good%20first%20issue) and [help wanted](https://github.com/kacper-szewczyk/Ticknest/labels/help%20wanted) are a good place to start, and [CONTRIBUTING.md](CONTRIBUTING.md) explains how.
 
 > [!TIP]
-> **Enjoying Ticknest?** Buying me a coffee helps keep the project maintained and the public demo online.
+> **Enjoying Tickness?** Buying me a coffee helps keep the project maintained and the public demo online.
 >
 > [![Buy me a coffee](https://img.shields.io/badge/Buy_me_a_coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/kszewczyk)
 
 **Need help with setup or a custom feature?** Get in touch:
 
-[![Email](https://img.shields.io/badge/ticknest.opensource%40gmail.com-D14836?style=for-the-badge&logo=maildotru&logoColor=white)](mailto:ticknest.opensource@gmail.com)
+[![Email](https://img.shields.io/badge/ticknest.opensource%40gmail.com-D14836?style=for-the-badge&logo=maildotru&logoColor=white)](mailto:tickness.opensource@gmail.com)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0yMC40NDcgMjAuNDUyaC0zLjU1NHYtNS41NjljMC0xLjMyOC0uMDI3LTMuMDM3LTEuODUyLTMuMDM3LTEuODUzIDAtMi4xMzYgMS40NDUtMi4xMzYgMi45Mzl2NS42NjdIOS4zNTFWOWgzLjQxNHYxLjU2MWguMDQ2Yy40NzctLjkzNyAxLjYzNy0xLjkzMSAzLjM3LTEuOTMxIDMuNjAxIDAgNC4yNjcgMi4zNyA0LjI2NyA0Ljl2NC45MXpNNS4zMzcgNy40MzNhMi4wNjQgMi4wNjQgMCAxIDEgMC00LjEyOCAyLjA2NCAyLjA2NCAwIDAgMSAwIDQuMTI4em0xLjc4MiAxMy4wMTlIMy41NTVWOWgzLjU2NHYxMS40NTJ6TTIyLjIyNSAwSDEuNzcxQy43OTIgMCAwIC43NzQgMCAxLjcyOXYyMC41NDJDMCAyMy4yMjcuNzkyIDI0IDEuNzcxIDI0aDIwLjQ1MUMyMy4yIDI0IDI0IDIzLjIyNyAyNCAyMi4yNzFWMS43MjlDMjQgLjc3NCAyMy4yIDAgMjIuMjIyIDB6Ii8+PC9zdmc+)](https://www.linkedin.com/in/kacperszewczyk)
 
 ## Documentation
@@ -119,4 +119,4 @@ In another terminal, run `npm run dev` and open <http://127.0.0.1:5173>.
 
 ## License
 
-Ticknest is distributed under the [MIT License](LICENSE).
+Tickness is distributed under the [MIT License](LICENSE).

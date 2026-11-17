@@ -1,11 +1,11 @@
 {
   "app": {
-    "loadingAccount": "Wczytywanie konta Ticknest…",
-    "version": "Ticknest v{{version}}",
-    "startFailedTitle": "Nie udało się uruchomić Ticknest",
+    "loadingAccount": "Wczytywanie konta Tickness…",
+    "version": "Tickness v{{version}}",
+    "startFailedTitle": "Nie udało się uruchomić Tickness",
     "startFailedBody": "Podczas wczytywania aplikacji wystąpił nieoczekiwany błąd.",
     "crashTitle": "Coś poszło nie tak",
-    "crashBody": "W Ticknest wystąpił nieoczekiwany błąd. Odśwież stronę, aby kontynuować.",
+    "crashBody": "W Tickness wystąpił nieoczekiwany błąd. Odśwież stronę, aby kontynuować.",
     "reload": "Odśwież",
     "demoBusy": "To publiczna wersja demo, więc może być przeciążona. Spróbuj ponownie za kilka minut albo <link>uruchom własną kopię z repozytorium na GitHubie</link>."
   },
@@ -13,7 +13,7 @@
     "label": "Język",
     "kicker": "JĘZYK",
     "title": "Język interfejsu",
-    "intro": "Wybierz język, w którym Ticknest będzie się dla Ciebie wyświetlać. Pozostali członkowie obszaru roboczego zachowują własny język.",
+    "intro": "Wybierz język, w którym Tickness będzie się dla Ciebie wyświetlać. Pozostali członkowie obszaru roboczego zachowują własny język.",
     "saved": "Język zapisany. Będzie używany na każdym urządzeniu, na którym się zalogujesz.",
     "saveFailed": "Nie udało się zapisać języka. Sprawdź połączenie i spróbuj ponownie."
   },
@@ -23,7 +23,7 @@
     "heroBody": "Rejestruj czas w zespołowym obszarze roboczym, który działa w Twoim własnym projekcie Firebase.",
     "heroFooter": "Open source · Własny hosting · Bez limitu użytkowników",
     "kickerReset": "ODZYSKIWANIE KONTA",
-    "kickerWelcome": "WITAJ W TICKNEST",
+    "kickerWelcome": "WITAJ W TICKNESS",
     "titleReset": "Zresetuj hasło",
     "titleSignUp": "Załóż konto",
     "titleSignIn": "Witaj ponownie",
@@ -43,7 +43,7 @@
     "forgotPassword": "Nie pamiętasz hasła?",
     "rememberedIt": "Już pamiętasz?",
     "haveAccount": "Masz już konto?",
-    "newToTicknest": "Pierwszy raz w Ticknest?",
+    "newToTickness": "Pierwszy raz w Tickness?",
     "createAnAccount": "Załóż konto",
     "resetSent": "Jeśli istnieje konto z tym adresem, wysłaliśmy na nie link do zresetowania hasła."
   },
@@ -52,7 +52,7 @@
     "emailAlreadyInUse": "Konto z tym adresem e-mail już istnieje. Zaloguj się.",
     "invalidCredential": "Nieprawidłowy e-mail lub hasło.",
     "invalidEmail": "Wpisz prawidłowy adres e-mail.",
-    "networkRequestFailed": "Ticknest nie może połączyć się z Firebase Authentication. Sprawdź połączenie z internetem i spróbuj ponownie. Jeśli używasz VPN-a, zapory sieciowej lub rozszerzenia chroniącego prywatność, upewnij się, że pozwala tej stronie łączyć się z Firebase.",
+    "networkRequestFailed": "Tickness nie może połączyć się z Firebase Authentication. Sprawdź połączenie z internetem i spróbuj ponownie. Jeśli używasz VPN-a, zapory sieciowej lub rozszerzenia chroniącego prywatność, upewnij się, że pozwala tej stronie łączyć się z Firebase.",
     "weakPassword": "Wybierz hasło o długości co najmniej 6 znaków.",
     "tooManyRequests": "Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.",
     "userDisabled": "To konto jest wyłączone. Skontaktuj się z administratorem obszaru roboczego.",
@@ -69,13 +69,13 @@
     "functionsNotFound": "Usługa obszarów roboczych nie jest wdrożona w tym projekcie Firebase. Wdróż Firebase Functions i spróbuj ponownie.",
     "permissionDenied": "Nie masz dostępu do tego obszaru roboczego.",
     "authFallback": "Nie udało się Cię zalogować. Spróbuj ponownie. Jeśli problem się powtarza, sprawdź ustawienia Firebase Authentication.",
-    "busy": "Ticknest jest teraz przeciążony lub nieosiągalny. Sprawdź połączenie i spróbuj ponownie za kilka minut.",
+    "busy": "Tickness jest teraz przeciążony lub nieosiągalny. Sprawdź połączenie i spróbuj ponownie za kilka minut.",
     "busyDemo": "Publiczna wersja demo jest teraz przeciążona lub nieosiągalna. Spróbuj ponownie za kilka minut albo uruchom własną kopię z {{url}}."
   },
   "appearance": {
     "kicker": "WYGLĄD",
     "title": "Paleta kolorów",
-    "intro": "Wybierz, jak Ticknest ma dla Ciebie wyglądać. Pozostali członkowie obszaru roboczego zachowują własne palety.",
+    "intro": "Wybierz, jak Tickness ma dla Ciebie wyglądać. Pozostali członkowie obszaru roboczego zachowują własne palety.",
     "saved": "Paleta zapisana. Będzie używana na każdym urządzeniu, na którym się zalogujesz.",
     "saveFailed": "Nie udało się zapisać palety. Sprawdź połączenie i spróbuj ponownie.",
     "groupAutomatic": "Automatyczna",
@@ -90,7 +90,7 @@
   "palettes": {
     "forest": {
       "name": "Las",
-      "description": "Klasyczne zielenie Ticknest."
+      "description": "Klasyczne zielenie Tickness."
     },
     "ocean": {
       "name": "Ocean",
@@ -217,7 +217,7 @@
     "noticeLabel": "Informacja o wersji demo",
     "banner": "<strong>Publiczna wersja demo.</strong> Wszystkie dane są resetowane co 24 godziny, a wszystko, co dodasz, zostanie usunięte. Następny reset: <time>{{reset}}</time>.",
     "viewSource": "Zobacz kod na GitHubie",
-    "aboutProject": "Czym jest Ticknest?",
+    "aboutProject": "Czym jest Tickness?",
     "buyCoffee": "Postaw mi kawę",
     "tryTitle": "Wypróbuj wersję demo",
     "tryIntro": "Zaloguj się na przykładowe konto. Wszystkie konta mają hasło <code>{{password}}</code>. Dane są resetowane co 24 godziny.",
@@ -228,15 +228,15 @@
     "signingInManager": "Logowanie na konto menedżera {{email}}.",
     "signingInMember": "Logowanie na konto członka {{email}}.",
     "useAccount": "Użyj tego konta",
-    "supportLead": "Podoba Ci się Ticknest? Pomóż utrzymać go za darmo.",
+    "supportLead": "Podoba Ci się Tickness? Pomóż utrzymać go za darmo.",
     "star": "Daj gwiazdkę na GitHubie",
-    "contactLead": "Chcesz, żebym skonfigurował Ticknest dla Twojego zespołu, albo potrzebujesz funkcji, której jeszcze nie ma?",
+    "contactLead": "Chcesz, żebym skonfigurował Tickness dla Twojego zespołu, albo potrzebujesz funkcji, której jeszcze nie ma?",
     "contactHelp": "Pomogę Ci to osiągnąć.",
     "getInTouch": "Napisz do mnie",
     "linkedIn": "Napisz na LinkedInie",
-    "pausedTitle": "Wersja demo Ticknest jest wstrzymana",
+    "pausedTitle": "Wersja demo Tickness jest wstrzymana",
     "pausedBody": "Publiczna wersja demo ma teraz więcej odwiedzających, niż może obsłużyć, więc została na jakiś czas wstrzymana. Zajrzyj później.",
-    "pausedOpenSource": "Ticknest jest open source. Możesz przejrzeć kod i uruchomić własną kopię we własnym projekcie Firebase."
+    "pausedOpenSource": "Tickness jest open source. Możesz przejrzeć kod i uruchomić własną kopię we własnym projekcie Firebase."
   },
   "timeOff": {
     "unknownType": "Nieznany rodzaj",
@@ -470,11 +470,11 @@
     "summaryReady_few": "{{count}} wpisy gotowe do importu, łącznie {{duration}}.",
     "summaryReady_many": "{{count}} wpisów gotowych do importu, łącznie {{duration}}.",
     "summaryReady_other": "{{count}} wpisu gotowego do importu, łącznie {{duration}}.",
-    "summaryShortened_one": "{{count}} wpis ma opis lub nazwę dłuższą, niż Ticknest przechowuje. Zostanie skrócony.",
-    "summaryShortened_few": "{{count}} wpisy mają opis lub nazwę dłuższą, niż Ticknest przechowuje. Zostaną skrócone.",
-    "summaryShortened_many": "{{count}} wpisów ma opis lub nazwę dłuższą, niż Ticknest przechowuje. Zostaną skrócone.",
-    "summaryShortened_other": "{{count}} wpisu ma opis lub nazwę dłuższą, niż Ticknest przechowuje. Zostaną skrócone.",
-    "summaryOverlapNote": "Wpisy nakładające się na czas zapisany już w Ticknest są pomijane, więc ponowny import tego samego pliku nie tworzy duplikatów.",
+    "summaryShortened_one": "{{count}} wpis ma opis lub nazwę dłuższą, niż Tickness przechowuje. Zostanie skrócony.",
+    "summaryShortened_few": "{{count}} wpisy mają opis lub nazwę dłuższą, niż Tickness przechowuje. Zostaną skrócone.",
+    "summaryShortened_many": "{{count}} wpisów ma opis lub nazwę dłuższą, niż Tickness przechowuje. Zostaną skrócone.",
+    "summaryShortened_other": "{{count}} wpisu ma opis lub nazwę dłuższą, niż Tickness przechowuje. Zostaną skrócone.",
+    "summaryOverlapNote": "Wpisy nakładające się na czas zapisany już w Tickness są pomijane, więc ponowny import tego samego pliku nie tworzy duplikatów.",
     "skippedHeading_one": "Pominięto {{count}} wiersz",
     "skippedHeading_few": "Pominięto {{count}} wiersze",
     "skippedHeading_many": "Pominięto {{count}} wierszy",
@@ -488,9 +488,9 @@
       "taskWithoutProject": "ma zadanie, ale nie ma projektu.",
       "unknownUser": "ta osoba nie należy do tego obszaru roboczego.",
       "overlapsFile": "nakłada się na inny wpis tej samej osoby w pliku.",
-      "overlapsExisting": "nakłada się na wpis zapisany już w Ticknest.",
+      "overlapsExisting": "nakłada się na wpis zapisany już w Tickness.",
       "overlapsRunningTimer": "nakłada się na włączony timer tej osoby.",
-      "invalidRow": "wiersz ma wartości, których Ticknest nie może zapisać."
+      "invalidRow": "wiersz ma wartości, których Tickness nie może zapisać."
     },
     "andMore_one": "i {{count}} więcej",
     "andMore_few": "i {{count}} więcej",

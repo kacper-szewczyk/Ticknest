@@ -1,4 +1,4 @@
-# Ticknest
+# Tickness
 
 [English](README.md) | **Español** | [Polski](README.pl.md)
 
@@ -6,7 +6,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/en/timesheet-dark.png">
-  <img src="docs/screenshots/en/timesheet-light.png" alt="La hoja de horas de Ticknest con un temporizador en marcha y las entradas de una semana agrupadas por día">
+  <img src="docs/screenshots/en/timesheet-light.png" alt="La hoja de horas de Tickness con un temporizador en marcha y las entradas de una semana agrupadas por día">
 </picture>
 
 | Registrar el tiempo                                                                | Informes y exportación                                                                       | Gestionar el equipo                                                                                                      |
@@ -18,7 +18,7 @@ Las capturas de pantalla están en inglés por ahora. Todas muestran los datos d
 
 **[Prueba la demo](https://ticknest-pi.vercel.app)**: inicia sesión con una de las cuentas de ejemplo que aparecen en la pantalla de inicio de sesión. Los datos de la demo se restablecen cada 24 horas. La interfaz está disponible en español.
 
-¿Primera vez por aquí? La **[página del proyecto](https://ticknest-landing.vercel.app)** (en inglés) resume qué hace Ticknest y en qué se diferencia de otras herramientas de control de horas.
+¿Primera vez por aquí? La **[página del proyecto](https://ticknest-landing.vercel.app)** (en inglés) resume qué hace Tickness y en qué se diferencia de otras herramientas de control de horas.
 
 La documentación completa está en inglés: consulta el [README](README.md) y la [guía de despliegue](docs/operations.md).
 
@@ -33,7 +33,7 @@ La documentación completa está en inglés: consulta el [README](README.md) y l
 - **Importación desde Clockify**: trae tu historial desde el CSV de un informe detallado, con una vista previa antes de guardar.
 - **Interfaz en inglés, español y polaco**, paletas de colores claras y oscuras, y un diseño que funciona en teléfonos.
 
-## Por qué Ticknest
+## Por qué Tickness
 
 - **Los datos son tuyos.** Todo se guarda en tu proyecto de Firebase; los autores no gestionan ningún servidor y no ven tus entradas.
 - **Sin cuotas por usuario.** Solo pagas el consumo de Firebase.
@@ -59,4 +59,4 @@ Puedes plantear preguntas, proponer ideas y enseñar tu propia instalación en [
 
 ## Licencia
 
-Ticknest se distribuye bajo la [licencia MIT](LICENSE).
+Tickness se distribuye bajo la [licencia MIT](LICENSE).

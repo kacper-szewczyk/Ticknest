@@ -263,7 +263,7 @@ async function chooseProject() {
     say('Your Firebase projects:')
     for (const project of projects) say(`  - ${project.projectId} (${project.displayName ?? 'no name'})`)
   }
-  const fallback = current ?? (projects.length === 0 ? 'ticknest-' + Math.random().toString(36).slice(2, 8) : '')
+  const fallback = current ?? (projects.length === 0 ? 'tickness-' + Math.random().toString(36).slice(2, 8) : '')
   let projectId = ''
   while (!isValidProjectId(projectId)) {
     projectId = await ask('Project ID to use (an existing one, or a new ID to create)', fallback)
@@ -276,7 +276,7 @@ async function chooseProject() {
     if (!(await confirm(`Create a new Firebase project "${projectId}"?`, true))) {
       throw new SetupError('No project selected.')
     }
-    if (!runInteractive(firebaseBin, ['projects:create', projectId, '--display-name', 'Ticknest'])) {
+    if (!runInteractive(firebaseBin, ['projects:create', projectId, '--display-name', 'Tickness'])) {
       throw new SetupError('Creating the project failed. Project IDs are global, so try a different ID.')
     }
   }
@@ -294,7 +294,7 @@ async function chooseProject() {
 
 async function linkBilling(projectId, hasGcloud) {
   step('3. Billing (Blaze plan)')
-  say('Ticknest uses Cloud Functions, which need the Blaze (pay-as-you-go) plan with a billing account.')
+  say('Tickness uses Cloud Functions, which need the Blaze (pay-as-you-go) plan with a billing account.')
   say('Small teams usually stay within the free quotas, but usage beyond them is billed.')
   const urls = consoleUrls(projectId)
 
@@ -404,7 +404,7 @@ async function writeEnv(projectId, region) {
   let apps = firebaseJson(['apps:list', 'WEB', '--project', projectId]) ?? []
   if (apps.length === 0) {
     say('Creating the Firebase web app. Accept the default Hosting site if you are asked.')
-    if (!runInteractive(firebaseBin, ['apps:create', 'WEB', 'Ticknest', '--project', projectId])) {
+    if (!runInteractive(firebaseBin, ['apps:create', 'WEB', 'Tickness', '--project', projectId])) {
       throw new SetupError('Creating the Firebase web app failed.')
     }
     apps = firebaseJson(['apps:list', 'WEB', '--project', projectId]) ?? []
@@ -447,7 +447,7 @@ async function deploy(projectId) {
 function printNextSteps(projectId, useFirebaseHosting) {
   step('Done')
   const urls = consoleUrls(projectId)
-  if (useFirebaseHosting) say(`Your Ticknest: ${urls.site}`)
+  if (useFirebaseHosting) say(`Your Tickness: ${urls.site}`)
   else say('Deploy the web app on Vercel with the VITE_* values from .env.production.local (docs/operations.md).')
   say()
   say('Next steps:')
@@ -458,7 +458,7 @@ function printNextSteps(projectId, useFirebaseHosting) {
 }
 
 async function main() {
-  say('Ticknest guided setup. Nothing is deployed until you confirm it. Press Ctrl+C to stop at any time.')
+  say('Tickness guided setup. Nothing is deployed until you confirm it. Press Ctrl+C to stop at any time.')
   const { hasGcloud } = await checkPrerequisites()
   const projectId = await chooseProject()
   await linkBilling(projectId, hasGcloud)

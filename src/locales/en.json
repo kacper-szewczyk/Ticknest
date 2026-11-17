@@ -1,11 +1,11 @@
 {
   "app": {
-    "loadingAccount": "Loading your Ticknest account…",
-    "version": "Ticknest v{{version}}",
-    "startFailedTitle": "Ticknest could not start",
+    "loadingAccount": "Loading your Tickness account…",
+    "version": "Tickness v{{version}}",
+    "startFailedTitle": "Tickness could not start",
     "startFailedBody": "An unexpected error occurred while loading the app.",
     "crashTitle": "Something went wrong",
-    "crashBody": "Ticknest hit an unexpected error. Reload the page to continue.",
+    "crashBody": "Tickness hit an unexpected error. Reload the page to continue.",
     "reload": "Reload",
     "demoBusy": "This is the public demo, so it may be busy. Try again in a few minutes, or <link>run your own copy from the GitHub repository</link>."
   },
@@ -13,7 +13,7 @@
     "label": "Language",
     "kicker": "LANGUAGE",
     "title": "Interface language",
-    "intro": "Choose the language Ticknest uses for you. Other workspace members keep their own language.",
+    "intro": "Choose the language Tickness uses for you. Other workspace members keep their own language.",
     "saved": "Language saved. It will follow you on any device you sign in to.",
     "saveFailed": "We couldn’t save your language. Check your connection and try again."
   },
@@ -23,7 +23,7 @@
     "heroBody": "Track time with a team workspace that lives in your own Firebase project.",
     "heroFooter": "Open source · Self-hosted · No seat limits",
     "kickerReset": "ACCOUNT RECOVERY",
-    "kickerWelcome": "WELCOME TO TICKNEST",
+    "kickerWelcome": "WELCOME TO TICKNESS",
     "titleReset": "Reset your password",
     "titleSignUp": "Create your account",
     "titleSignIn": "Welcome back",
@@ -43,7 +43,7 @@
     "forgotPassword": "Forgot password?",
     "rememberedIt": "Remembered it?",
     "haveAccount": "Already have an account?",
-    "newToTicknest": "New to Ticknest?",
+    "newToTickness": "New to Tickness?",
     "createAnAccount": "Create an account",
     "resetSent": "If an account exists for that address, a reset link is on its way."
   },
@@ -52,7 +52,7 @@
     "emailAlreadyInUse": "An account already exists for this email. Sign in instead.",
     "invalidCredential": "The email or password is incorrect.",
     "invalidEmail": "Enter a valid email address.",
-    "networkRequestFailed": "Ticknest couldn’t reach Firebase Authentication. Check your internet connection and try again. If you use a VPN, firewall, or privacy extension, make sure it allows this site to connect to Firebase.",
+    "networkRequestFailed": "Tickness couldn’t reach Firebase Authentication. Check your internet connection and try again. If you use a VPN, firewall, or privacy extension, make sure it allows this site to connect to Firebase.",
     "weakPassword": "Choose a password with at least 6 characters.",
     "tooManyRequests": "Too many attempts. Wait a moment and try again.",
     "userDisabled": "This account is disabled. Contact the workspace administrator.",
@@ -69,13 +69,13 @@
     "functionsNotFound": "The workspace service is not deployed in this Firebase project. Deploy the Firebase Functions, then try again.",
     "permissionDenied": "You do not have access to this workspace.",
     "authFallback": "We couldn’t sign you in. Please try again. If the problem continues, check the Firebase Authentication settings.",
-    "busy": "Ticknest is busy or unreachable right now. Check your connection and try again in a few minutes.",
+    "busy": "Tickness is busy or unreachable right now. Check your connection and try again in a few minutes.",
     "busyDemo": "The public demo is busy or unreachable right now. Try again in a few minutes, or run your own copy from {{url}}."
   },
   "appearance": {
     "kicker": "APPEARANCE",
     "title": "Color palette",
-    "intro": "Choose how Ticknest looks for you. Other workspace members keep their own palettes.",
+    "intro": "Choose how Tickness looks for you. Other workspace members keep their own palettes.",
     "saved": "Palette saved. It will follow you on any device you sign in to.",
     "saveFailed": "We couldn’t save your palette. Check your connection and try again.",
     "groupAutomatic": "Automatic",
@@ -90,7 +90,7 @@
   "palettes": {
     "forest": {
       "name": "Forest",
-      "description": "The classic Ticknest greens."
+      "description": "The classic Tickness greens."
     },
     "ocean": {
       "name": "Ocean",
@@ -215,7 +215,7 @@
     "noticeLabel": "Demo notice",
     "banner": "<strong>Public demo.</strong> All data is reset every 24 hours and anything you add is removed. Next reset: <time>{{reset}}</time>.",
     "viewSource": "View the source on GitHub",
-    "aboutProject": "What is Ticknest?",
+    "aboutProject": "What is Tickness?",
     "buyCoffee": "Buy me a coffee",
     "tryTitle": "Try the demo",
     "tryIntro": "Sign in with a sample account. Every account uses the password <code>{{password}}</code>. Data resets every 24 hours.",
@@ -226,15 +226,15 @@
     "signingInManager": "Signing in with the manager account {{email}}.",
     "signingInMember": "Signing in with the member account {{email}}.",
     "useAccount": "Use this account",
-    "supportLead": "Love Ticknest? Help keep it free.",
+    "supportLead": "Love Tickness? Help keep it free.",
     "star": "Star it on GitHub",
-    "contactLead": "Want Ticknest set up for your team, or need a feature it doesn't have yet?",
+    "contactLead": "Want Tickness set up for your team, or need a feature it doesn't have yet?",
     "contactHelp": "I'll help you get there.",
     "getInTouch": "Get in touch",
     "linkedIn": "Message me on LinkedIn",
-    "pausedTitle": "The Ticknest demo is paused",
+    "pausedTitle": "The Tickness demo is paused",
     "pausedBody": "The public demo is getting more visitors than it can handle right now, so it is paused for a while. Please check back later.",
-    "pausedOpenSource": "Ticknest is open source. You can read the code and run your own copy on your own Firebase project."
+    "pausedOpenSource": "Tickness is open source. You can read the code and run your own copy on your own Firebase project."
   },
   "timeOff": {
     "unknownType": "Unknown type",
@@ -452,9 +452,9 @@
     "summaryHeading": "Entries",
     "summaryReady_one": "{{count}} entry ready to import, {{duration}} in total.",
     "summaryReady_other": "{{count}} entries ready to import, {{duration}} in total.",
-    "summaryShortened_one": "{{count}} entry has a description or name longer than Ticknest stores. It will be shortened.",
-    "summaryShortened_other": "{{count}} entries have a description or name longer than Ticknest stores. They will be shortened.",
-    "summaryOverlapNote": "Entries that overlap time already in Ticknest are skipped, so importing the same file again doesn’t create duplicates.",
+    "summaryShortened_one": "{{count}} entry has a description or name longer than Tickness stores. It will be shortened.",
+    "summaryShortened_other": "{{count}} entries have a description or name longer than Tickness stores. They will be shortened.",
+    "summaryOverlapNote": "Entries that overlap time already in Tickness are skipped, so importing the same file again doesn’t create duplicates.",
     "skippedHeading_one": "{{count}} row skipped",
     "skippedHeading_other": "{{count}} rows skipped",
     "skippedRow": "Line {{line}}: {{reason}}",
@@ -466,9 +466,9 @@
       "taskWithoutProject": "it has a task but no project.",
       "unknownUser": "the person isn’t a member of this workspace.",
       "overlapsFile": "it overlaps another entry of the same person in the file.",
-      "overlapsExisting": "it overlaps an entry already in Ticknest.",
+      "overlapsExisting": "it overlaps an entry already in Tickness.",
       "overlapsRunningTimer": "it overlaps the person’s running timer.",
-      "invalidRow": "the row has values Ticknest can’t store."
+      "invalidRow": "the row has values Tickness can’t store."
     },
     "andMore_one": "and {{count}} more",
     "andMore_other": "and {{count}} more",

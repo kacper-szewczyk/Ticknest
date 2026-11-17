@@ -43,7 +43,7 @@ export type ClockifyRow = {
   billable: boolean
   startAt: number
   endAt: number
-  /** True when the description or a name was longer than Ticknest stores and was shortened. */
+  /** True when the description or a name was longer than Tickness stores and was shortened. */
   shortened: boolean
 }
 

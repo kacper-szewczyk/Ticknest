@@ -4,7 +4,7 @@ import { DEMO_RESET_HOUR, DEMO_RESET_TIME_ZONE } from '../../functions/src/demo/
 
 /** The public repository, linked from the demo UI so visitors can find the source and self-host it. */
 export const DEMO_SOURCE_URL = 'https://github.com/kacper-szewczyk/Ticknest'
-/** The project's landing page, which explains what Ticknest is to visitors who arrive at the sign-in screen first. */
+/** The project's landing page, which explains what Tickness is to visitors who arrive at the sign-in screen first. */
 export const DEMO_LANDING_URL = 'https://ticknest-landing.vercel.app'
 
 /** UTM tags so the landing page's cookieless analytics can count visitors who came from the demo. The app itself sends nothing. */
@@ -17,7 +17,7 @@ export function demoLandingUrl(language: string): string {
 /** Where visitors who like the project can support the author. */
 export const DEMO_SUPPORT_URL = 'https://buymeacoffee.com/kszewczyk'
 /** How visitors can reach the author for help with setup or custom features. */
-export const DEMO_CONTACT_EMAIL = 'ticknest.opensource@gmail.com'
+export const DEMO_CONTACT_EMAIL = 'tickness.opensource@gmail.com'
 export const DEMO_CONTACT_LINKEDIN_URL = 'https://www.linkedin.com/in/kacperszewczyk'
 
 export { DEMO_ACCOUNTS, type DemoAccount, type DemoAccountRole } from '../../functions/src/demo/accounts'
