@@ -1,4 +1,4 @@
-// The browser tab title has two owners: the current view sets the page title ("Reports · Acme · Ticknest") and a
+// The browser tab title has two owners: the current view sets the page title ("Reports · Acme · Tickness") and a
 // running timer temporarily replaces it. Keeping both here means stopping the timer shows the title of the view
 // the user is on now, not the one they were on when it started.
 

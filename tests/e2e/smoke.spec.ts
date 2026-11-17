@@ -36,7 +36,7 @@ test('each view leads with one focused h1 and has its own title @mobile', async 
       await expect(h1).toBeFocused()
       // The h1 is the first heading in <main>.
       await expect(main.getByRole('heading').first()).toHaveJSProperty('tagName', 'H1')
-      await expect(page).toHaveTitle(new RegExp(`^${item.label} · .+ · Ticknest$`))
+      await expect(page).toHaveTitle(new RegExp(`^${item.label} · .+ · Tickness$`))
     })
   }
 })
