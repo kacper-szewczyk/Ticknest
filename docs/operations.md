@@ -213,12 +213,12 @@ Replace `europe-west1` with your [Functions region](#functions-region). The run 
 
 A launch post can send thousands of visitors to the demo in a few hours. Prepare the demo project before you announce it, and know what to do if the bill starts to climb.
 
-**Before a launch.**
+**Before a launch.** Tick these off on the demo project and record what you set.
 
-1. **Budget alert.** In Google Cloud Billing, create a budget scoped to the demo project only, with email alerts at 50%, 90%, and 100% of an amount you are willing to lose in a month. A budget alert notifies you; it does not stop spending.
-2. **App Check.** Follow [App Check](#app-check-optional), then enforce it for both Cloud Firestore (in the Firebase console) and the callable Functions (`ENFORCE_APP_CHECK=true`). Check that the App Check metrics show nearly all requests as verified. Without enforcement, anyone can sign in with the published demo password and script writes directly against Firestore.
-3. **Quotas and limits.** Firestore has no per-user or per-IP write limit you can set. The limits that apply are the [Firestore quotas](https://firebase.google.com/docs/firestore/quotas), the Firebase Authentication sign-in limits (an IP that signs in too often gets `auth/too-many-requests`), and `maxInstances: 3` on every callable Function, which caps their compute but means requests queue or fail with `resource-exhausted` under heavy load. The web app shows those as a "demo is busy" message with a link to this repository.
-4. **Load test.** Run `npm run demo:load-test` with the emulators running (see [Load test](#load-test)).
+- [ ] **Budget alert.** In Google Cloud Billing, create a budget scoped to the demo project only, with email alerts at 50%, 90%, and 100% of an amount you are willing to lose in a month (see [Set a budget alert](#set-a-budget-alert)). A budget alert notifies you; it does not stop spending. The public demo's budget is **$10 a month**, with email alerts at 50%, 90%, and 100% of actual spend to the maintainer.
+- [ ] **App Check.** Follow [App Check](#app-check-optional), then enforce it for both Cloud Firestore (in the Firebase console) and the callable Functions (`ENFORCE_APP_CHECK=true`). Check that the App Check metrics show nearly all requests as verified. Without enforcement, anyone can sign in with the published demo password and script writes directly against Firestore.
+- [ ] **Quotas and limits.** Firestore has no per-user or per-IP write limit you can set. The limits that apply are the [Firestore quotas](https://firebase.google.com/docs/firestore/quotas), the Firebase Authentication sign-in limits (an IP that signs in too often gets `auth/too-many-requests`), and `maxInstances: 3` on every callable Function, which caps their compute but means requests queue or fail with `resource-exhausted` under heavy load. The web app shows those as a "demo is busy" message with a link to this repository. Compare them with the [load test](#load-test) numbers.
+- [x] **Load test.** Run `npm run demo:load-test` with the emulators running (see [Load test](#load-test)). The results below are from such a run. A run against a dedicated test project, not the emulators, would give production-like latency; it is optional.
 
 **If the budget alert fires or the demo is overwhelmed**, pause it:
 
