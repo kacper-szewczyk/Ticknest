@@ -321,6 +321,7 @@ export function ReportsPanel({
     <SectionCard labelledBy="reports-heading" sx={{ maxWidth: 'none' }}>
       <SectionHeading
         id="reports-heading"
+        level={1}
         kicker={t('reports.kicker')}
         title={t('reports.title')}
         description={t('reports.datesIn', { timeZone: timezone })}

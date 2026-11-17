@@ -149,7 +149,9 @@
     "workspace": "Przestrzeń robocza",
     "yourAccount": "Twoje konto",
     "signedInAs": "Zalogowano jako {{account}}",
-    "signOut": "Wyloguj się"
+    "signOut": "Wyloguj się",
+    "skipToContent": "Przejdź do treści głównej",
+    "documentTitle": "{{view}} · {{workspace}} · Ticknest"
   },
   "common": {
     "billable": "Płatny",

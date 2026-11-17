@@ -147,7 +147,9 @@
     "workspace": "Workspace",
     "yourAccount": "Your account",
     "signedInAs": "Signed in as {{account}}",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "skipToContent": "Skip to main content",
+    "documentTitle": "{{view}} · {{workspace}} · Ticknest"
   },
   "common": {
     "billable": "Billable",

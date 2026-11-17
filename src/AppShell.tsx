@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import Drawer from '@mui/material/Drawer'
@@ -44,6 +44,8 @@ type ShellProps<V extends string> = {
   compactHeader?: ReactNode
   /** Compact `footer` for the collapsed rail. */
   compactFooter?: ReactNode
+  /** Id of the page's `<main>` (with `tabIndex={-1}`); adds a "Skip to main content" link that focuses it. */
+  mainId?: string
   children: ReactNode
 }
 
@@ -58,6 +60,7 @@ export function AppShell<V extends string>({
   compactBrand,
   compactHeader,
   compactFooter,
+  mainId,
   children,
 }: ShellProps<V>) {
   const { t } = useTranslation()
@@ -65,6 +68,7 @@ export function AppShell<V extends string>({
   // Only applies from md up; the small-screen drawer ignores it.
   const [collapsed, setCollapsed] = useState(loadSidebarCollapsed)
   const sidebarId = useId()
+  const drawerId = useId()
   const collapseButtonRef = useRef<HTMLButtonElement>(null)
   const expandButtonRef = useRef<HTMLButtonElement>(null)
   const shouldMoveFocus = useRef(false)
@@ -87,6 +91,20 @@ export function AppShell<V extends string>({
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      {mainId && (
+        <Box
+          component="a"
+          href={`#${mainId}`}
+          // The URL hash holds the current view, so focus <main> directly instead of following the link.
+          onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+            event.preventDefault()
+            document.getElementById(mainId)?.focus()
+          }}
+          sx={skipLinkSx}
+        >
+          {t('shell.skipToContent')}
+        </Box>
+      )}
       <Box
         component="aside"
         id={sidebarId}
@@ -173,6 +191,7 @@ export function AppShell<V extends string>({
         <IconButton
           aria-label={t('shell.openNavigation')}
           aria-expanded={drawerOpen}
+          aria-controls={drawerId}
           onClick={() => setDrawerOpen(true)}
           sx={{ color: 'inherit' }}
         >
@@ -191,7 +210,15 @@ export function AppShell<V extends string>({
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         sx={{ display: { md: 'none' } }}
-        slotProps={{ paper: { sx: { width: SIDEBAR_WIDTH, maxWidth: '85vw', border: 0 } } }}
+        slotProps={{
+          paper: {
+            id: drawerId,
+            role: 'dialog',
+            'aria-modal': true,
+            'aria-label': t('shell.mainNavigation'),
+            sx: { width: SIDEBAR_WIDTH, maxWidth: '85vw', border: 0 },
+          },
+        }}
       >
         <SidebarContent
           brand={brand}
@@ -236,6 +263,23 @@ export function AppShell<V extends string>({
     </Box>
   )
 }
+
+// Visually hidden until it gets keyboard focus, then shown over the top-left corner.
+const skipLinkSx = {
+  position: 'fixed',
+  top: 8,
+  left: 8,
+  zIndex: (theme: Theme) => theme.zIndex.tooltip + 1,
+  px: 2,
+  py: 1.25,
+  borderRadius: '10px',
+  bgcolor: 'background.paper',
+  color: 'text.primary',
+  fontWeight: 650,
+  boxShadow: 3,
+  transform: 'translateY(-200%)',
+  '&:focus': { transform: 'none' },
+} as const
 
 const sidebarToggleSx = {
   color: sidebarColors.text,
@@ -299,6 +343,7 @@ function SidebarContent<V extends string>({
   toggle?: ReactNode
 }) {
   const { t, i18n } = useTranslation()
+  const sectionIdPrefix = useId()
   return (
     <Box
       sx={{
@@ -318,10 +363,12 @@ function SidebarContent<V extends string>({
       </Box>
       {header && <Box sx={{ px: 1.5, pb: 1.5, borderBottom: 1, borderColor: sidebarColors.border }}>{header}</Box>}
       <Box component="nav" aria-label={t('shell.mainNavigation')} sx={{ flex: 1, overflowY: 'auto', px: 1.5, pb: 2 }}>
-        {sectionsOf(items).map((section) => (
+        {/* Group labels name their lists rather than being headings, so the page's h1 leads the outline. */}
+        {sectionsOf(items).map((section, index) => (
           <Box key={section} sx={{ mt: 2 }}>
             <Typography
-              component="h2"
+              component="p"
+              id={`${sectionIdPrefix}-${index}`}
               sx={{
                 px: 1.5,
                 mb: 0.75,
@@ -333,7 +380,11 @@ function SidebarContent<V extends string>({
             >
               {section.toLocaleUpperCase(i18n.language)}
             </Typography>
-            <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 0.25 }}>
+            <Box
+              component="ul"
+              aria-labelledby={`${sectionIdPrefix}-${index}`}
+              sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 0.25 }}
+            >
               {items
                 .filter((item) => item.section === section)
                 .map((item) => {

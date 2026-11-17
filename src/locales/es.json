@@ -148,7 +148,9 @@
     "workspace": "Espacio de trabajo",
     "yourAccount": "Tu cuenta",
     "signedInAs": "Sesión iniciada como {{account}}",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "skipToContent": "Saltar al contenido principal",
+    "documentTitle": "{{view}} · {{workspace}} · Ticknest"
   },
   "common": {
     "billable": "Facturable",

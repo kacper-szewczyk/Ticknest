@@ -166,6 +166,7 @@ export function TimeOffApprovalsPanel({
       <SectionCard labelledBy="time-off-approvals-heading" sx={{ maxWidth: 900 }}>
         <SectionHeading
           id="time-off-approvals-heading"
+          level={1}
           kicker={t('timeOff.approvals.kicker')}
           title={t('timeOff.approvals.title')}
         />

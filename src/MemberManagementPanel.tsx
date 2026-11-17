@@ -201,6 +201,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     <SectionCard labelledBy="members-heading">
       <SectionHeading
         id="members-heading"
+        level={1}
         kicker={t('members.kicker')}
         title={t('members.title')}
         action={<Chip label={t('members.memberCount', { count: activeMembers.length })} />}

@@ -35,20 +35,37 @@ function holidayBalance(page: Page, year: number) {
     .filter({ hasText: 'Holiday' })
 }
 
+function formatDays(days: number): string {
+  return `${days} ${days === 1 ? 'day' : 'days'}`
+}
+
+/** Available and taken holiday days, read from the balance card once it has loaded. */
+async function readHolidayBalance(page: Page, year: number): Promise<{ available: number; taken: number }> {
+  const balance = holidayBalance(page, year)
+  await expect(balance).toContainText('taken')
+  const text = (await balance.textContent()) ?? ''
+  const available = /Holiday([\d.]+) days?available/.exec(text)
+  const taken = /([\d.]+) days? taken/.exec(text)
+  if (!available || !taken) throw new Error(`Could not read the holiday balance: ${text}`)
+  return { available: Number(available[1]), taken: Number(taken[1]) }
+}
+
 test('a member requests holiday, a manager approves it, and the balance goes down', async ({ page, consoleErrors }) => {
   const { start, end, year } = leaveWeek()
   const member = demoAccount('member')
+  // The demo seed gives the member some leave already, so compare against what the balance starts at.
+  let before = { available: 0, taken: 0 }
 
   await test.step('member sends a request', async () => {
     await signInAs(page, 'member')
     await navigateTo(page, 'Time off')
-    await expect(holidayBalance(page, year)).toContainText('20 days')
+    before = await readHolidayBalance(page, year)
     await page.getByRole('button', { name: 'Request time off' }).click()
     const dialog = page.getByRole('dialog', { name: 'Request time off' })
     await dialog.getByLabel('Leave type').selectOption({ label: 'Holiday' })
     await dialog.getByRole('textbox', { name: 'First day' }).fill(start)
     await dialog.getByRole('textbox', { name: 'Last day' }).fill(end)
-    await expect(dialog.getByText('Uses 3 days. Balance after: 17 days.')).toBeVisible()
+    await expect(dialog.getByText(`Uses 3 days. Balance after: ${formatDays(before.available - 3)}.`)).toBeVisible()
     await dialog.getByRole('button', { name: 'Send request' }).click()
     await expect(page.getByText('Request sent. It is pending approval.')).toBeVisible()
     await expect(holidayBalance(page, year)).toContainText('3 days pending')
@@ -59,7 +76,8 @@ test('a member requests holiday, a manager approves it, and the balance goes dow
     await signInAs(page, 'manager')
     await navigateTo(page, 'Team time off')
     await expect(page.getByRole('heading', { name: 'Team time off' })).toBeVisible()
-    const toApprove = page.getByRole('button', { name: '1 request to approve' })
+    // Other seeded members have pending requests too.
+    const toApprove = page.getByRole('button', { name: /^\d+ requests? to approve$/ })
     await expect(toApprove).toBeVisible()
 
     // The calendar opens on the current month; step forward to the leave's month.
@@ -71,9 +89,15 @@ test('a member requests holiday, a manager approves it, and the balance goes dow
     for (let step = 0; step < 2 && !(await table.isVisible()); step += 1) {
       await page.getByRole('button', { name: 'Next month' }).click()
     }
+    // The week can run into the next month, so count only its days in the month shown.
+    const daysInMonth = [0, 1, 2].filter(
+      (offset) =>
+        new Date(Date.parse(`${start}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 7) ===
+        start.slice(0, 7),
+    ).length
     await expect(
       table.getByRole('img', { name: new RegExp(`^${member.displayName}, .*Holiday, Pending`) }),
-    ).toHaveCount(3)
+    ).toHaveCount(daysInMonth)
 
     await toApprove.click()
     const row = page.getByRole('article').filter({ hasText: member.displayName }).filter({ hasText: 'Pending' })
@@ -88,8 +112,8 @@ test('a member requests holiday, a manager approves it, and the balance goes dow
   await test.step('member sees the approved leave and the lower balance', async () => {
     await signInAs(page, 'member')
     await navigateTo(page, 'Time off')
-    await expect(holidayBalance(page, year)).toContainText('17 days')
-    await expect(holidayBalance(page, year)).toContainText('3 days taken')
+    await expect(holidayBalance(page, year)).toContainText(`${formatDays(before.available - 3)}available`)
+    await expect(holidayBalance(page, year)).toContainText(`${formatDays(before.taken + 3)} taken`)
     await expect(page.getByText('Comment: Enjoy!')).toBeVisible()
   })
 

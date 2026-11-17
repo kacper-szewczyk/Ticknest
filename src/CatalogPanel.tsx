@@ -157,6 +157,7 @@ export function CatalogPanel({ workspaceId }: { workspaceId: string }) {
     <SectionCard labelledBy="catalog-heading">
       <SectionHeading
         id="catalog-heading"
+        level={1}
         kicker="WORK ORGANIZATION"
         title="Clients, projects & tasks"
         action={
