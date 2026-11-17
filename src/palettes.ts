@@ -34,7 +34,8 @@ export type AppColors = {
     avatarBg: string
     avatarText: string
   }
-  segment: { billable: string; nonBillable: string; running: string; gap: string }
+  /** Timeline segment fills. `runningEdge` outlines the running segment so it reaches 3:1 against `track`. */
+  segment: { billable: string; nonBillable: string; running: string; runningEdge: string; gap: string }
   avatars: string[]
   avatarText: string
 }
@@ -98,7 +99,13 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         avatarBg: '#dbe8d7',
         avatarText: '#213b2c',
       },
-      segment: { billable: '#386b43', nonBillable: '#9fbfa8', running: '#c4892f', gap: '#d6e6ee' },
+      segment: {
+        billable: '#386b43',
+        nonBillable: '#9fbfa8',
+        running: '#c4892f',
+        runningEdge: '#8f5f1a',
+        gap: '#d6e6ee',
+      },
       avatars: ['#dbe8d7', '#efe3cf', '#dfe6ef', '#eedcd8', '#e5def0', '#d8ebe7'],
       avatarText: '#24342a',
     },
@@ -140,7 +147,13 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         avatarBg: '#d3e4f5',
         avatarText: '#163a5c',
       },
-      segment: { billable: '#2f6f9e', nonBillable: '#9fbfd8', running: '#c4892f', gap: '#e8e4d8' },
+      segment: {
+        billable: '#2f6f9e',
+        nonBillable: '#9fbfd8',
+        running: '#c4892f',
+        runningEdge: '#8f5f1a',
+        gap: '#e8e4d8',
+      },
       avatars: ['#d3e4f5', '#efe3cf', '#dbeee6', '#eedcd8', '#e5def0', '#d8ebe7'],
       avatarText: '#1d2b3a',
     },
@@ -182,7 +195,13 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         avatarBg: '#e6d9ee',
         avatarText: '#462c56',
       },
-      segment: { billable: '#6b4a84', nonBillable: '#c0abd0', running: '#c4892f', gap: '#e3e7ec' },
+      segment: {
+        billable: '#6b4a84',
+        nonBillable: '#c0abd0',
+        running: '#c4892f',
+        runningEdge: '#8f5f1a',
+        gap: '#e3e7ec',
+      },
       avatars: ['#e6d9ee', '#efe3cf', '#dfe6ef', '#eedcd8', '#dbeee6', '#f3e3ec'],
       avatarText: '#2e2433',
     },
@@ -224,7 +243,13 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         avatarBg: '#f3d9cb',
         avatarText: '#6e311c',
       },
-      segment: { billable: '#9a4a2c', nonBillable: '#ddb39f', running: '#4f7a8f', gap: '#e6eadc' },
+      segment: {
+        billable: '#9a4a2c',
+        nonBillable: '#ddb39f',
+        running: '#4f7a8f',
+        runningEdge: '#3e6274',
+        gap: '#e6eadc',
+      },
       avatars: ['#f3d9cb', '#efe3cf', '#dfe6ef', '#e3ecd8', '#e5def0', '#d8ebe7'],
       avatarText: '#33261f',
     },
@@ -266,7 +291,13 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         avatarBg: '#2f4a37',
         avatarText: '#e3ebe4',
       },
-      segment: { billable: '#6fb27c', nonBillable: '#3f6b4c', running: '#e0a548', gap: '#2d4250' },
+      segment: {
+        billable: '#6fb27c',
+        nonBillable: '#3f6b4c',
+        running: '#e0a548',
+        runningEdge: '#f0c27a',
+        gap: '#2d4250',
+      },
       avatars: ['#2f4a37', '#4a3f2a', '#2e3b4d', '#4d3230', '#3d3350', '#28463f'],
       avatarText: '#e3ebe4',
     },
@@ -308,7 +339,13 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         avatarBg: '#1f3550',
         avatarText: '#e3e9f0',
       },
-      segment: { billable: '#5c9ce6', nonBillable: '#34557a', running: '#e8a64a', gap: '#3a3a4f' },
+      segment: {
+        billable: '#5c9ce6',
+        nonBillable: '#34557a',
+        running: '#e8a64a',
+        runningEdge: '#f3c27f',
+        gap: '#3a3a4f',
+      },
       avatars: ['#1f3550', '#4a3f2a', '#28463f', '#4d3230', '#3d3350', '#2f4a37'],
       avatarText: '#e3e9f0',
     },
@@ -350,7 +387,13 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         avatarBg: '#3a2f1f',
         avatarText: '#ececec',
       },
-      segment: { billable: '#e0a050', nonBillable: '#6b5a42', running: '#6fb0d8', gap: '#333a40' },
+      segment: {
+        billable: '#e0a050',
+        nonBillable: '#6b5a42',
+        running: '#6fb0d8',
+        runningEdge: '#a3cfe8',
+        gap: '#333a40',
+      },
       avatars: ['#3a2f1f', '#2e3b4d', '#28463f', '#4d3230', '#3d3350', '#3a3a3a'],
       avatarText: '#ececec',
     },
