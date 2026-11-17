@@ -155,6 +155,13 @@ describe('TimerBar', () => {
     expect(screen.getByRole('status').textContent).toBe('Timer stopped, 1 min saved')
   })
 
+  it('announces a stop under a minute without "0 min"', async () => {
+    entries = [{ ...runningEntry('Quick'), startAt: Timestamp.fromMillis(Date.now() - 5_000) } as TimeEntry]
+    renderBar()
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Timer stopped, under a minute saved'))
+  })
+
   it('keeps focus on Start and announces nothing when starting fails', async () => {
     startTimer.mockRejectedValue(new Error('Offline.'))
     renderBar()

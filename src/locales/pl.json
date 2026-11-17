@@ -675,6 +675,7 @@
     "stopped": "Licznik zatrzymany, zapisano {{duration}}",
     "durationHours": "{{hours}} godz. {{minutes}} min",
     "durationMinutes": "{{minutes}} min",
+    "durationUnderMinute": "mniej niż minutę",
     "autoStopped": "Twój licznik „{{description}}” działał po północy, więc został zatrzymany z końcem dnia, w którym go uruchomiono. Jeśli praca trwała dłużej, popraw wpis."
   },
   "entries": {

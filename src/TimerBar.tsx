@@ -354,7 +354,8 @@ function RunningDescriptionField({
 function spokenDuration(seconds: number, t: ReturnType<typeof useTranslation>['t']): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  return hours > 0 ? t('timer.durationHours', { hours, minutes }) : t('timer.durationMinutes', { minutes })
+  if (hours > 0) return t('timer.durationHours', { hours, minutes })
+  return minutes > 0 ? t('timer.durationMinutes', { minutes }) : t('timer.durationUnderMinute')
 }
 
 const visuallyHiddenSx = {

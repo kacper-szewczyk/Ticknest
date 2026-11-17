@@ -635,6 +635,7 @@
     "stopped": "Timer stopped, {{duration}} saved",
     "durationHours": "{{hours}} h {{minutes}} min",
     "durationMinutes": "{{minutes}} min",
+    "durationUnderMinute": "under a minute",
     "autoStopped": "Your timer “{{description}}” ran past midnight, so it was stopped at the end of the day it started. Edit the entry if you worked later."
   },
   "entries": {
