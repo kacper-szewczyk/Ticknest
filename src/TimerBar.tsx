@@ -10,6 +10,7 @@ import { useTranslation } from './i18n'
 import { autoStopNoticeEntry, markAutoStopNoticeSeen, readSeenAutoStopNotice } from './lib/autoStopNotice'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed } from './lib/dates'
+import { setTimerTitle } from './lib/documentTitle'
 import { readableError } from './lib/errors'
 import { runningTimerTitle } from './lib/tabTitle'
 import {
@@ -109,20 +110,13 @@ export function TimerBar({ user, workspaceId, catalog }: { user: User; workspace
     ? Math.max(0, Math.floor(now / 1000 - runningEntry.startAt.toMillis() / 1000))
     : 0
 
-  // Show the running timer in the browser tab, driven by the same one-second clock as the bar. The title that was
-  // there before comes back when the timer stops or the bar unmounts (sign-out, leaving the workspace).
-  const isRunning = runningEntry !== undefined
+  // Show the running timer in the browser tab, driven by the same one-second clock as the bar. The current view's
+  // title comes back when the timer stops or the bar unmounts (sign-out, leaving the workspace).
   const tabTitle = runningEntry ? runningTimerTitle(elapsed, runningEntry) : null
   useEffect(() => {
-    if (!isRunning) return
-    const defaultTitle = document.title
-    return () => {
-      document.title = defaultTitle
-    }
-  }, [isRunning])
-  useEffect(() => {
-    if (tabTitle !== null) document.title = tabTitle
+    setTimerTitle(tabTitle)
   }, [tabTitle])
+  useEffect(() => () => setTimerTitle(null), [])
 
   const elapsedText = (
     <Typography
