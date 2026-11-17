@@ -28,6 +28,15 @@ const sidebarColors = {
   border: (theme: Theme) => alpha(theme.palette.app.sidebar.strong, 0.08),
 }
 
+// The global focus ring (app.focus) is too dark to see on the sidebar in the light palettes, so every control on
+// the sidebar background gets the sidebar accent instead.
+const sidebarFocusSx = {
+  '& .MuiButtonBase-root.Mui-focusVisible': {
+    outline: (theme: Theme) => `3px solid ${theme.palette.app.sidebar.accent}`,
+    outlineOffset: 1,
+  },
+} as const
+
 type ShellProps<V extends string> = {
   brand: ReactNode
   /** Rendered under the brand, above the navigation (e.g. a workspace switcher). */
@@ -117,6 +126,7 @@ export function AppShell<V extends string>({
           overflow: 'hidden',
           transition: `width ${SIDEBAR_TRANSITION}`,
           zIndex: (theme) => theme.zIndex.appBar,
+          ...sidebarFocusSx,
         }}
       >
         {collapsed ? (
@@ -186,6 +196,7 @@ export function AppShell<V extends string>({
           px: 1.5,
           bgcolor: sidebarColors.bg,
           color: sidebarColors.strong,
+          ...sidebarFocusSx,
         }}
       >
         <IconButton
@@ -216,7 +227,7 @@ export function AppShell<V extends string>({
             role: 'dialog',
             'aria-modal': true,
             'aria-label': t('shell.mainNavigation'),
-            sx: { width: SIDEBAR_WIDTH, maxWidth: '85vw', border: 0 },
+            sx: { width: SIDEBAR_WIDTH, maxWidth: '85vw', border: 0, ...sidebarFocusSx },
           },
         }}
       >
@@ -301,10 +312,6 @@ function navButtonSx(isActive: boolean) {
     bgcolor: isActive ? sidebarColors.activeBg : 'transparent',
     transition: 'background-color .15s, color .15s',
     '&:hover': { bgcolor: sidebarColors.activeBg, color: sidebarColors.strong },
-    '&.Mui-focusVisible': {
-      outline: (theme: Theme) => `3px solid ${theme.palette.app.sidebar.accent}`,
-      outlineOffset: 1,
-    },
     '&::before': isActive
       ? {
           content: '""',

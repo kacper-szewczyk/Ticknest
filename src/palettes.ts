@@ -28,6 +28,7 @@ export type AppColors = {
     bg: string
     text: string
     muted: string
+    /** Quietest sidebar text (e.g. the version line); still at least 4.5:1 on `bg`. */
     faint: string
     strong: string
     accent: string
@@ -92,7 +93,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         bg: '#17271f',
         text: '#c3d0c6',
         muted: '#7f9383',
-        faint: '#5f7363',
+        faint: '#7c9080',
         strong: '#f3f7ef',
         accent: '#a8d29a',
         avatarBg: '#dbe8d7',
@@ -134,7 +135,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         bg: '#142536',
         text: '#c2cfdc',
         muted: '#7d90a4',
-        faint: '#5c7086',
+        faint: '#7a8da1',
         strong: '#f1f6fb',
         accent: '#8fc1ee',
         avatarBg: '#d3e4f5',
@@ -176,7 +177,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         bg: '#251a2c',
         text: '#d2c6d8',
         muted: '#95849e',
-        faint: '#6f5f78',
+        faint: '#91809a',
         strong: '#f7f1fa',
         accent: '#d2a8ec',
         avatarBg: '#e6d9ee',
@@ -218,7 +219,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         bg: '#2b1d17',
         text: '#dccbc1',
         muted: '#a08c80',
-        faint: '#7a675c',
+        faint: '#988478',
         strong: '#fbf3ee',
         accent: '#f0a986',
         avatarBg: '#f3d9cb',
@@ -260,7 +261,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         bg: '#0d1410',
         text: '#b9c7bc',
         muted: '#78897c',
-        faint: '#5a6b5e',
+        faint: '#718275',
         strong: '#f0f6ef',
         accent: '#a8d29a',
         avatarBg: '#2f4a37',
@@ -302,7 +303,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         bg: '#0a1018',
         text: '#b5c3d3',
         muted: '#7488a0',
-        faint: '#566a80',
+        faint: '#6a7e95',
         strong: '#eef4fb',
         accent: '#8ab4f8',
         avatarBg: '#1f3550',
@@ -344,7 +345,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
         bg: '#0e0e0e',
         text: '#c4c4c4',
         muted: '#858585',
-        faint: '#626262',
+        faint: '#7b7b7b',
         strong: '#f5f5f5',
         accent: '#f2b05e',
         avatarBg: '#3a2f1f',
