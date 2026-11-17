@@ -1,20 +1,17 @@
+import { currentLanguage, i18n } from '../i18n'
 import type { Catalog } from './catalog'
 import { formatElapsed } from './dates'
-import {
-  localDate,
-  localDateTime,
-  localTime,
-  UNKNOWN_USER,
-  type ReportFilters,
-  type ReportMember,
-} from './reportFormat'
-import { entrySeconds, type GroupBy, GROUP_BY_OPTIONS, type ReportGroup } from './reportGroups'
+import { localDate, localDateTime, localTime, unknownUser, type ReportFilters, type ReportMember } from './reportFormat'
+import { entrySeconds, groupByLabel, type GroupBy, type ReportGroup } from './reportGroups'
 import type { TimeEntry } from './timeEntries'
 
 /** A PDF this long is already around 120 pages; past it, people should narrow the filters or use CSV. */
 export const PDF_EXPORT_ROW_LIMIT = 5_000
 
-export const PDF_ROW_LIMIT_MESSAGE = `This report has more than ${PDF_EXPORT_ROW_LIMIT.toLocaleString('en-US')} entries, which is too many for a PDF. Narrow the filters or use Export CSV instead.`
+/** Shown instead of exporting when the report has more entries than {@link PDF_EXPORT_ROW_LIMIT}. */
+export function pdfRowLimitMessage(): string {
+  return i18n.t('reports.export.pdfRowLimit', { limit: PDF_EXPORT_ROW_LIMIT })
+}
 
 const EMPTY_CELL = '—'
 
@@ -46,8 +43,15 @@ export type ReportPdfModel = {
   summaryTitle: string
   summaryHead: string[]
   summaryBody: ReportPdfSummaryRow[]
+  entriesTitle: string
   entriesHead: string[]
   entriesBody: string[][]
+  /** Index of the duration column in `entriesHead`, which the renderer right-aligns. */
+  durationColumn: number
+  /** Placeholder cell for an empty table. */
+  noEntries: string
+  /** Footer page label, e.g. "Page 2 of 9". */
+  pageLabel: (page: number, pages: number) => string
 }
 
 export function reportPdfFileName(filters: Pick<ReportFilters, 'startDay' | 'endDay'>) {
@@ -61,17 +65,34 @@ export function describeReportFilters(
   members: readonly ReportMember[],
   canSeeAllEntries: boolean,
 ): string[] {
+  const { t } = i18n
   const labels: string[] = []
   if (canSeeAllEntries && filters.userId) {
     const member = members.find((item) => item.uid === filters.userId)
-    labels.push(`Member: ${member?.displayName?.trim() || member?.email?.trim() || UNKNOWN_USER}`)
+    labels.push(
+      t('reports.pdf.memberFilter', {
+        name: member?.displayName?.trim() || member?.email?.trim() || unknownUser(),
+      }),
+    )
   }
   const named = (items: readonly { id: string; name: string }[], id: string, fallback: string) =>
     items.find((item) => item.id === id)?.name || fallback
-  if (filters.clientId) labels.push(`Client: ${named(catalog.clients, filters.clientId, 'Unknown client')}`)
-  if (filters.projectId) labels.push(`Project: ${named(catalog.projects, filters.projectId, 'Unknown project')}`)
-  if (filters.taskId) labels.push(`Task: ${named(catalog.tasks, filters.taskId, 'Unknown task')}`)
-  if (filters.billable) labels.push(filters.billable === 'yes' ? 'Billable only' : 'Non-billable only')
+  if (filters.clientId)
+    labels.push(
+      t('reports.pdf.clientFilter', { name: named(catalog.clients, filters.clientId, t('reports.pdf.unknownClient')) }),
+    )
+  if (filters.projectId)
+    labels.push(
+      t('reports.pdf.projectFilter', {
+        name: named(catalog.projects, filters.projectId, t('reports.pdf.unknownProject')),
+      }),
+    )
+  if (filters.taskId)
+    labels.push(
+      t('reports.pdf.taskFilter', { name: named(catalog.tasks, filters.taskId, t('reports.pdf.unknownTask')) }),
+    )
+  if (filters.billable)
+    labels.push(filters.billable === 'yes' ? t('reports.pdf.billableOnly') : t('reports.pdf.nonBillableOnly'))
   return labels
 }
 
@@ -102,54 +123,67 @@ function entryRow(entry: TimeEntry, input: ReportPdfInput): string[] {
   return [
     startDay,
     ...(input.showUser ? [input.userName(entry)] : []),
-    entry.description || 'Untitled entry',
+    entry.description || i18n.t('common.untitledEntry'),
     entry.clientName || EMPTY_CELL,
     entry.projectName || EMPTY_CELL,
     entry.taskName || EMPTY_CELL,
     localTime(start, input.timeZone),
     endLabel,
     formatElapsed(entrySeconds(entry)),
-    entry.billable ? 'Yes' : 'No',
+    entry.billable ? i18n.t('reports.yes') : i18n.t('reports.no'),
   ]
 }
 
 /** Lays out everything the PDF shows. Kept free of the PDF library so it stays cheap to test. */
 export function buildReportPdfModel(input: ReportPdfInput): ReportPdfModel {
+  const { t } = i18n
   const totalSeconds = input.entries.reduce((total, entry) => total + entrySeconds(entry), 0)
   const billableSeconds = input.entries.reduce((total, entry) => total + (entry.billable ? entrySeconds(entry) : 0), 0)
-  const groupLabel = GROUP_BY_OPTIONS.find((option) => option.value === input.groupBy)?.label ?? 'Day'
+  const entriesHead = [
+    t('reports.columns.date'),
+    ...(input.showUser ? [t('reports.columns.user')] : []),
+    t('reports.columns.description'),
+    t('reports.columns.client'),
+    t('reports.columns.project'),
+    t('reports.columns.task'),
+    t('reports.columns.start'),
+    t('reports.columns.end'),
+    t('reports.columns.duration'),
+    t('reports.columns.billable'),
+  ]
   return {
     fileName: reportPdfFileName(input.filters),
     title: input.workspaceName.trim() || 'Tickness',
-    subtitle: `Time report · ${input.filters.startDay} to ${input.filters.endDay}`,
+    subtitle: t('reports.pdf.subtitle', { start: input.filters.startDay, end: input.filters.endDay }),
     details: [
-      `Time zone: ${input.timeZone}`,
-      `Generated: ${localDateTime(input.generatedAt ?? new Date(), input.timeZone)}`,
-      `Filters: ${input.filterLabels.length > 0 ? input.filterLabels.join(', ') : 'None'}`,
+      t('reports.pdf.timeZone', { timeZone: input.timeZone }),
+      t('reports.pdf.generated', { date: localDateTime(input.generatedAt ?? new Date(), input.timeZone) }),
+      t('reports.pdf.filters', {
+        filters: input.filterLabels.length > 0 ? input.filterLabels.join(', ') : t('reports.pdf.noFilters'),
+      }),
     ],
     totals: [
-      ['Total tracked', formatElapsed(totalSeconds)],
-      ['Billable', formatElapsed(billableSeconds)],
-      ['Entries', input.entries.length.toLocaleString('en-US')],
+      [t('reports.totals.totalTracked'), formatElapsed(totalSeconds)],
+      [t('reports.totals.billable'), formatElapsed(billableSeconds)],
+      [t('reports.totals.entries'), input.entries.length.toLocaleString(currentLanguage())],
     ],
-    summaryTitle: `Summary by ${groupLabel.toLowerCase()}`,
-    summaryHead: [groupLabel, 'Entries', 'Billable', 'Total', 'Share'],
+    summaryTitle: t(`reports.pdf.summaryBy.${input.groupBy}`),
+    summaryHead: [
+      groupByLabel(input.groupBy),
+      t('reports.columns.entries'),
+      t('reports.totals.billable'),
+      t('reports.columns.total'),
+      t('reports.columns.share'),
+    ],
     summaryBody: input.groups.flatMap((group) => [
       summaryRow(group, totalSeconds, false),
       ...(group.children ?? []).map((child) => summaryRow(child, totalSeconds, true)),
     ]),
-    entriesHead: [
-      'Date',
-      ...(input.showUser ? ['User'] : []),
-      'Description',
-      'Client',
-      'Project',
-      'Task',
-      'Start',
-      'End',
-      'Duration',
-      'Billable',
-    ],
+    entriesTitle: t('reports.pdf.detailedEntries'),
+    entriesHead,
     entriesBody: input.entries.map((entry) => entryRow(entry, input)),
+    durationColumn: entriesHead.length - 2,
+    noEntries: t('reports.pdf.noEntries'),
+    pageLabel: (page, pages) => t('reports.pdf.page', { page, pages }),
   }
 }

@@ -501,9 +501,15 @@ export function WorkspaceScreen({ user }: { user: User }) {
       <Box component="label" sx={{ display: 'grid', gap: 0.5, px: 1 }}>
         <Typography
           component="span"
-          sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'app.sidebar.muted' }}
+          sx={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '.12em',
+            textTransform: 'uppercase',
+            color: 'app.sidebar.muted',
+          }}
         >
-          WORKSPACE
+          {t('shell.workspace')}
         </Typography>
         <Box
           component="select"
@@ -566,14 +572,17 @@ export function WorkspaceScreen({ user }: { user: User }) {
 
   const compactSidebarFooter = (
     <>
-      <Tooltip title={user.email ?? user.displayName ?? 'Your account'} placement="right">
-        <Box role="img" aria-label={`Signed in as ${user.email ?? user.displayName ?? 'your account'}`}>
+      <Tooltip title={user.email ?? user.displayName ?? t('shell.yourAccount')} placement="right">
+        <Box
+          role="img"
+          aria-label={t('shell.signedInAs', { account: user.email ?? user.displayName ?? t('shell.yourAccount') })}
+        >
           {userAvatar}
         </Box>
       </Tooltip>
-      <Tooltip title="Sign out" placement="right">
+      <Tooltip title={t('shell.signOut')} placement="right">
         <IconButton
-          aria-label="Sign out"
+          aria-label={t('shell.signOut')}
           onClick={() => void signOutUser()}
           sx={{
             color: 'app.sidebar.text',
@@ -594,7 +603,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
         {userAvatar}
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="body2" noWrap sx={{ color: 'app.sidebar.strong', fontWeight: 600 }}>
-            {user.displayName || 'Your account'}
+            {user.displayName || t('shell.yourAccount')}
           </Typography>
           <Typography variant="caption" noWrap sx={{ display: 'block', color: 'app.sidebar.muted' }}>
             {user.email}
@@ -612,7 +621,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
           '&:hover': { bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.09) },
         }}
       >
-        Sign out
+        {t('shell.signOut')}
       </Button>
       <Typography variant="caption" sx={{ px: 1, color: 'app.sidebar.faint' }}>
         Tickness v{__APP_VERSION__}
@@ -657,7 +666,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
         {notice && <FormMessage severity="success">{notice}</FormMessage>}
         {!emailVerified && <EmailVerificationNotice user={user} />}
         {activeWorkspace && setupWorkspaceId === activeWorkspace.id ? (
-          <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+          <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
             <SetupWizard
               workspaceId={activeWorkspace.id}
               workspaceName={activeWorkspace.name}
@@ -703,7 +712,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
               />
             )}
             {currentView === 'reports' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <ReportsPanel
                   user={user}
                   workspaceId={activeWorkspace.id}
@@ -714,7 +723,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
               </Suspense>
             )}
             {currentView === 'my-budgets' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <MyBudgetsPanel
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}
@@ -727,7 +736,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
               </Suspense>
             )}
             {currentView === 'team-budgets' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <TeamBudgetsPanel
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}
@@ -738,12 +747,12 @@ export function WorkspaceScreen({ user }: { user: User }) {
               </Suspense>
             )}
             {currentView === 'budgets' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <BudgetsPanel key={activeWorkspace.id} workspaceId={activeWorkspace.id} catalog={catalog} />
               </Suspense>
             )}
             {currentView === 'time-off' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <TimeOffPanel
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}
@@ -753,7 +762,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
               </Suspense>
             )}
             {currentView === 'time-off-approvals' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <TimeOffApprovalsPanel
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}
@@ -764,7 +773,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
               </Suspense>
             )}
             {currentView === 'team-time-off' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <TeamTimeOffPanel
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}
@@ -776,7 +785,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
             )}
             {currentView === 'catalog' && <CatalogPanel workspaceId={activeWorkspace.id} />}
             {currentView === 'members' && (
-              <Suspense fallback={<LoadingState label="Loading…" sx={{ py: 8 }} />}>
+              <Suspense fallback={<LoadingState label={t('common.loading')} sx={{ py: 8 }} />}>
                 <MemberManagementPanel
                   key={activeWorkspace.id}
                   workspaceId={activeWorkspace.id}

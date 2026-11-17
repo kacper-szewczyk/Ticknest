@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
 import { describe, expect, it } from 'vitest'
+import { changeAppLanguage } from '../../src/i18n'
 import type { Catalog } from '../../src/lib/catalog'
 import { csvRow, type ReportFilters } from '../../src/lib/reportFormat'
 import { summarizeReport } from '../../src/lib/reportGroups'
@@ -154,6 +155,26 @@ describe('buildReportPdfModel', () => {
     expect(model.entriesHead).not.toContain('User')
     expect(model.entriesBody[0]).toHaveLength(9)
     expect(JSON.stringify(buildReportPdfModel(input()))).not.toMatch(/uid-/)
+  })
+})
+
+describe('buildReportPdfModel in Polish', () => {
+  it('translates the headings, columns and summary groups', async () => {
+    await changeAppLanguage('pl')
+    try {
+      const model = buildReportPdfModel(input())
+      expect(model.subtitle).toBe('Raport czasu · 2026-10-01 – 2026-10-31')
+      expect(model.details[2]).toBe('Filtry: Brak')
+      expect(model.totals.map(([label]) => label)).toEqual(['Łączny czas', 'Płatne', 'Wpisy'])
+      expect(model.summaryTitle).toBe('Podsumowanie według projektów')
+      expect(model.summaryHead[0]).toBe('Projekt')
+      expect(model.summaryBody[2]?.cells[0]).toBe('Bez projektu')
+      expect(model.entriesHead[model.durationColumn]).toBe('Czas trwania')
+      expect(model.entriesBody[0]?.at(-1)).toBe('Tak')
+      expect(model.pageLabel(2, 9)).toBe('Strona 2 z 9')
+    } finally {
+      await changeAppLanguage('en')
+    }
   })
 })
 

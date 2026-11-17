@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
 import { describe, expect, it } from 'vitest'
+import { changeAppLanguage } from '../../src/i18n'
 import {
   csvField,
   csvHeader,
@@ -10,7 +11,7 @@ import {
   reportRange,
   reportUserName,
   searchReportEntries,
-  UNKNOWN_USER,
+  unknownUser,
   type ReportFilters,
 } from '../../src/lib/reportFormat'
 import type { TimeEntry } from '../../src/lib/timeEntries'
@@ -152,6 +153,17 @@ describe('csvHeader', () => {
       'Date,User,Description,Client,Project,Task,Start (Europe/Warsaw),End (Europe/Warsaw),Duration,Billable',
     )
   })
+
+  it('uses the interface language', async () => {
+    await changeAppLanguage('pl')
+    try {
+      expect(csvHeader('UTC')).toBe(
+        'Data,Osoba,Opis,Klient,Projekt,Zadanie,Początek (UTC),Koniec (UTC),Czas trwania,Płatny',
+      )
+    } finally {
+      await changeAppLanguage('en')
+    }
+  })
 })
 
 describe('reportUserName', () => {
@@ -170,8 +182,8 @@ describe('reportUserName', () => {
   })
 
   it('never returns a raw user ID', () => {
-    expect(reportUserName(entry({ userId: 'KXvfP50Tq', userDisplayName: undefined }), [])).toBe(UNKNOWN_USER)
-    expect(reportUserName(entry({ userId: 'KXvfP50Tq', userDisplayName: 'KXvfP50Tq' }), [])).toBe(UNKNOWN_USER)
+    expect(reportUserName(entry({ userId: 'KXvfP50Tq', userDisplayName: undefined }), [])).toBe(unknownUser())
+    expect(reportUserName(entry({ userId: 'KXvfP50Tq', userDisplayName: 'KXvfP50Tq' }), [])).toBe(unknownUser())
   })
 })
 
@@ -191,7 +203,7 @@ describe('csvRow', () => {
       taskName: null,
       billable: false,
     })
-    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC', UNKNOWN_USER)).toBe(
+    expect(csvRow({ ...completed, endAt: completed.endAt! }, 'UTC', unknownUser())).toBe(
       '2026-10-14,Unknown user,"Fix ""login"", again",,,,2026-10-14 08:00:00 UTC,2026-10-14 09:30:15 UTC,01:30:15,No',
     )
   })

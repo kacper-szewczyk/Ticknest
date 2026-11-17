@@ -19,6 +19,8 @@ export type Catalog = {
   demo: { useAccount: string }
   timer: { region: string; placeholder: string; start: string; stop: string }
   entries: { expandAll: string; collapseAll: string }
+  reports: { export: { pdf: string } }
+  members: { peopleWithAccess: string }
 }
 export const LANGUAGES = ['en', 'pl'] as const
 export type Language = (typeof LANGUAGES)[number]

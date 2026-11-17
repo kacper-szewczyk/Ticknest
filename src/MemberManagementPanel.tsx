@@ -26,21 +26,28 @@ import {
   type WorkspaceMember,
   type WorkspaceRole,
 } from './lib/workspaces'
+import { i18n, useAppLanguage, useTranslation } from './i18n'
 import { isFeatureEnabled } from './lib/featureFlags'
 import { invitationUrl } from './lib/inviteLink'
 import { EmptyText, FormMessage, ListRow, SectionCard, SectionHeading } from './ui'
 
-const ROLE_LABELS: Record<WorkspaceRole, string> = { owner: 'Owner', manager: 'Manager', member: 'Member' }
+const ROLES: readonly WorkspaceRole[] = ['owner', 'manager', 'member']
+
+// Roles come from Firestore, so an unexpected value is shown as a plain member rather than a missing key.
+function roleLabel(role: WorkspaceRole): string {
+  return i18n.t(`members.roles.${ROLES.includes(role) ? role : 'member'}`)
+}
 
 // Summaries of SPEC §2, shown under each role option and in the "About roles" hint. Budgets are left out when the
 // feature is off, so the copy never promises a page nobody can open.
 function roleDescriptions(): Record<WorkspaceRole, string> {
+  const { t } = i18n
   return {
-    owner: 'Manages the workspace, its members, clients, projects and settings.',
+    owner: t('members.roleDescriptions.owner'),
     manager: isFeatureEnabled('budgets')
-      ? 'Can see everyone’s time, run reports on all users, and manage budgets for any member.'
-      : 'Can see everyone’s time and run reports on all users.',
-    member: 'Tracks and reports on their own time only.',
+      ? t('members.roleDescriptions.managerWithBudgets')
+      : t('members.roleDescriptions.manager'),
+    member: t('members.roleDescriptions.member'),
   }
 }
 
@@ -58,22 +65,13 @@ function isAssignableRole(role: string): role is AssignableRole {
 }
 
 function roleChangeConfirmation({ member, role }: RoleChange): { title: string; body: string; action: string } {
+  const { t } = i18n
   const name = memberName(member)
-  const budgetsEnabled = isFeatureEnabled('budgets')
-  if (role === 'manager')
-    return {
-      title: `Make ${name} a manager?`,
-      body: budgetsEnabled
-        ? 'They’ll be able to see all workspace time entries, run reports on everyone and manage budgets for any member.'
-        : 'They’ll be able to see all workspace time entries and run reports on everyone.',
-      action: 'Make manager',
-    }
+  const copy = role === 'manager' ? 'makeManager' : 'makeMember'
   return {
-    title: `Make ${name} a member?`,
-    body: budgetsEnabled
-      ? 'They’ll no longer be able to see other people’s time entries, run reports on everyone or manage budgets. They’ll track and report on their own time only.'
-      : 'They’ll no longer be able to see other people’s time entries or run reports on everyone. They’ll track and report on their own time only.',
-    action: 'Make member',
+    title: t(`members.${copy}.title`, { name }),
+    body: isFeatureEnabled('budgets') ? t(`members.${copy}.bodyWithBudgets`) : t(`members.${copy}.body`),
+    action: t(`members.${copy}.action`),
   }
 }
 
@@ -81,7 +79,7 @@ function RoleChip({ role }: { role: WorkspaceRole }) {
   return (
     <Chip
       size="small"
-      label={ROLE_LABELS[role] ?? ROLE_LABELS.member}
+      label={roleLabel(role)}
       color={role === 'owner' ? 'primary' : role === 'manager' ? 'secondary' : 'default'}
       variant={role === 'member' ? 'outlined' : 'filled'}
       sx={{ flex: '0 0 auto', fontWeight: 600 }}
@@ -90,6 +88,8 @@ function RoleChip({ role }: { role: WorkspaceRole }) {
 }
 
 export function MemberManagementPanel({ workspaceId, currentUserId }: { workspaceId: string; currentUserId: string }) {
+  const { t } = useTranslation()
+  const language = useAppLanguage()
   const descriptions = roleDescriptions()
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([])
@@ -123,10 +123,10 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     try {
       const invitation = await createWorkspaceInvitation(workspaceId, email)
       setInviteUrl(invitationUrl(window.location.origin, workspaceId, invitation.invitationId, invitation.token))
-      setNotice(`Invitation created for ${email.trim()}. Copy the link and send it to them. It expires in 7 days.`)
+      setNotice(t('members.invitationCreated', { email: email.trim() }))
       setEmail('')
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Could not create the invitation.')
+      setError(issue instanceof Error ? issue.message : t('members.createFailed'))
     } finally {
       setPending(false)
     }
@@ -138,30 +138,25 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     setNotice('')
     try {
       await revokeWorkspaceInvitation(workspaceId, invitation.id)
-      setNotice(`Invitation for ${invitation.email} revoked.`)
+      setNotice(t('members.revoked', { email: invitation.email }))
       setInviteUrl('')
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Could not revoke this invitation.')
+      setError(issue instanceof Error ? issue.message : t('members.revokeFailed'))
     } finally {
       setPending(false)
     }
   }
 
   async function remove(member: WorkspaceMember) {
-    if (
-      !window.confirm(
-        `Remove ${memberName(member)} from this workspace? Their historical time entries will be retained.`,
-      )
-    )
-      return
+    if (!window.confirm(t('members.confirmRemove', { name: memberName(member) }))) return
     setBusyMemberUid(member.uid)
     setError('')
     setNotice('')
     try {
       await removeWorkspaceMember(workspaceId, member.uid)
-      setNotice(`${memberName(member)} was removed. Historical entries were retained.`)
+      setNotice(t('members.removed', { name: memberName(member) }))
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Could not remove this member.')
+      setError(issue instanceof Error ? issue.message : t('members.removeFailed'))
     } finally {
       setBusyMemberUid('')
     }
@@ -182,9 +177,9 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
     setNotice('')
     try {
       await setWorkspaceMemberRole(workspaceId, member.uid, role)
-      setNotice(role === 'manager' ? `${name} is now a manager.` : `${name} is now a member.`)
+      setNotice(role === 'manager' ? t('members.nowManager', { name }) : t('members.nowMember', { name }))
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Could not change this member’s role.')
+      setError(issue instanceof Error ? issue.message : t('members.roleChangeFailed'))
     } finally {
       setBusyMemberUid('')
     }
@@ -193,9 +188,9 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(inviteUrl)
-      setNotice('Invitation link copied.')
+      setNotice(t('members.linkCopied'))
     } catch {
-      setNotice('Select and copy the invitation link below.')
+      setNotice(t('members.copyManually'))
     }
   }
 
@@ -207,9 +202,9 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
       <SectionHeading
         id="members-heading"
         level={1}
-        kicker="TEAM ACCESS"
-        title="Workspace members"
-        action={<Chip label={`${activeMembers.length} ${activeMembers.length === 1 ? 'member' : 'members'}`} />}
+        kicker={t('members.kicker')}
+        title={t('members.title')}
+        action={<Chip label={t('members.memberCount', { count: activeMembers.length })} />}
       />
       {error && <FormMessage severity="error">{error}</FormMessage>}
       {notice && <FormMessage severity="success">{notice}</FormMessage>}
@@ -222,18 +217,18 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
         sx={{ mt: 2.5, alignItems: { sm: 'flex-start' } }}
       >
         <TextField
-          label="Email address"
+          label={t('members.emailAddress')}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="email"
           required
           placeholder="teammate@example.com"
-          helperText="We’ll create a secure, single-use link. Copy it and send it to the invited email address."
+          helperText={t('members.emailHelper')}
           slotProps={{ htmlInput: { maxLength: 254 } }}
         />
         <Button variant="contained" type="submit" disabled={pending} sx={{ flex: '0 0 auto' }}>
-          {pending ? 'Creating…' : 'Create invitation'}
+          {pending ? t('members.creating') : t('members.createInvitation')}
         </Button>
       </Stack>
       {inviteUrl && (
@@ -250,19 +245,19 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
           }}
         >
           <TextField
-            label="Invitation link"
+            label={t('members.invitationLink')}
             value={inviteUrl}
             onFocus={(event) => event.target.select()}
             slotProps={{ htmlInput: { readOnly: true } }}
           />
           <Button variant="outlined" onClick={() => void copyLink()} sx={{ flex: '0 0 auto' }}>
-            Copy link
+            {t('members.copyLink')}
           </Button>
         </Paper>
       )}
       {invitations.length > 0 && (
         <Box sx={{ mt: 2.75 }}>
-          <Typography variant="h3">Pending invitations</Typography>
+          <Typography variant="h3">{t('members.pendingInvitations')}</Typography>
           {invitations.map((invitation) => (
             <ListRow key={invitation.id}>
               <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0, overflowWrap: 'anywhere' }}>
@@ -270,11 +265,11 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                   {invitation.email}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Expires {invitation.expiresAt.toDate().toLocaleDateString()}
+                  {t('members.expires', { date: invitation.expiresAt.toDate().toLocaleDateString(language) })}
                 </Typography>
               </Box>
               <Button size="small" color="error" onClick={() => void revoke(invitation)} disabled={pending}>
-                Revoke
+                {t('members.revoke')}
               </Button>
             </ListRow>
           ))}
@@ -282,14 +277,14 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
       )}
       <Box sx={{ mt: 2.75 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h3">People with access</Typography>
+          <Typography variant="h3">{t('members.peopleWithAccess')}</Typography>
           <Button
             size="small"
             onClick={() => setShowRoleHelp((shown) => !shown)}
             aria-expanded={showRoleHelp}
             aria-controls="about-roles"
           >
-            About roles
+            {t('members.aboutRoles')}
           </Button>
         </Stack>
         <Collapse in={showRoleHelp}>
@@ -298,7 +293,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
               {(['owner', 'manager', 'member'] as const).map((role) => (
                 <Box key={role}>
                   <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>
-                    {ROLE_LABELS[role]}
+                    {roleLabel(role)}
                   </Typography>
                   <Typography component="dd" variant="body2" color="text.secondary" sx={{ m: 0 }}>
                     {descriptions[role]}
@@ -336,7 +331,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                     <RoleChip role={member.role} />
                     {member.uid === currentUserId && (
                       <Typography variant="caption" color="text.secondary">
-                        (you)
+                        {t('members.you')}
                       </Typography>
                     )}
                   </Stack>
@@ -355,7 +350,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                   <TextField
                     select
                     size="small"
-                    label="Role"
+                    label={t('members.role')}
                     value={member.role === 'manager' ? 'manager' : 'member'}
                     onChange={(event) => requestRoleChange(member, event.target.value)}
                     disabled={isBusy}
@@ -363,8 +358,11 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                     slotProps={{
                       select: {
                         // Name the person, not just "Role", so each row's control is distinct to screen readers.
-                        SelectDisplayProps: { 'aria-label': `Role for ${name}`, 'aria-labelledby': undefined },
-                        renderValue: (value) => ROLE_LABELS[value as AssignableRole],
+                        SelectDisplayProps: {
+                          'aria-label': t('members.roleFor', { name }),
+                          'aria-labelledby': undefined,
+                        },
+                        renderValue: (value) => roleLabel(value as AssignableRole),
                         MenuProps: { slotProps: { paper: { sx: { maxWidth: 320 } } } },
                       },
                     }}
@@ -372,7 +370,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                     {ASSIGNABLE_ROLES.map((role) => (
                       <MenuItem key={role} value={role} sx={{ whiteSpace: 'normal' }}>
                         <ListItemText
-                          primary={ROLE_LABELS[role]}
+                          primary={roleLabel(role)}
                           secondary={descriptions[role]}
                           slotProps={{ primary: { sx: { fontWeight: 600 } } }}
                         />
@@ -380,18 +378,18 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                     ))}
                   </TextField>
                   <Button size="small" color="error" onClick={() => void remove(member)} disabled={isBusy}>
-                    Remove
+                    {t('members.remove')}
                   </Button>
                 </Stack>
               )}
             </ListRow>
           )
         })}
-        {activeMembers.length === 0 && <EmptyText>Loading members…</EmptyText>}
+        {activeMembers.length === 0 && <EmptyText>{t('members.loading')}</EmptyText>}
       </Box>
       {pastMembers.length > 0 && (
         <Box sx={{ mt: 2.75 }}>
-          <Typography variant="h3">Past members</Typography>
+          <Typography variant="h3">{t('members.pastMembers')}</Typography>
           {pastMembers.map((member) => (
             <ListRow key={member.uid}>
               <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0, overflowWrap: 'anywhere' }}>
@@ -399,7 +397,7 @@ export function MemberManagementPanel({ workspaceId, currentUserId }: { workspac
                   {member.displayName || member.email}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {member.email} · Removed
+                  {t('members.removedMember', { email: member.email })}
                 </Typography>
               </Box>
             </ListRow>
@@ -424,6 +422,7 @@ function RoleChangeDialog({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const { t } = useTranslation()
   // Keep the last change on screen while the dialog fades out.
   const [shownChange, setShownChange] = useState(change)
   if (change && change !== shownChange) setShownChange(change)
@@ -447,7 +446,7 @@ function RoleChangeDialog({
             <DialogContentText id="role-change-body">{copy.body}</DialogContentText>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button onClick={onCancel}>Cancel</Button>
+            <Button onClick={onCancel}>{t('common.cancel')}</Button>
             <Button variant="contained" onClick={onConfirm} autoFocus>
               {copy.action}
             </Button>

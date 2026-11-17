@@ -3,6 +3,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { changeAppLanguage } from '../../src/i18n'
 import type { WorkspaceMember } from '../../src/lib/workspaces'
 import { PALETTES } from '../../src/palettes'
 import { createAppTheme } from '../../src/theme'
@@ -173,5 +174,21 @@ describe('MemberManagementPanel roles', () => {
     await userEvent.setup().click(toggle)
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByText('Tracks and reports on their own time only.', { selector: 'dd' })).toBeTruthy()
+  })
+})
+
+describe('MemberManagementPanel in Polish', () => {
+  it('translates the headings, role badges and plural member count', async () => {
+    await changeAppLanguage('pl')
+    try {
+      renderPanel()
+      expect(screen.getByRole('heading', { name: 'Członkowie przestrzeni roboczej' })).toBeTruthy()
+      expect(screen.getByText('3 osoby')).toBeTruthy()
+      expect(screen.getByText('Osoby z dostępem')).toBeTruthy()
+      expect(within(row('Mia Lopez')).getAllByText('Menedżer').length).toBeGreaterThan(0)
+      expect(screen.getByRole('combobox', { name: 'Rola: Ben Carter' })).toBeTruthy()
+    } finally {
+      await changeAppLanguage('en')
+    }
   })
 })

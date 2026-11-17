@@ -179,7 +179,7 @@ async function walkthrough(page: Page, catalog: Catalog, { captioned }: Take, re
   await step('reports', 9, async () => {
     const nav = page.getByRole('navigation', { name: catalog.shell.mainNavigation })
     await glideAndClick(page, nav.getByRole('button', { name: catalog.nav.reports }))
-    await expect(page.getByRole('button', { name: 'Export PDF' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: catalog.reports.export.pdf })).toBeEnabled()
     await page.waitForTimeout(1_500)
     await glideAndClick(page, page.locator('#report-group-tab-project'))
     await page.waitForTimeout(1_500)
@@ -187,7 +187,7 @@ async function walkthrough(page: Page, catalog: Catalog, { captioned }: Take, re
     await page.waitForTimeout(1_000)
   })
   await step('exportPdf', 5, async () => {
-    const exportPdf = page.getByRole('button', { name: 'Export PDF' })
+    const exportPdf = page.getByRole('button', { name: catalog.reports.export.pdf })
     const download = page.waitForEvent('download')
     await glideAndClick(page, exportPdf)
     await download

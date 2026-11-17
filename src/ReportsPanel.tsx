@@ -18,7 +18,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { User } from 'firebase/auth'
-import { useTranslation } from './i18n'
+import { useAppLanguage, useTranslation } from './i18n'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import type { Catalog } from './lib/catalog'
 import { formatElapsed, localDayString } from './lib/dates'
@@ -26,16 +26,11 @@ import { IN_MEMORY_EXPORT_ROW_LIMIT, loadReportSummary, streamReportCsv } from '
 import {
   reportUserName,
   searchReportEntries,
-  UNKNOWN_USER,
+  unknownUser,
   type ReportFilters,
   type ReportMember,
 } from './lib/reportFormat'
-import {
-  buildReportPdfModel,
-  describeReportFilters,
-  PDF_EXPORT_ROW_LIMIT,
-  PDF_ROW_LIMIT_MESSAGE,
-} from './lib/reportPdf'
+import { buildReportPdfModel, describeReportFilters, PDF_EXPORT_ROW_LIMIT, pdfRowLimitMessage } from './lib/reportPdf'
 import type { TimeEntry } from './lib/timeEntries'
 import {
   entrySeconds,
@@ -132,6 +127,7 @@ export function ReportsPanel({
   catalog: Catalog
 }) {
   const { t } = useTranslation()
+  const language = useAppLanguage()
   const [filters, setFilters] = useState<ReportFilters>(initialFilters)
   const [groupBy, setGroupBy] = useState<GroupBy>(() => groupFromHash(canSeeAllEntries))
   const wide = useMediaQuery(useTheme().breakpoints.up('lg'))
@@ -156,11 +152,7 @@ export function ReportsPanel({
   const invalidRange = !filters.startDay || !filters.endDay || filters.startDay > filters.endDay
   const summaryEntries = summaryState.key === key ? summaryState.entries : []
   const summaryLoading = !invalidRange && loadedKey !== key
-  const error = invalidRange
-    ? 'Choose a valid date range. The start date must be on or before the end date.'
-    : errorState.key === key
-      ? errorState.message
-      : ''
+  const error = invalidRange ? t('reports.invalidRange') : errorState.key === key ? errorState.message : ''
 
   useEffect(() => {
     if (!canSeeAllEntries) return
@@ -184,7 +176,7 @@ export function ReportsPanel({
         if (!cancelled)
           setErrorState({
             key,
-            message: loadError instanceof Error ? loadError.message : 'Could not load this report.',
+            message: loadError instanceof Error ? loadError.message : t('reports.loadFailed'),
           })
       })
       .finally(() => {
@@ -195,7 +187,7 @@ export function ReportsPanel({
     return () => {
       cancelled = true
     }
-  }, [workspaceId, user.uid, canSeeAllEntries, filters, key, invalidRange])
+  }, [workspaceId, user.uid, canSeeAllEntries, filters, key, invalidRange, t])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS)
@@ -214,9 +206,6 @@ export function ReportsPanel({
   const visibleCount = visibleState.key === visibleKey ? visibleState.count : ENTRIES_PAGE_SIZE
   const entries = matchingEntries.slice(0, visibleCount)
   const hasMore = matchingEntries.length > visibleCount
-  const entryCountLabel = summaryLoading
-    ? 'entries'
-    : `${summaryEntries.length.toLocaleString()} ${summaryEntries.length === 1 ? 'entry' : 'entries'}`
 
   const groups = summarizeReport(summaryEntries, groupBy, (entry) => reportUserName(entry, reportMembers))
   const totalSeconds = summaryEntries.reduce((total, entry) => total + duration(entry), 0)
@@ -263,9 +252,7 @@ export function ReportsPanel({
             return
           }
           if (bufferedRows + rowCount > IN_MEMORY_EXPORT_ROW_LIMIT) {
-            throw new Error(
-              `This browser’s download limit is ${IN_MEMORY_EXPORT_ROW_LIMIT.toLocaleString()} rows. Use a browser that supports streamed file saving or narrow the date range.`,
-            )
+            throw new Error(t('reports.export.downloadLimit', { limit: IN_MEMORY_EXPORT_ROW_LIMIT }))
           }
           bufferedRows += rowCount
           fileParts.push(chunk)
@@ -279,13 +266,13 @@ export function ReportsPanel({
         downloadBlob(new Blob(fileParts, { type: 'text/csv;charset=utf-8' }), suggestedName)
         fileParts = []
       }
-      setExportNotice(`Exported ${exportedRows.toLocaleString()} ${exportedRows === 1 ? 'entry' : 'entries'}.`)
+      setExportNotice(t('reports.export.exportedCsv', { count: exportedRows }))
     } catch (exportError) {
       if (writable) await writable.abort(exportError).catch(() => undefined)
       if (exportError instanceof DOMException && exportError.name === 'AbortError') return
       setErrorState({
         key,
-        message: exportError instanceof Error ? exportError.message : 'Could not export this report.',
+        message: exportError instanceof Error ? exportError.message : t('reports.export.csvFailed'),
       })
     } finally {
       setExporting(false)
@@ -297,7 +284,7 @@ export function ReportsPanel({
   async function exportPdf() {
     setExportNotice('')
     if (summaryEntries.length > PDF_EXPORT_ROW_LIMIT) {
-      setErrorState({ key, message: PDF_ROW_LIMIT_MESSAGE })
+      setErrorState({ key, message: pdfRowLimitMessage() })
       return
     }
     setExportingPdf(true)
@@ -316,19 +303,18 @@ export function ReportsPanel({
       })
       const { renderReportPdf } = await import('./lib/renderReportPdf')
       downloadBlob(await renderReportPdf(model), model.fileName)
-      const count = summaryEntries.length
-      setExportNotice(`Exported ${count.toLocaleString()} ${count === 1 ? 'entry' : 'entries'} to PDF.`)
+      setExportNotice(t('reports.export.exportedPdf', { count: summaryEntries.length }))
     } catch (exportError) {
       setErrorState({
         key,
-        message: exportError instanceof Error ? exportError.message : 'Could not export this report as a PDF.',
+        message: exportError instanceof Error ? exportError.message : t('reports.export.pdfFailed'),
       })
     } finally {
       setExportingPdf(false)
     }
   }
 
-  const timezone = new Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'
+  const timezone = new Intl.DateTimeFormat().resolvedOptions().timeZone || t('reports.localTime')
   const exportBusy = exporting || exportingPdf
   const filterCount = canSeeAllEntries ? 7 : 6
   return (
@@ -336,13 +322,13 @@ export function ReportsPanel({
       <SectionHeading
         id="reports-heading"
         level={1}
-        kicker="WORKSPACE INSIGHTS"
-        title="Reports"
-        description={`Dates in ${timezone}`}
+        kicker={t('reports.kicker')}
+        title={t('reports.title')}
+        description={t('reports.datesIn', { timeZone: timezone })}
         action={
           <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', gap: 1.5, flexShrink: 0 }}>
             <Button variant="outlined" onClick={() => void exportCsv()} disabled={invalidRange || exportBusy}>
-              {exporting ? `Exporting… ${exportProgress.toLocaleString()}` : 'Export CSV'}
+              {exporting ? t('reports.export.csvProgress', { rows: exportProgress }) : t('reports.export.csv')}
             </Button>
             <Button
               variant="outlined"
@@ -350,7 +336,11 @@ export function ReportsPanel({
               // The PDF is built from the summary, so it waits until every matching entry has loaded.
               disabled={invalidRange || summaryLoading || exportBusy}
             >
-              {exportingPdf ? 'Preparing PDF…' : summaryLoading && !invalidRange ? 'Loading entries…' : 'Export PDF'}
+              {exportingPdf
+                ? t('reports.export.preparingPdf')
+                : summaryLoading && !invalidRange
+                  ? t('reports.loadingEntries')
+                  : t('reports.export.pdf')}
             </Button>
           </Stack>
         }
@@ -370,14 +360,14 @@ export function ReportsPanel({
         }}
       >
         <TextField
-          label="From"
+          label={t('reports.filters.from')}
           type="date"
           value={filters.startDay}
           onChange={(event) => updateFilter('startDay', event.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <TextField
-          label="Through"
+          label={t('reports.filters.through')}
           type="date"
           value={filters.endDay}
           onChange={(event) => updateFilter('endDay', event.target.value)}
@@ -385,26 +375,26 @@ export function ReportsPanel({
         />
         {canSeeAllEntries && (
           <SelectField
-            label="Member"
+            label={t('reports.filters.member')}
             value={filters.userId}
             onChange={(event) => updateFilter('userId', event.target.value)}
           >
-            <option value="">Everyone</option>
+            <option value="">{t('reports.filters.everyone')}</option>
             {members
               .filter((member) => member.status !== 'removed')
               .map((member) => (
                 <option key={member.uid} value={member.uid}>
-                  {member.displayName || member.email || UNKNOWN_USER}
+                  {member.displayName || member.email || unknownUser()}
                 </option>
               ))}
           </SelectField>
         )}
         <SelectField
-          label="Client"
+          label={t('reports.filters.client')}
           value={filters.clientId}
           onChange={(event) => updateFilter('clientId', event.target.value)}
         >
-          <option value="">All clients</option>
+          <option value="">{t('reports.filters.allClients')}</option>
           {catalog.clients.map((client) => (
             <option key={client.id} value={client.id}>
               {client.name}
@@ -412,11 +402,11 @@ export function ReportsPanel({
           ))}
         </SelectField>
         <SelectField
-          label="Project"
+          label={t('reports.filters.project')}
           value={filters.projectId}
           onChange={(event) => updateFilter('projectId', event.target.value)}
         >
-          <option value="">All projects</option>
+          <option value="">{t('reports.filters.allProjects')}</option>
           {catalog.projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
@@ -424,11 +414,11 @@ export function ReportsPanel({
           ))}
         </SelectField>
         <SelectField
-          label="Task"
+          label={t('reports.filters.task')}
           value={filters.taskId}
           onChange={(event) => updateFilter('taskId', event.target.value)}
         >
-          <option value="">All tasks</option>
+          <option value="">{t('reports.filters.allTasks')}</option>
           {catalog.tasks.map((task) => (
             <option key={task.id} value={task.id}>
               {task.name}
@@ -436,13 +426,13 @@ export function ReportsPanel({
           ))}
         </SelectField>
         <SelectField
-          label="Billable"
+          label={t('reports.filters.billable')}
           value={filters.billable}
           onChange={(event) => updateFilter('billable', event.target.value as ReportFilters['billable'])}
         >
-          <option value="">All entries</option>
-          <option value="yes">Billable</option>
-          <option value="no">Non-billable</option>
+          <option value="">{t('reports.filters.allEntries')}</option>
+          <option value="yes">{t('reports.filters.billableOnly')}</option>
+          <option value="no">{t('reports.filters.nonBillableOnly')}</option>
         </SelectField>
       </Box>
       {error && <FormMessage severity="error">{error}</FormMessage>}
@@ -450,15 +440,22 @@ export function ReportsPanel({
           change. */}
       <LiveStatus>
         {!summaryLoading &&
-          `Report updated: ${formatElapsed(totalSeconds)} total, ${formatElapsed(billableSeconds)} billable, ${summaryEntries.length} ${summaryEntries.length === 1 ? 'entry' : 'entries'}`}
+          t('reports.updated', {
+            total: formatElapsed(totalSeconds),
+            billable: formatElapsed(billableSeconds),
+            entries: t('reports.entryCount', { count: summaryEntries.length }),
+          })}
       </LiveStatus>
       <Box
         sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: { xs: 0.75, sm: 1.25 }, mt: 2.5 }}
       >
         {[
-          ['Total tracked', formatElapsed(totalSeconds)],
-          ['Billable', formatElapsed(billableSeconds)],
-          ['Entries', `${summaryEntries.length}${summaryLoading ? '…' : ''}`],
+          [t('reports.totals.totalTracked'), formatElapsed(totalSeconds)],
+          [t('reports.totals.billable'), formatElapsed(billableSeconds)],
+          [
+            t('reports.totals.entries'),
+            `${summaryEntries.length.toLocaleString(language)}${summaryLoading ? '…' : ''}`,
+          ],
         ].map(([label, value]) => (
           <Paper
             key={label}
@@ -482,14 +479,14 @@ export function ReportsPanel({
         ))}
       </Box>
       <Typography variant="h3" sx={{ mt: 3 }}>
-        Summary
+        {t('reports.summary')}
       </Typography>
       <Tabs
         value={groupBy}
         onChange={(_event, next: GroupBy) => selectGroup(next)}
         variant="scrollable"
         allowScrollButtonsMobile
-        aria-label="Group summary by"
+        aria-label={t('reports.groupSummaryBy')}
         sx={{ mt: 1, borderBottom: 1, borderColor: 'divider' }}
       >
         {groupByOptions(canSeeAllEntries).map((option) => (
@@ -504,7 +501,7 @@ export function ReportsPanel({
       </Tabs>
       <Box role="tabpanel" id="report-group-panel" aria-labelledby={`report-group-tab-${groupBy}`} sx={{ mt: 0.5 }}>
         {groups.length === 0 && !summaryLoading ? (
-          <EmptyText>No completed entries match these filters.</EmptyText>
+          <EmptyText>{t('reports.noMatches')}</EmptyText>
         ) : (
           groups.map((group) =>
             group.children ? (
@@ -514,7 +511,7 @@ export function ReportsPanel({
             ),
           )
         )}
-        {summaryLoading && <EmptyText>Updating summary…</EmptyText>}
+        {summaryLoading && <EmptyText>{t('reports.updatingSummary')}</EmptyText>}
       </Box>
       <Divider sx={{ mt: 2 }} />
       <Stack
@@ -522,7 +519,7 @@ export function ReportsPanel({
         sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, mt: 2 }}
       >
         <Typography variant="h3" id="report-entries-heading">
-          Detailed entries
+          {t('reports.detailedEntries')}
         </Typography>
         <Button
           variant="outlined"
@@ -531,7 +528,11 @@ export function ReportsPanel({
           aria-controls="report-entries"
           disabled={invalidRange}
         >
-          {entriesOpen ? 'Hide entries' : `Show ${entryCountLabel}`}
+          {entriesOpen
+            ? t('reports.hideEntries')
+            : summaryLoading
+              ? t('reports.showEntries')
+              : t('reports.showEntryCount', { count: summaryEntries.length })}
         </Button>
       </Stack>
       {entriesOpen && (
@@ -541,23 +542,21 @@ export function ReportsPanel({
             sx={{ alignItems: { xs: 'stretch', sm: 'flex-start' }, justifyContent: 'space-between', gap: 1.5, mt: 1.5 }}
           >
             <TextField
-              label="Search entries"
+              label={t('reports.searchEntries')}
               type="search"
               size="small"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              helperText={
-                canSeeAllEntries ? 'Description, client, project, task or user' : 'Description, client, project or task'
-              }
+              helperText={canSeeAllEntries ? t('reports.searchHelpWithUser') : t('reports.searchHelp')}
               sx={{ width: { xs: '100%', sm: 360 } }}
             />
             {/* Lines up with the input box rather than the input plus its helper text. */}
             <Typography variant="caption" color="text.secondary" aria-live="polite" sx={{ pt: { sm: 1.25 } }}>
               {summaryLoading || searchPending
-                ? 'Loading entries…'
+                ? t('reports.loadingEntries')
                 : search
-                  ? `${matchingEntries.length.toLocaleString()} of ${summaryEntries.length.toLocaleString()} entries · newest first`
-                  : 'Newest first'}
+                  ? t('reports.searchResults', { matches: matchingEntries.length, count: summaryEntries.length })
+                  : t('reports.newestFirst')}
             </Typography>
           </Stack>
           <Box sx={{ mt: 1 }}>
@@ -567,15 +566,15 @@ export function ReportsPanel({
                   <ListRow key={entry.id} sx={{ alignItems: { xs: 'flex-start', sm: 'center' } }}>
                     <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
                       <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                        {entry.description || UNTITLED_ENTRY}
+                        {entry.description || t('common.untitledEntry')}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" noWrap>
                         {[
-                          entry.startAt.toDate().toLocaleString(),
+                          entry.startAt.toDate().toLocaleString(language),
                           // Every entry a regular member sees is their own, so the user segment would be noise.
                           canSeeAllEntries ? reportUserName(entry, members) : null,
                           [entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
-                            'No client, project, or task',
+                            t('entries.noWork'),
                         ]
                           .filter(Boolean)
                           .join(' · ')}
@@ -590,9 +589,7 @@ export function ReportsPanel({
                   </ListRow>
                 ))}
             {entries.length === 0 && !summaryLoading && !searchPending && (
-              <EmptyText>
-                {search ? `No entries match “${search}”.` : 'No completed entries match these filters.'}
-              </EmptyText>
+              <EmptyText>{search ? t('reports.noSearchMatches', { search }) : t('reports.noMatches')}</EmptyText>
             )}
           </Box>
           {hasMore && (
@@ -601,7 +598,7 @@ export function ReportsPanel({
               onClick={() => setVisibleState({ key: visibleKey, count: visibleCount + ENTRIES_PAGE_SIZE })}
               sx={{ display: 'flex', mx: 'auto', mt: 2 }}
             >
-              Show more entries
+              {t('reports.showMore')}
             </Button>
           )}
         </Box>
@@ -612,7 +609,6 @@ export function ReportsPanel({
 
 const ENTRIES_PAGE_SIZE = 25
 const SEARCH_DEBOUNCE_MS = 300
-const UNTITLED_ENTRY = 'Untitled entry'
 const EMPTY_CELL = '—'
 
 /** Wide-screen layout for detailed entries: one column per field so nothing gets truncated. */
@@ -625,27 +621,37 @@ function EntriesTable({
   members: ReportMember[]
   showUser: boolean
 }) {
-  const headers = ['Description', 'Date & time', ...(showUser ? ['User'] : []), 'Client', 'Project', 'Task', 'Billable']
+  const { t } = useTranslation()
+  const language = useAppLanguage()
+  const headers = [
+    t('reports.columns.description'),
+    t('reports.columns.dateTime'),
+    ...(showUser ? [t('reports.columns.user')] : []),
+    t('reports.columns.client'),
+    t('reports.columns.project'),
+    t('reports.columns.task'),
+    t('reports.columns.billable'),
+  ]
   return (
     // The scroll box is a safety net for narrow lg viewports with long names; it should rarely engage.
     <Box sx={{ overflowX: 'auto' }}>
-      <Table size="small" aria-label="Detailed entries">
+      <Table size="small" aria-label={t('reports.detailedEntries')}>
         <TableHead>
           <TableRow>
             {headers.map((header) => (
               <TableCell key={header}>{header}</TableCell>
             ))}
-            <TableCell align="right">Duration</TableCell>
+            <TableCell align="right">{t('reports.columns.duration')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {entries.map((entry) => (
             <TableRow key={entry.id}>
-              <TableCell sx={{ fontWeight: 600 }}>{entry.description || UNTITLED_ENTRY}</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>{entry.description || t('common.untitledEntry')}</TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                {entry.startAt.toDate().toLocaleDateString()}
+                {entry.startAt.toDate().toLocaleDateString(language)}
                 <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  {entry.startAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {entry.startAt.toDate().toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })}
                 </Typography>
               </TableCell>
               {showUser && <TableCell>{reportUserName(entry, members)}</TableCell>}
@@ -672,10 +678,11 @@ function shareOfTotal(seconds: number, totalSeconds: number) {
 }
 
 function ShareBar({ percent }: { percent: number }) {
+  const { t } = useTranslation()
   return (
     <Box
       role="img"
-      aria-label={`${percent}% of total`}
+      aria-label={t('reports.shareOfTotal', { percent })}
       sx={{ height: 6, borderRadius: 3, bgcolor: 'action.hover', overflow: 'hidden' }}
     >
       <Box sx={{ width: `${percent}%`, height: '100%', bgcolor: 'primary.main' }} />
@@ -700,6 +707,7 @@ function SummaryRow({
   nested?: boolean
   toggle?: ReactNode
 }) {
+  const { t } = useTranslation()
   const percent = shareOfTotal(group.seconds, totalSeconds)
   return (
     <Box
@@ -729,13 +737,13 @@ function SummaryRow({
         </Box>
       </Stack>
       <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
-        {group.count} {group.count === 1 ? 'entry' : 'entries'}
+        {t('reports.entryCount', { count: group.count })}
       </Typography>
       <Typography
         variant="caption"
         color="text.secondary"
         sx={{ display: { xs: 'none', sm: 'block' }, fontVariantNumeric: 'tabular-nums' }}
-        aria-label={`Billable ${formatElapsed(group.billableSeconds)}`}
+        aria-label={t('reports.billableTime', { time: formatElapsed(group.billableSeconds) })}
       >
         {formatElapsed(group.billableSeconds)}
       </Typography>
@@ -754,6 +762,7 @@ function SummaryRow({
 
 /** A client or project swimlane: a header row with its totals, then its projects or tasks underneath. */
 function SummaryLane({ group, totalSeconds }: { group: ReportGroup; totalSeconds: number }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(true)
   const childrenId = `report-lane-${group.key || 'none'}`.replace(/[^\w-]/g, '-')
   return (
@@ -767,7 +776,9 @@ function SummaryLane({ group, totalSeconds }: { group: ReportGroup; totalSeconds
             onClick={() => setOpen((current) => !current)}
             aria-expanded={open}
             aria-controls={childrenId}
-            aria-label={`${open ? 'Collapse' : 'Expand'} ${group.label}`}
+            aria-label={
+              open ? t('reports.collapseGroup', { name: group.label }) : t('reports.expandGroup', { name: group.label })
+            }
             sx={{ ml: -0.75 }}
           >
             <Box

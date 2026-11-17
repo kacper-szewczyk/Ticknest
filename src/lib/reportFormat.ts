@@ -1,3 +1,4 @@
+import { i18n } from '../i18n'
 import type { TimeEntry } from './timeEntries'
 import type { WorkspaceMember } from './workspaces'
 import { formatElapsed, localDayBounds } from './dates'
@@ -31,7 +32,10 @@ export function matchesFilters(entry: TimeEntry, filters: ReportFilters): boolea
 
 export type ReportMember = Pick<WorkspaceMember, 'uid' | 'displayName' | 'email'>
 
-export const UNKNOWN_USER = 'Unknown user'
+/** The name shown for an entry whose user can't be named, in the active UI language. */
+export function unknownUser(): string {
+  return i18n.t('reports.unknownUser')
+}
 
 /**
  * Names the user who tracked an entry: the member's display name, then email, then the name snapshotted on the
@@ -47,7 +51,7 @@ export function reportUserName(
     member?.displayName?.trim() ||
     member?.email?.trim() ||
     (snapshot && snapshot !== entry.userId ? snapshot : '') ||
-    UNKNOWN_USER
+    unknownUser()
   )
 }
 
@@ -82,17 +86,18 @@ export function localDateTime(date: Date, timeZone: string): string {
 }
 
 export function csvHeader(timeZone: string): string {
+  const { t } = i18n
   const headers = [
-    'Date',
-    'User',
-    'Description',
-    'Client',
-    'Project',
-    'Task',
-    `Start (${timeZone})`,
-    `End (${timeZone})`,
-    'Duration',
-    'Billable',
+    t('reports.columns.date'),
+    t('reports.columns.user'),
+    t('reports.columns.description'),
+    t('reports.columns.client'),
+    t('reports.columns.project'),
+    t('reports.columns.task'),
+    t('reports.csv.start', { timeZone }),
+    t('reports.csv.end', { timeZone }),
+    t('reports.columns.duration'),
+    t('reports.columns.billable'),
   ]
   return headers.map(csvField).join(',')
 }
@@ -116,7 +121,7 @@ export function csvRow(
     localDateTime(start, timeZone),
     localDateTime(end, timeZone),
     formatElapsed(seconds),
-    entry.billable ? 'Yes' : 'No',
+    entry.billable ? i18n.t('reports.yes') : i18n.t('reports.no'),
   ]
     .map(csvField)
     .join(',')

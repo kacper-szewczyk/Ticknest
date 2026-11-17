@@ -1,19 +1,28 @@
+import { i18n } from '../i18n'
 import { localDayString } from './dates'
 import type { TimeEntry } from './timeEntries'
 
 export type GroupBy = 'day' | 'client' | 'project' | 'task' | 'user'
 
-export const GROUP_BY_OPTIONS: readonly { value: GroupBy; label: string; managersOnly?: boolean }[] = [
-  { value: 'day', label: 'Day' },
-  { value: 'client', label: 'Client' },
-  { value: 'project', label: 'Project' },
-  { value: 'task', label: 'Task' },
-  { value: 'user', label: 'User', managersOnly: true },
+const GROUP_BY_OPTIONS: readonly { value: GroupBy; managersOnly?: boolean }[] = [
+  { value: 'day' },
+  { value: 'client' },
+  { value: 'project' },
+  { value: 'task' },
+  { value: 'user', managersOnly: true },
 ]
+
+/** The tab label for a group-by value, in the active UI language. */
+export function groupByLabel(groupBy: GroupBy): string {
+  return i18n.t(`reports.groups.${groupBy}`)
+}
 
 /** The tabs a viewer may use: regular members only see their own entries, so grouping by user is noise for them. */
 export function groupByOptions(canSeeAllEntries: boolean) {
-  return GROUP_BY_OPTIONS.filter((option) => canSeeAllEntries || !option.managersOnly)
+  return GROUP_BY_OPTIONS.filter((option) => canSeeAllEntries || !option.managersOnly).map((option) => ({
+    value: option.value,
+    label: groupByLabel(option.value),
+  }))
 }
 
 /** Reads a group-by value from untrusted input (the URL), falling back to Day when it is unknown or not allowed. */
@@ -51,11 +60,14 @@ function dimension(entry: TimeEntry, groupBy: GroupBy, userName: (entry: TimeEnt
       return { key: day, label: day }
     }
     case 'client':
-      return catalogDimension(entry.clientId, entry.clientName, 'No client')
+      return catalogDimension(entry.clientId, entry.clientName, i18n.t('reports.noClient'))
     case 'project':
-      return { ...catalogDimension(entry.projectId, entry.projectName, 'No project'), caption: entry.clientName ?? '' }
+      return {
+        ...catalogDimension(entry.projectId, entry.projectName, i18n.t('reports.noProject')),
+        caption: entry.clientName ?? '',
+      }
     case 'task':
-      return catalogDimension(entry.taskId, entry.taskName, 'No task')
+      return catalogDimension(entry.taskId, entry.taskName, i18n.t('reports.noTask'))
     case 'user': {
       const label = userName(entry)
       return { key: entry.userId, label }
