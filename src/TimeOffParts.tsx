@@ -1,10 +1,31 @@
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
+import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import { NavIcon } from './AppShell'
 import { useTranslation } from './i18n'
 import type { LeaveBalance, LeaveStatus, LeaveType } from './lib/leave'
 import { leaveTypeName, useFormatDays } from './useLeaveFormat'
+
+/** A previous/next arrow for stepping through months or years, 44px like the timesheet's week arrows. */
+export function StepButton({
+  direction,
+  label,
+  onClick,
+}: {
+  direction: 'previous' | 'next'
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <IconButton onClick={onClick} aria-label={label} sx={{ width: 44, height: 44 }}>
+      <NavIcon>
+        <path d={direction === 'previous' ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'} />
+      </NavIcon>
+    </IconButton>
+  )
+}
 
 export function LeaveTypeLabel({ type }: { type: LeaveType | undefined }) {
   const { t } = useTranslation()

@@ -7,7 +7,6 @@ import SpeedDialAction from '@mui/material/SpeedDialAction'
 import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
-import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
 import { type ReactNode, useEffect, useState } from 'react'
@@ -237,8 +236,9 @@ export function TimeEntriesPanel({
             >
               {formatElapsed(weekTotal)}
             </Typography>
-            {isWeekOver && <OverLimitChip label={t('entries.overWeek')} message={t('entries.overWeekMessage')} />}
+            {isWeekOver && <OverLimitChip label={t('entries.overWeek')} />}
           </Stack>
+          {isWeekOver && <OverLimitMessage>{t('entries.overWeekMessage')}</OverLimitMessage>}
         </Box>
         <Stack spacing={0.5} sx={{ alignItems: 'flex-end' }}>
           <Typography variant="caption" color="text.secondary">
@@ -402,24 +402,35 @@ function WarningIcon() {
   )
 }
 
-function OverLimitChip({ label, message }: { label: string; message: string }) {
+// A badge next to the total; the full message is shown as text below it (`OverLimitMessage`) so keyboard and touch
+// users read it without a tooltip, and the chip itself is not a tab stop.
+function OverLimitChip({ label }: { label: string }) {
   return (
-    <Tooltip title={message}>
-      <Chip
-        size="small"
-        color="warning"
-        variant="outlined"
-        icon={<WarningIcon />}
-        label={label}
-        tabIndex={0}
-        aria-label={`${label}. ${message}`}
-        // Phones show only the icon; the tooltip and accessible name still carry the full text.
-        sx={{
-          '& .MuiChip-icon': { width: 16, height: 16, mr: { xs: -0.75, sm: 0 } },
-          '& .MuiChip-label': { display: { xs: 'none', sm: 'block' } },
-        }}
-      />
-    </Tooltip>
+    <Chip
+      size="small"
+      color="warning"
+      variant="outlined"
+      icon={<WarningIcon />}
+      label={label}
+      // Phones show only the icon; the message below carries the meaning.
+      sx={{
+        '& .MuiChip-icon': { width: 16, height: 16, mr: { xs: -0.75, sm: 0 } },
+        '& .MuiChip-label': { display: { xs: 'none', sm: 'block' } },
+      }}
+    />
+  )
+}
+
+/** The over-limit message as text; `inset` lines it up with a day heading's text, past the chevron. */
+function OverLimitMessage({ children, inset = false }: { children: ReactNode; inset?: boolean }) {
+  return (
+    <Typography
+      component="p"
+      variant="caption"
+      sx={{ display: 'block', color: 'warning.main', ...(inset && { pl: 3.5, pb: 0.5 }) }}
+    >
+      {children}
+    </Typography>
   )
 }
 
@@ -544,7 +555,7 @@ function DaySection({
           )}
         </Typography>
         <Stack direction="row" spacing={{ xs: 0.5, sm: 1.75 }} sx={{ alignItems: 'center' }}>
-          {isOverLimit && <OverLimitChip label={t('entries.overDay')} message={t('entries.overDayMessage')} />}
+          {isOverLimit && <OverLimitChip label={t('entries.overDay')} />}
           <Typography
             variant="body2"
             sx={{
@@ -566,6 +577,7 @@ function DaySection({
           </Button>
         </Stack>
       </Stack>
+      {isOverLimit && <OverLimitMessage inset>{t('entries.overDayMessage')}</OverLimitMessage>}
       {hasEntries ? (
         <>
           {!isExpanded && <DaySummaryLine summary={summary} />}

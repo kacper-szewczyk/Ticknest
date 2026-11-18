@@ -30,7 +30,9 @@ const radioStyle = { position: 'absolute', inset: 0, margin: 0, opacity: 0, curs
 export function ProjectColorField({ value, onChange }: { value: string; onChange: (color: string) => void }) {
   const name = useId()
   const [custom, setCustom] = useState(() => !presetProjectColor(value))
-  const selected = custom ? 'custom' : presetProjectColor(value)?.value
+  const selectedPreset = custom ? undefined : presetProjectColor(value)
+  const selected = custom ? 'custom' : selectedPreset?.value
+  const selectedName = custom ? 'Custom' : selectedPreset?.name
 
   return (
     <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
@@ -97,6 +99,12 @@ export function ProjectColorField({ value, onChange }: { value: string; onChange
           />
         )}
       </Box>
+      {/* Swatch names are otherwise only in `title` tooltips, which keyboard and touch users never see. */}
+      {selectedName && (
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
+          Selected: {selectedName}
+        </Typography>
+      )}
     </Box>
   )
 }

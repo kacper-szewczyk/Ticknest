@@ -1,6 +1,5 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -24,7 +23,7 @@ import {
   subscribeToLeaveTypes,
 } from './lib/timeOff'
 import { LeaveRequestDialog } from './LeaveRequestDialog'
-import { BalanceSummary, LeaveStatusChip, LeaveTypeLabel, OverAllowanceChip } from './TimeOffParts'
+import { BalanceSummary, LeaveStatusChip, LeaveTypeLabel, OverAllowanceChip, StepButton } from './TimeOffParts'
 import { useFormatDays, useFormatLeaveRange } from './useLeaveFormat'
 import { EmptyText, FormMessage, ListRow, LoadingState, SectionCard, SectionHeading } from './ui'
 
@@ -195,15 +194,11 @@ export function YearSwitcher({ year, onChange }: { year: number; onChange: (year
   const { t } = useTranslation()
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5, mt: 1.5 }}>
-      <IconButton size="small" onClick={() => onChange(year - 1)} aria-label={t('timeOff.previousYear')}>
-        ‹
-      </IconButton>
+      <StepButton direction="previous" label={t('timeOff.previousYear')} onClick={() => onChange(year - 1)} />
       <Typography component="p" aria-live="polite" sx={{ fontWeight: 700, minWidth: 48, textAlign: 'center' }}>
         {year}
       </Typography>
-      <IconButton size="small" onClick={() => onChange(year + 1)} aria-label={t('timeOff.nextYear')}>
-        ›
-      </IconButton>
+      <StepButton direction="next" label={t('timeOff.nextYear')} onClick={() => onChange(year + 1)} />
     </Stack>
   )
 }
