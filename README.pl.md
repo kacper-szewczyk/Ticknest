@@ -31,7 +31,7 @@ Pełna dokumentacja jest po angielsku: zobacz [README](README.md) i [przewodnik 
 - **Zespoły**: zaproszenia przez link i role Właściciel, Menedżer i Członek.
 - **Budżety** (opcjonalne) dla projektów i osób.
 - **Import z Clockify**: przenieś historię z pliku CSV raportu szczegółowego, z podglądem przed zapisem.
-- **Interfejs po angielsku, hiszpańsku i polsku**, jasne i ciemne palety kolorów, działa na telefonach.
+- **Instalacja jako aplikacja**: z Chrome lub Edge („Zainstaluj aplikację” w panelu bocznym lub na pasku adresu) albo na iPhonie i iPadzie przez Udostępnij › Do ekranu początkowego. Otwiera się we własnym oknie, uruchamia się bez sieci i pyta przed przejściem na nową wersję.
 
 ## Dlaczego Tickness
 

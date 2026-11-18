@@ -288,7 +288,7 @@ The Emulator Suite does not emulate App Check. With the default `demo-ticknest` 
 `firebase.json` sends these headers on every Hosting response:
 
 - `X-Frame-Options: DENY` stops other sites from framing the app, which protects against clickjacking. This header is enforced.
-- `Content-Security-Policy-Report-Only` lists where the app may load scripts, styles, frames, and network requests from: the Hosting origin, Firebase Auth (`apis.google.com` and the auth domain's `/__/auth/iframe`), Firestore, Auth, and App Check APIs (`*.googleapis.com`), callable Functions (`*.cloudfunctions.net`), and reCAPTCHA Enterprise. It also sets `frame-ancestors 'none'`. Browsers only report violations of this policy in the developer console; they block nothing yet. `frame-ancestors` has no effect in a report-only policy, which is why `X-Frame-Options` is also set.
+- `Content-Security-Policy-Report-Only` lists where the app may load scripts, styles, frames, and network requests from: the Hosting origin, Firebase Auth (`apis.google.com` and the auth domain's `/__/auth/iframe`), Firestore, Auth, and App Check APIs (`*.googleapis.com`), callable Functions (`*.cloudfunctions.net`), and reCAPTCHA Enterprise. It also limits service workers and the web app manifest to the Hosting origin (`worker-src 'self'`, `manifest-src 'self'`) and sets `frame-ancestors 'none'`. Browsers only report violations of this policy in the developer console; they block nothing yet. `frame-ancestors` has no effect in a report-only policy, which is why `X-Frame-Options` is also set.
 
 MUI injects its styles at runtime, so `style-src` allows `'unsafe-inline'`. Scripts are restricted to files and the listed hosts; no inline scripts or `eval` are allowed.
 
@@ -297,6 +297,19 @@ MUI injects its styles at runtime, so `style-src` allows `'unsafe-inline'`. Scri
 **Enforcing the policy.** Deploy to a [preview channel](https://firebase.google.com/docs/hosting/test-preview-deploy) with `npx firebase hosting:channel:deploy csp-test` and open the browser console. Test email sign-in, Google sign-in (popup), email verification, password reset, accepting an invitation, the callable Functions (such as creating a workspace or an invitation), and App Check if you enabled it. When no `Content-Security-Policy` violations are reported, rename the header key to `Content-Security-Policy` in `firebase.json` and redeploy Hosting. Re-test after you add a provider, an external resource, or a dependency that loads remote code.
 
 Builds that use the Emulator Suite connect to `http://127.0.0.1`, so they report violations under this policy. These reports are expected and do not apply to production builds.
+
+### Installable app and service worker
+
+Production builds include a service worker (`dist/sw.js`, built by `vite-plugin-pwa` from `vite.config.ts`) and the web app manifest (`public/manifest.webmanifest`), so browsers can install Tickness and open it in its own window.
+
+- **What it caches.** The service worker precaches the app shell: `index.html`, the hashed JavaScript and CSS under `/assets/`, icons and the manifest. The PDF export's code and fonts and the manifest screenshots load from the network when needed. It caches no Firestore, Auth or Functions responses (`*.googleapis.com`, `*.cloudfunctions.net`); workspace data stays with the Firebase SDK. Navigations to Firebase Hosting's `/__/` helper pages always go to the network.
+- **Offline.** With no connection, the installed app still opens and shows a "You're offline" notice. Data that has not loaded yet appears once the connection is back; the Firestore SDK keeps its data in memory only.
+- **Updates.** After a deploy, the next visit downloads the new version in the background and shows "A new version of Tickness is available" with **Reload** and **Later**. Nothing switches until the user chooses Reload, or until every Tickness tab is closed. A running timer is stored in Firestore, so it keeps running across the reload.
+- **Not registered** in `npm run dev` or in builds with `VITE_USE_FIREBASE_EMULATORS=true` (e2e tests, screenshots, local demos).
+
+**Headers for other hosts.** `firebase.json` and `vercel.json` serve `sw.js` and `manifest.webmanifest` with `Cache-Control: no-cache`, so browsers check for a new service worker on every visit. If you serve `dist/` from another host, send the same header for `/sw.js`, `/manifest.webmanifest` and `/index.html`, and keep `/assets/*` long-lived and `immutable`. If `sw.js` is cached for long, users stay on the old version until that cache expires.
+
+**Removing the service worker.** If you need to take it out of a deployment, do not just delete `sw.js`: browsers keep running an installed service worker until it is replaced. Deploy a `sw.js` that unregisters itself (for example `self.addEventListener('install', () => self.skipWaiting()); self.addEventListener('activate', () => self.registration.unregister())`) and keep it in place for a few weeks.
 
 ### Local development
 

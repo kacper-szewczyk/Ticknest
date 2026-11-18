@@ -36,6 +36,7 @@ New here? The **[landing page](https://ticknest-landing.vercel.app/?utm_source=g
 - **Workspaces** with their own name and week start, and a setup wizard for the first client, project and task.
 - **Import from Clockify**: bring your history over from a Clockify Detailed report CSV, with a preview of who gets which entries and what will be created.
 - **Interface in English, Spanish and Polish**, light and dark colour palettes, and a layout that works on phones.
+- **Installable app**: install Tickness from Chrome or Edge ("Install app" in the sidebar or the address bar) or, on iPhone and iPad, with Share › Add to Home Screen. It opens in its own window, loads its shell offline, and asks before switching to a new version.
 
 ## Why not Clockify?
 
