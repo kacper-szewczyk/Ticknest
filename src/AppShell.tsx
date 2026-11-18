@@ -16,7 +16,21 @@ const RAIL_WIDTH = 72
 // Disabled for prefers-reduced-motion by the global rule in theme.ts.
 const SIDEBAR_TRANSITION = '.2s ease'
 
-export type NavItem<V extends string> = { value: V; label: string; icon: ReactNode; section: string; badge?: ReactNode }
+export type NavItem<V extends string> = {
+  value: V
+  label: string
+  icon: ReactNode
+  section: string
+  /** Visible badge (e.g. a count). Hidden from assistive tech, so pass `badgeLabel` with it. */
+  badge?: ReactNode
+  /** Text version of the badge, e.g. "3 requests waiting". Read by screen readers and shown in the rail tooltip. */
+  badgeLabel?: string
+}
+
+/** Accessible name for a nav button with a badge, e.g. "Time-off approvals, 3 requests waiting". */
+function navItemLabel(item: { label: string; badge?: ReactNode; badgeLabel?: string }): string {
+  return item.badge && item.badgeLabel ? `${item.label}, ${item.badgeLabel}` : item.label
+}
 
 const sidebarColors = {
   bg: 'app.sidebar.bg',
@@ -393,6 +407,7 @@ function SidebarContent<V extends string>({
                     <li key={item.value}>
                       <ButtonBase
                         onClick={() => onNavigate(item.value)}
+                        aria-label={item.badge && item.badgeLabel ? navItemLabel(item) : undefined}
                         aria-current={isActive ? 'page' : undefined}
                         sx={navButtonSx(isActive)}
                       >
@@ -404,7 +419,7 @@ function SidebarContent<V extends string>({
                         </Box>
                         <span>{item.label}</span>
                         {item.badge && (
-                          <Box component="span" sx={{ ml: 'auto' }}>
+                          <Box component="span" aria-hidden="true" sx={{ ml: 'auto' }}>
                             {item.badge}
                           </Box>
                         )}
@@ -500,10 +515,10 @@ function SidebarRail<V extends string>({
                 const isActive = item.value === active
                 return (
                   <li key={item.value}>
-                    <Tooltip title={item.label} placement="right">
+                    <Tooltip title={navItemLabel(item)} placement="right">
                       <ButtonBase
                         onClick={() => onNavigate(item.value)}
-                        aria-label={item.label}
+                        aria-label={navItemLabel(item)}
                         aria-current={isActive ? 'page' : undefined}
                         sx={{ ...navButtonSx(isActive), justifyContent: 'center', px: 0 }}
                       >

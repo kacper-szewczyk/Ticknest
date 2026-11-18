@@ -298,10 +298,10 @@ export function WorkspaceScreen({ user }: { user: User }) {
       label: t('nav.timeOffApprovals'),
       icon: navIcons.timeOffApprovals,
       section: t('nav.sectionManage'),
+      badgeLabel: t('nav.pendingCount', { count: pendingLeaveCount }),
       badge: pendingLeaveCount > 0 && (
         <Box
           component="span"
-          aria-label={t('nav.pendingCount', { count: pendingLeaveCount })}
           sx={{
             display: 'inline-flex',
             minWidth: 20,
