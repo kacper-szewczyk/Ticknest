@@ -4,9 +4,7 @@ import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { devices, expect, test, type Page } from '@playwright/test'
-import type { DemoAccountRole } from '../../functions/src/demo/accounts.ts'
-import type { PaletteId } from '../../src/palettes.ts'
-import { demoAccount, reseedEmulators } from '../e2e/fixtures'
+import { demoAccount, reseedEmulators, setProfilePalette } from '../e2e/fixtures'
 import {
   expandAllDays,
   LANGUAGES,
@@ -21,39 +19,6 @@ import {
 
 const OUTPUT_DIR = path.resolve('docs/screenshots')
 const GIF_VIEWPORT = { width: 1280, height: 720 }
-const PROJECT_ID = 'demo-ticknest'
-
-function emulatorHost(variable: string, fallback: string): string {
-  const host = process.env[variable] ?? fallback
-  if (!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host)) throw new Error(`${variable} must be a local emulator.`)
-  return host
-}
-
-/**
- * Saves `palette` on the demo account's profile, the same field the Appearance settings write. The app follows the
- * profile, so this is how a capture switches between the light and dark palettes. The emulators accept the
- * `Bearer owner` token as an admin, which bypasses the security rules.
- */
-async function setProfilePalette(role: DemoAccountRole, palette: PaletteId): Promise<void> {
-  const authHost = emulatorHost('FIREBASE_AUTH_EMULATOR_HOST', '127.0.0.1:9099')
-  const firestoreHost = emulatorHost('FIRESTORE_EMULATOR_HOST', '127.0.0.1:8080')
-  const headers = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }
-
-  const lookup = await fetch(
-    `http://${authHost}/identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:lookup`,
-    { method: 'POST', headers, body: JSON.stringify({ email: [demoAccount(role).email] }) },
-  )
-  const { users } = (await lookup.json()) as { users?: { localId: string }[] }
-  const uid = users?.[0]?.localId
-  if (!uid) throw new Error(`No ${role} demo account in the Auth emulator; did the seed run?`)
-
-  const update = await fetch(
-    `http://${firestoreHost}/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${uid}?updateMask.fieldPaths=palette`,
-    { method: 'PATCH', headers, body: JSON.stringify({ fields: { palette: { stringValue: palette } } }) },
-  )
-  if (!update.ok) throw new Error(`Could not set the ${role} palette: ${update.status} ${await update.text()}`)
-}
-
 /** Lets fonts, charts, and transitions settle, moves the pointer out of the way, then saves a screenshot. */
 async function capture(page: Page, file: string): Promise<void> {
   await page.evaluate(() => document.fonts.ready)

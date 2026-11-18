@@ -22,15 +22,16 @@ import {
   initialBudgetWeek,
 } from './lib/memberBudgets'
 
-// A symbol next to each status keeps it readable without color.
+// A symbol next to each status keeps it readable without color. Off and upcoming days use text.secondary, not
+// text.disabled, which is below 4.5:1: they still carry information.
 const STATUS_STYLES: Record<BudgetDayStatus, { symbol: string; color: string }> = {
   under: { symbol: '▼', color: 'error.main' },
   met: { symbol: '✓', color: 'success.main' },
   over: { symbol: '▲', color: 'success.main' },
-  off: { symbol: '–', color: 'text.disabled' },
+  off: { symbol: '–', color: 'text.secondary' },
   'time-off': { symbol: '◇', color: 'info.main' },
   'in-progress': { symbol: '●', color: 'primary.main' },
-  upcoming: { symbol: '○', color: 'text.disabled' },
+  upcoming: { symbol: '○', color: 'text.secondary' },
 }
 
 // One target's progress: today's target, the running balance, and a week-by-week breakdown. Shared by the

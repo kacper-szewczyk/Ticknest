@@ -104,7 +104,7 @@ describe('CatalogPanel', () => {
     const user = userEvent.setup()
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderPanel()
-    await user.click(screen.getByRole('button', { name: 'Edit client Northwind' }))
+    await user.click(screen.getByRole('button', { name: /^Edit client Northwind(?!\S)/ }))
     const drawer = screen.getByRole('dialog', { name: 'Edit client' })
     const name = within(drawer).getByRole('textbox', { name: /Name/ }) as HTMLInputElement
     expect(name.value).toBe('Northwind')
@@ -141,7 +141,7 @@ describe('CatalogPanel', () => {
     const user = userEvent.setup()
     renderPanel()
     await user.click(screen.getByRole('button', { name: 'Projects' }))
-    await user.click(screen.getByRole('button', { name: 'Edit project Legacy' }))
+    await user.click(screen.getByRole('button', { name: /^Edit project Legacy(?!\S)/ }))
     const drawer = screen.getByRole('dialog')
     const client = within(drawer).getByRole('combobox', { name: 'Client' }) as HTMLInputElement
     expect(client.value).toBe('Globex (archived)')
@@ -180,7 +180,7 @@ describe('CatalogPanel', () => {
       ['No client', ['Internal']],
     ])
     expect(screen.getByRole('button', { name: /Globex \(archived\)/ })).toBeTruthy()
-    const brochure = screen.getByRole('button', { name: 'Edit project Brochure' })
+    const brochure = screen.getByRole('button', { name: /^Edit project Brochure(?!\S)/ })
     expect(brochure.textContent).toContain('Print run for the spring fair')
     expect(brochure.textContent).toContain('Est. 7:30')
 
@@ -188,7 +188,7 @@ describe('CatalogPanel', () => {
     expect(northwind.getAttribute('aria-expanded')).toBe('true')
     await user.click(northwind)
     expect(northwind.getAttribute('aria-expanded')).toBe('false')
-    expect(screen.queryByRole('button', { name: 'Edit project Site' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Edit project Site(?!\S)/ })).toBeNull()
     await user.click(northwind)
 
     await user.type(searchBox(), 'northwind')
@@ -243,7 +243,7 @@ describe('CatalogPanel', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPanel()
     await user.click(screen.getByRole('button', { name: 'Projects' }))
-    await user.click(screen.getByRole('button', { name: 'Edit project Site' }))
+    await user.click(screen.getByRole('button', { name: /^Edit project Site(?!\S)/ }))
     const drawer = screen.getByRole('dialog', { name: 'Edit project' })
     const estimate = within(drawer).getByRole('textbox', { name: 'Estimate (hours)' }) as HTMLInputElement
     expect(estimate.value).toBe('7:30')
@@ -309,7 +309,7 @@ describe('CatalogPanel', () => {
       expect(site.textContent).toContain('Northwind')
       expect(site.textContent).toContain('2 tasks')
       expect(screen.getByRole('button', { name: /^App \(archived\)/ })).toBeTruthy()
-      const design = screen.getByRole('button', { name: 'Edit task Design' })
+      const design = screen.getByRole('button', { name: /^Edit task Design(?!\S)/ })
       expect(design.textContent).toContain('Billable')
       expect(design.textContent).toContain('Est. 7:30')
 
@@ -320,7 +320,7 @@ describe('CatalogPanel', () => {
       expect(site.getAttribute('aria-expanded')).toBe('true')
       await user.click(site)
       expect(site.getAttribute('aria-expanded')).toBe('false')
-      expect(screen.queryByRole('button', { name: 'Edit task Design' })).toBeNull()
+      expect(screen.queryByRole('button', { name: /^Edit task Design(?!\S)/ })).toBeNull()
       await user.click(site)
 
       await user.type(searchBox(), 'brochure')
@@ -377,7 +377,7 @@ describe('CatalogPanel', () => {
 
     it('keeps an archived project selectable when editing a task that uses it', async () => {
       const user = await openTasks()
-      await user.click(screen.getByRole('button', { name: 'Edit task Migrate' }))
+      await user.click(screen.getByRole('button', { name: /^Edit task Migrate(?!\S)/ }))
       const drawer = screen.getByRole('dialog', { name: 'Edit task' })
       expect((within(drawer).getByRole('combobox', { name: /Project/ }) as HTMLInputElement).value).toBe(
         'App (archived)',
