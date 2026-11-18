@@ -9,6 +9,7 @@ import type { TimeEntry } from '../../src/lib/timeEntries'
 import type { WorkspaceMember } from '../../src/lib/workspaces'
 import { PALETTES } from '../../src/palettes'
 import { createAppTheme } from '../../src/theme'
+import { changeAppLanguage } from '../../src/i18n'
 import { TimesheetDashboard } from '../../src/TimesheetDashboard'
 
 // Entries keyed by the first day of the two-week range the dashboard subscribes with (previous week start).
@@ -251,5 +252,33 @@ describe('TimesheetDashboard for managers', () => {
 
     await events.click(within(dialog).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog', { name: 'Grace Hopper' })).toBeNull()
+  })
+})
+
+describe('TimesheetDashboard in Polish', () => {
+  beforeEach(async () => {
+    await changeAppLanguage('pl')
+  })
+  afterEach(async () => {
+    await changeAppLanguage('en')
+  })
+
+  it('translates the team view, with Polish plurals and dates', () => {
+    renderDashboard(true)
+    expect(screen.getByRole('heading', { name: 'Pulpit karty czasu', level: 1 })).toBeTruthy()
+    // Two members is the Polish "few" form.
+    expect(screen.getByText('2 z 2 członków')).toBeTruthy()
+    expect(screen.getByRole('searchbox', { name: 'Szukaj członków' })).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: /^pon\.?\s*2$/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Pokaż kartę czasu: Grace Hopper' })).toBeTruthy()
+  })
+
+  it('translates the personal week, with Polish day labels and durations', () => {
+    renderDashboard(false)
+    const strip = screen.getByRole('group', { name: 'Pokaż dzień' })
+    expect(within(strip).getByRole('button', { name: /^poniedziałek, 2 .+, zarejestrowano 2 h$/ })).toBeTruthy()
+    expect(within(strip).getByRole('button', { name: 'Wczoraj, zarejestrowano 1 h' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Wpisy (2)' })).toBeTruthy()
+    expect(screen.getByText('Cel tygodniowy')).toBeTruthy()
   })
 })
