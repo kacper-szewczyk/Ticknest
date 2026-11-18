@@ -7,7 +7,6 @@ import SpeedDialAction from '@mui/material/SpeedDialAction'
 import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
-import type { SxProps, Theme } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
 import { type ReactNode, useEffect, useState } from 'react'
@@ -422,9 +421,14 @@ function OverLimitChip({ label }: { label: string }) {
   )
 }
 
-function OverLimitMessage({ children, sx }: { children: ReactNode; sx?: SxProps<Theme> }) {
+/** The over-limit message as text; `inset` lines it up with a day heading's text, past the chevron. */
+function OverLimitMessage({ children, inset = false }: { children: ReactNode; inset?: boolean }) {
   return (
-    <Typography component="p" variant="caption" color="warning.main" sx={sx}>
+    <Typography
+      component="p"
+      variant="caption"
+      sx={{ display: 'block', color: 'warning.main', ...(inset && { pl: 3.5, pb: 0.5 }) }}
+    >
       {children}
     </Typography>
   )
@@ -573,7 +577,7 @@ function DaySection({
           </Button>
         </Stack>
       </Stack>
-      {isOverLimit && <OverLimitMessage sx={{ pl: 3.5, pb: 0.5 }}>{t('entries.overDayMessage')}</OverLimitMessage>}
+      {isOverLimit && <OverLimitMessage inset>{t('entries.overDayMessage')}</OverLimitMessage>}
       {hasEntries ? (
         <>
           {!isExpanded && <DaySummaryLine summary={summary} />}

@@ -8,7 +8,7 @@ import { useTranslation } from './i18n'
 import type { LeaveBalance, LeaveStatus, LeaveType } from './lib/leave'
 import { leaveTypeName, useFormatDays } from './useLeaveFormat'
 
-/** A previous/next arrow for stepping through months or years, at the default (not small) target size. */
+/** A previous/next arrow for stepping through months or years, 44px like the timesheet's week arrows. */
 export function StepButton({
   direction,
   label,
@@ -19,7 +19,7 @@ export function StepButton({
   onClick: () => void
 }) {
   return (
-    <IconButton onClick={onClick} aria-label={label}>
+    <IconButton onClick={onClick} aria-label={label} sx={{ width: 44, height: 44 }}>
       <NavIcon>
         <path d={direction === 'previous' ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'} />
       </NavIcon>
