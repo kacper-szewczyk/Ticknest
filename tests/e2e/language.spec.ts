@@ -6,7 +6,10 @@ test('a visitor switches the sign-in screen to Spanish, and it stays Spanish aft
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
 
-  await page.getByLabel('Language').selectOption('es')
+  const picker = page.getByRole('button', { name: 'Language: English' })
+  await expect(picker).toBeInViewport()
+  await picker.click()
+  await page.getByRole('menuitemradio', { name: 'Español' }).click()
 
   await expect(page.getByRole('heading', { name: 'Hola de nuevo' })).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'es')
@@ -25,7 +28,38 @@ test.describe('with a browser that prefers Polish', () => {
 
     await expect(page.getByRole('heading', { name: 'Witaj ponownie' })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'pl')
+    await expect(page.getByRole('button', { name: 'Język: Polski' })).toBeInViewport()
   })
+})
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 } })
+
+  test('the sign-in language picker is visible without scrolling', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: 'Language: English' })).toBeInViewport()
+  })
+})
+
+test('a signed-in user switches language from the sidebar, without opening Settings', async ({ page }) => {
+  const account = demoAccount('manager')
+  await page.goto('/')
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: account.email })
+    .getByRole('button', { name: 'Use this account' })
+    .click()
+
+  await page.getByRole('button', { name: 'Language: English' }).click()
+  await page.getByRole('menuitemradio', { name: 'Español' }).click()
+
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Idioma: Español' })).toBeVisible()
+
+  // Put it back, so other specs using this account start in English.
+  await page.getByRole('button', { name: 'Idioma: Español' }).click()
+  await page.getByRole('menuitemradio', { name: 'English' }).click()
+  await expect(page.getByRole('button', { name: 'Language: English' })).toBeVisible()
 })
 
 test('a language chosen in Settings follows the user to another device', async ({ page, browser }) => {
@@ -38,7 +72,10 @@ test('a language chosen in Settings follows the user to another device', async (
     .click()
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings' }).click()
 
-  await page.getByRole('region', { name: 'Interface language' }).getByLabel('Language').selectOption('pl')
+  await page
+    .getByRole('region', { name: 'Interface language' })
+    .getByLabel('Language', { exact: true })
+    .selectOption('pl')
 
   await expect(page.getByText('Język zapisany.', { exact: false })).toBeVisible()
   await expect(

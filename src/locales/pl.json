@@ -17,6 +17,7 @@
   },
   "language": {
     "label": "Język",
+    "current": "Język: {{language}}",
     "kicker": "JĘZYK",
     "title": "Język interfejsu",
     "intro": "Wybierz język, w którym Tickness będzie się dla Ciebie wyświetlać. Pozostali członkowie obszaru roboczego zachowują własny język.",

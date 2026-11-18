@@ -30,12 +30,15 @@ async function loadLanguage(language: AppLanguage): Promise<void> {
   i18n.addResourceBundle(language, 'translation', catalog)
 }
 
-/** Loads the language if needed, switches the UI to it, and remembers it on this device. */
-export async function changeAppLanguage(language: AppLanguage): Promise<void> {
+/**
+ * Loads the language if needed and switches the UI to it. A chosen language is remembered on this device; pass
+ * `remember: false` for one only detected from the browser, so the browser's preference keeps applying until a choice.
+ */
+export async function changeAppLanguage(language: AppLanguage, { remember = true } = {}): Promise<void> {
   await loadLanguage(language)
   await i18n.changeLanguage(language)
   if (typeof document !== 'undefined') document.documentElement.lang = language
-  cacheLanguage(language)
+  if (remember) cacheLanguage(language)
 }
 
 /** Switches to this device's or browser's language before the first render. Stays in English if loading fails. */
@@ -43,7 +46,8 @@ export async function startI18n(): Promise<void> {
   const language = initialLanguage()
   if (language === DEFAULT_LANGUAGE) return
   try {
-    await changeAppLanguage(language)
+    // Already cached when it came from this device; not worth caching when it only came from the browser.
+    await changeAppLanguage(language, { remember: false })
   } catch (error) {
     console.error('Could not load the interface language.', error)
   }

@@ -14,7 +14,7 @@ import type { DemoAccount } from './lib/demo'
 import { readableError } from './lib/errors'
 import { Brand } from './Brand'
 import { DemoAccountsPanel } from './DemoMode'
-import { LanguageSelect } from './LanguageSelect'
+import { LanguageMenu } from './LanguageMenu'
 import { FormMessage } from './ui'
 
 type AuthMode = 'sign-in' | 'sign-up' | 'reset'
@@ -89,12 +89,23 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
     <Box
       component="main"
       sx={{
+        position: 'relative',
         minHeight: '100vh',
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', md: 'minmax(300px, .92fr) 1.08fr' },
         bgcolor: 'background.paper',
       }}
     >
+      <LanguageMenu
+        disabled={pending}
+        sx={{
+          position: 'absolute',
+          zIndex: 1,
+          top: { xs: 18, md: 24 },
+          right: { xs: 16, md: 32 },
+          color: 'text.secondary',
+        }}
+      />
       <Box
         component="section"
         sx={{
@@ -278,7 +289,6 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) 
               </p>
             )}
           </Box>
-          <LanguageSelect disabled={pending} sx={{ display: 'flex', mt: 3, mx: 'auto', maxWidth: 220 }} />
         </Box>
       </Box>
     </Box>
