@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Tickness",
   "short_name": "Tickness",
   "description": "Tickness is an open-source, self-hosted time tracker.",
@@ -7,9 +8,45 @@
   "display": "standalone",
   "background_color": "#f8f8f5",
   "theme_color": "#f8f8f5",
+  "categories": ["productivity", "business"],
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start a timer",
+      "short_name": "Timer",
+      "description": "Open the timesheet to start or stop the timer",
+      "url": "/#timesheet",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Reports",
+      "url": "/#reports",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Time off",
+      "url": "/#time-off",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/timesheet-wide.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The timesheet with the timer, the week's entries and daily totals"
+    },
+    {
+      "src": "/screenshots/timesheet-narrow.png",
+      "sizes": "824x1678",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tracking time on a phone"
+    }
   ]
 }

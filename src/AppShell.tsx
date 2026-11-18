@@ -16,7 +16,30 @@ const RAIL_WIDTH = 72
 // Disabled for prefers-reduced-motion by the global rule in theme.ts.
 const SIDEBAR_TRANSITION = '.2s ease'
 
-export type NavItem<V extends string> = { value: V; label: string; icon: ReactNode; section: string; badge?: ReactNode }
+export type NavItem<V extends string> = {
+  value: V
+  label: string
+  icon: ReactNode
+  section: string
+  /** Visible badge (e.g. a count). Hidden from assistive tech, so pass `badgeLabel` with it. */
+  badge?: ReactNode
+  /** Text version of the badge, e.g. "3 requests waiting". Read by screen readers and shown in the rail tooltip. */
+  badgeLabel?: string
+}
+
+/** Name and tooltip of an icon-only rail button, e.g. "Time-off approvals, 3 requests waiting". */
+function navItemLabel(item: { label: string; badge?: ReactNode; badgeLabel?: string }): string {
+  return item.badge && item.badgeLabel ? `${item.label}, ${item.badgeLabel}` : item.label
+}
+
+const visuallyHiddenSx = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const
 
 const sidebarColors = {
   bg: 'app.sidebar.bg',
@@ -27,6 +50,15 @@ const sidebarColors = {
   activeBg: (theme: Theme) => alpha(theme.palette.app.sidebar.strong, 0.09),
   border: (theme: Theme) => alpha(theme.palette.app.sidebar.strong, 0.08),
 }
+
+// The global focus ring (app.focus) is too dark to see on the sidebar in the light palettes, so every control on
+// the sidebar background gets the sidebar accent instead.
+const sidebarFocusSx = {
+  '& .MuiButtonBase-root.Mui-focusVisible': {
+    outline: (theme: Theme) => `3px solid ${theme.palette.app.sidebar.accent}`,
+    outlineOffset: 1,
+  },
+} as const
 
 type ShellProps<V extends string> = {
   brand: ReactNode
@@ -117,6 +149,7 @@ export function AppShell<V extends string>({
           overflow: 'hidden',
           transition: `width ${SIDEBAR_TRANSITION}`,
           zIndex: (theme) => theme.zIndex.appBar,
+          ...sidebarFocusSx,
         }}
       >
         {collapsed ? (
@@ -186,6 +219,7 @@ export function AppShell<V extends string>({
           px: 1.5,
           bgcolor: sidebarColors.bg,
           color: sidebarColors.strong,
+          ...sidebarFocusSx,
         }}
       >
         <IconButton
@@ -216,7 +250,7 @@ export function AppShell<V extends string>({
             role: 'dialog',
             'aria-modal': true,
             'aria-label': t('shell.mainNavigation'),
-            sx: { width: SIDEBAR_WIDTH, maxWidth: '85vw', border: 0 },
+            sx: { width: SIDEBAR_WIDTH, maxWidth: '85vw', border: 0, ...sidebarFocusSx },
           },
         }}
       >
@@ -301,10 +335,6 @@ function navButtonSx(isActive: boolean) {
     bgcolor: isActive ? sidebarColors.activeBg : 'transparent',
     transition: 'background-color .15s, color .15s',
     '&:hover': { bgcolor: sidebarColors.activeBg, color: sidebarColors.strong },
-    '&.Mui-focusVisible': {
-      outline: (theme: Theme) => `3px solid ${theme.palette.app.sidebar.accent}`,
-      outlineOffset: 1,
-    },
     '&::before': isActive
       ? {
           content: '""',
@@ -404,8 +434,15 @@ function SidebarContent<V extends string>({
                         </Box>
                         <span>{item.label}</span>
                         {item.badge && (
-                          <Box component="span" sx={{ ml: 'auto' }}>
+                          <Box component="span" aria-hidden="true" sx={{ ml: 'auto' }}>
                             {item.badge}
+                          </Box>
+                        )}
+                        {/* Named by its content, not an aria-label, so the name keeps the visible label for voice
+                            control users: "Time-off approvals 3 requests waiting". */}
+                        {item.badge && item.badgeLabel && (
+                          <Box component="span" sx={visuallyHiddenSx}>
+                            {item.badgeLabel}
                           </Box>
                         )}
                       </ButtonBase>
@@ -500,10 +537,10 @@ function SidebarRail<V extends string>({
                 const isActive = item.value === active
                 return (
                   <li key={item.value}>
-                    <Tooltip title={item.label} placement="right">
+                    <Tooltip title={navItemLabel(item)} placement="right">
                       <ButtonBase
                         onClick={() => onNavigate(item.value)}
-                        aria-label={item.label}
+                        aria-label={navItemLabel(item)}
                         aria-current={isActive ? 'page' : undefined}
                         sx={{ ...navButtonSx(isActive), justifyContent: 'center', px: 0 }}
                       >

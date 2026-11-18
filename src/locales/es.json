@@ -9,6 +9,12 @@
     "reload": "Recargar",
     "demoBusy": "Esta es la demo pública, así que puede estar saturada. Inténtalo de nuevo en unos minutos o <link>ejecuta tu propia copia desde el repositorio de GitHub</link>."
   },
+  "pwa": {
+    "offline": "Estás sin conexión. Tickness se volverá a conectar cuando vuelva la conexión.",
+    "updateReady": "Hay una nueva versión de Tickness disponible.",
+    "reload": "Recargar",
+    "later": "Más tarde"
+  },
   "language": {
     "label": "Idioma",
     "kicker": "IDIOMA",
@@ -150,7 +156,8 @@
     "signedInAs": "Sesión iniciada como {{account}}",
     "signOut": "Cerrar sesión",
     "skipToContent": "Saltar al contenido principal",
-    "documentTitle": "{{view}} · {{workspace}} · Tickness"
+    "documentTitle": "{{view}} · {{workspace}} · Tickness",
+    "installApp": "Instalar la app"
   },
   "common": {
     "billable": "Facturable",
@@ -647,10 +654,15 @@
     "region": "Temporizador",
     "placeholder": "¿En qué estás trabajando?",
     "runningDescription": "Descripción del temporizador en marcha",
-    "elapsed": "Tiempo transcurrido {{time}}",
+    "elapsedLabel": "Tiempo transcurrido",
     "start": "Iniciar",
     "starting": "Iniciando…",
     "stop": "Detener",
+    "started": "Temporizador iniciado",
+    "stopped": "Temporizador detenido. Tiempo guardado: {{duration}}",
+    "durationHours": "{{hours}} h {{minutes}} min",
+    "durationMinutes": "{{minutes}} min",
+    "durationUnderMinute": "menos de un minuto",
     "autoStopped": "Tu temporizador «{{description}}» siguió en marcha pasada la medianoche, así que se detuvo al final del día en que empezó. Edita el registro si trabajaste más tarde."
   },
   "entries": {

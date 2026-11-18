@@ -28,6 +28,14 @@ function renderShell(onNavigate = vi.fn()) {
         items={[
           { value: 'home', label: 'Home', icon: null, section: 'Track' },
           { value: 'reports', label: 'Reports', icon: null, section: 'Analyze' },
+          {
+            value: 'approvals',
+            label: 'Approvals',
+            icon: null,
+            section: 'Manage',
+            badge: <span>3</span>,
+            badgeLabel: '3 requests waiting',
+          },
         ]}
         active="home"
         onNavigate={onNavigate}
@@ -137,6 +145,23 @@ describe('AppShell desktop sidebar', () => {
     expect(within(drawer).getByText('Full brand')).toBeTruthy()
     expect(within(drawer).getByText('Workspace switcher')).toBeTruthy()
     expect(within(drawer).queryByRole('button', { name: 'Collapse sidebar', hidden: true })).toBeNull()
+  })
+
+  it('reads the badge as text in the expanded sidebar', () => {
+    const { sidebar } = renderShell()
+    // Named by its content (label + hidden badge text), not an aria-label, so it keeps the visible label.
+    const approvals = within(sidebar).getByRole('button', { name: 'Approvals 3 requests waiting' })
+    // The visible count is hidden from assistive tech, so it isn't read twice.
+    expect(within(approvals).getByText('3').closest('[aria-hidden="true"]')).toBeTruthy()
+  })
+
+  it('adds the badge to the accessible name and tooltip in the collapsed rail', async () => {
+    window.localStorage.setItem(STORAGE_KEY, 'true')
+    const { sidebar } = renderShell()
+    const approvals = within(sidebar).getByRole('button', { name: 'Approvals, 3 requests waiting' })
+    await userEvent.hover(approvals)
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Approvals, 3 requests waiting')
+    expect(within(sidebar).getByRole('button', { name: 'Reports' })).toBeTruthy()
   })
 
   it('names the small-screen drawer and points the menu button at it', async () => {

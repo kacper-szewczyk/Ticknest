@@ -13,14 +13,9 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
  */
 type KnownViolation = { rule: string; selector: string; issue: string }
 
-const KNOWN_VIOLATIONS: KnownViolation[] = [
-  // The "Tickness vX" version line in the sidebar footer (`app.sidebar.faint`) is about 3:1, below 4.5:1.
-  {
-    rule: 'color-contrast',
-    selector: ':is(aside, .MuiDrawer-paper) .MuiTypography-caption',
-    issue: 'https://github.com/kacper-szewczyk/Ticknest/issues/301',
-  },
-]
+// None right now. Add an entry only with a linked issue, e.g.
+// { rule: 'color-contrast', selector: 'aside .version-line', issue: 'https://github.com/<owner>/<repo>/issues/<n>' }
+const KNOWN_VIOLATIONS: KnownViolation[] = []
 
 function isKnown(rule: string, page: Page, target: string): Promise<boolean> {
   const selectors = KNOWN_VIOLATIONS.filter((known) => known.rule === rule).map((known) => known.selector)

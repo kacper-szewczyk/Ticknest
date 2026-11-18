@@ -235,7 +235,7 @@ describe('TimeEntriesPanel over-24h warning', () => {
     renderPanel()
     const tuesday = daySection('Tuesday')
     expect(within(tuesday).getByText('Over 24h')).toBeTruthy()
-    expect(within(tuesday).getByLabelText(/add up to more than 24 hours/)).toBeTruthy()
+    expect(within(tuesday).getByText(/add up to more than 24 hours/)).toBeTruthy()
     expect(within(daySection('Wednesday')).queryByText('Over 24h')).toBeNull()
   })
 

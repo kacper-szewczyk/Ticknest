@@ -32,6 +32,7 @@ La documentación completa está en inglés: consulta el [README](README.md) y l
 - **Presupuestos** (opcionales) para proyectos y personas.
 - **Importación desde Clockify**: trae tu historial desde el CSV de un informe detallado, con una vista previa antes de guardar.
 - **Interfaz en inglés, español y polaco**, paletas de colores claras y oscuras, y un diseño que funciona en teléfonos.
+- **Se instala como una app**: desde Chrome o Edge («Instalar la app» en la barra lateral o en la barra de direcciones) o, en iPhone y iPad, con Compartir › Añadir a pantalla de inicio. Se abre en su propia ventana, carga sin conexión y pregunta antes de pasar a una versión nueva.
 
 ## Por qué Tickness
 

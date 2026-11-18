@@ -9,6 +9,12 @@
     "reload": "Reload",
     "demoBusy": "This is the public demo, so it may be busy. Try again in a few minutes, or <link>run your own copy from the GitHub repository</link>."
   },
+  "pwa": {
+    "offline": "You're offline. Tickness will reconnect when your connection is back.",
+    "updateReady": "A new version of Tickness is available.",
+    "reload": "Reload",
+    "later": "Later"
+  },
   "language": {
     "label": "Language",
     "kicker": "LANGUAGE",
@@ -149,7 +155,8 @@
     "signedInAs": "Signed in as {{account}}",
     "signOut": "Sign out",
     "skipToContent": "Skip to main content",
-    "documentTitle": "{{view}} · {{workspace}} · Tickness"
+    "documentTitle": "{{view}} · {{workspace}} · Tickness",
+    "installApp": "Install app"
   },
   "common": {
     "billable": "Billable",
@@ -627,10 +634,15 @@
     "region": "Timer",
     "placeholder": "What are you working on?",
     "runningDescription": "Description of the running timer",
-    "elapsed": "Elapsed time {{time}}",
+    "elapsedLabel": "Elapsed time",
     "start": "Start",
     "starting": "Starting…",
     "stop": "Stop",
+    "started": "Timer started",
+    "stopped": "Timer stopped, {{duration}} saved",
+    "durationHours": "{{hours}} h {{minutes}} min",
+    "durationMinutes": "{{minutes}} min",
+    "durationUnderMinute": "under a minute",
     "autoStopped": "Your timer “{{description}}” ran past midnight, so it was stopped at the end of the day it started. Edit the entry if you worked later."
   },
   "entries": {

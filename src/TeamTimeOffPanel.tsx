@@ -1,6 +1,5 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -27,7 +26,7 @@ import {
 import { subscribeToLeaveRequests, subscribeToLeaveTypes } from './lib/timeOff'
 import { type WorkspaceMember, subscribeToWorkspaceMembers } from './lib/workspaces'
 import { LeaveRequestRow } from './TimeOffPanel'
-import { LeaveTypeLabel } from './TimeOffParts'
+import { LeaveTypeLabel, StepButton } from './TimeOffParts'
 import { leaveTypeName } from './useLeaveFormat'
 import { EmptyText, FormMessage, LoadingState, SectionCard, SectionHeading, SelectField } from './ui'
 
@@ -155,13 +154,11 @@ export function TeamTimeOffPanel({
         sx={{ gap: 1.5, mt: 2, alignItems: { xs: 'stretch', sm: 'center' }, flexWrap: 'wrap' }}
       >
         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
-          <IconButton
-            size="small"
+          <StepButton
+            direction="previous"
+            label={t('timeOff.team.previousMonth')}
             onClick={() => setMonth(shiftMonth(month, -1))}
-            aria-label={t('timeOff.team.previousMonth')}
-          >
-            ‹
-          </IconButton>
+          />
           <Typography
             component="p"
             aria-live="polite"
@@ -169,13 +166,11 @@ export function TeamTimeOffPanel({
           >
             {monthLabel}
           </Typography>
-          <IconButton
-            size="small"
+          <StepButton
+            direction="next"
+            label={t('timeOff.team.nextMonth')}
             onClick={() => setMonth(shiftMonth(month, 1))}
-            aria-label={t('timeOff.team.nextMonth')}
-          >
-            ›
-          </IconButton>
+          />
         </Stack>
         <SelectField
           label={t('timeOff.team.memberFilter')}

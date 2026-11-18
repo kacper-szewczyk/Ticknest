@@ -140,7 +140,7 @@ export function WorkPicker({
             )}
             <Typography
               variant="overline"
-              color="text.disabled"
+              color="text.secondary"
               sx={{ flexShrink: 0, width: 52, textAlign: 'right', fontSize: 10, lineHeight: 1 }}
             >
               {isTask

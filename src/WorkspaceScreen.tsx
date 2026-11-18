@@ -21,6 +21,7 @@ import { setPageTitle } from './lib/documentTitle'
 import { readableError } from './lib/errors'
 import { isFeatureEnabled } from './lib/featureFlags'
 import { usePendingLeaveCount } from './usePendingLeaveCount'
+import { InstallAppButton } from './InstallAppButton'
 import { clearInviteParamsFromAddressBar, hasInviteParams } from './lib/inviteLink'
 import {
   type SetupItem,
@@ -298,10 +299,10 @@ export function WorkspaceScreen({ user }: { user: User }) {
       label: t('nav.timeOffApprovals'),
       icon: navIcons.timeOffApprovals,
       section: t('nav.sectionManage'),
+      badgeLabel: t('nav.pendingCount', { count: pendingLeaveCount }),
       badge: pendingLeaveCount > 0 && (
         <Box
           component="span"
-          aria-label={t('nav.pendingCount', { count: pendingLeaveCount })}
           sx={{
             display: 'inline-flex',
             minWidth: 20,
@@ -580,6 +581,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
           {userAvatar}
         </Box>
       </Tooltip>
+      <InstallAppButton compact />
       <Tooltip title={t('shell.signOut')} placement="right">
         <IconButton
           aria-label={t('shell.signOut')}
@@ -610,6 +612,7 @@ export function WorkspaceScreen({ user }: { user: User }) {
           </Typography>
         </Box>
       </Stack>
+      <InstallAppButton />
       <Button
         size="small"
         onClick={() => void signOutUser()}
