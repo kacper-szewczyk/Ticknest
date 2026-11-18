@@ -27,10 +27,19 @@ export type NavItem<V extends string> = {
   badgeLabel?: string
 }
 
-/** Accessible name for a nav button with a badge, e.g. "Time-off approvals, 3 requests waiting". */
+/** Name and tooltip of an icon-only rail button, e.g. "Time-off approvals, 3 requests waiting". */
 function navItemLabel(item: { label: string; badge?: ReactNode; badgeLabel?: string }): string {
   return item.badge && item.badgeLabel ? `${item.label}, ${item.badgeLabel}` : item.label
 }
+
+const visuallyHiddenSx = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const
 
 const sidebarColors = {
   bg: 'app.sidebar.bg',
@@ -414,7 +423,6 @@ function SidebarContent<V extends string>({
                     <li key={item.value}>
                       <ButtonBase
                         onClick={() => onNavigate(item.value)}
-                        aria-label={item.badge && item.badgeLabel ? navItemLabel(item) : undefined}
                         aria-current={isActive ? 'page' : undefined}
                         sx={navButtonSx(isActive)}
                       >
@@ -428,6 +436,13 @@ function SidebarContent<V extends string>({
                         {item.badge && (
                           <Box component="span" aria-hidden="true" sx={{ ml: 'auto' }}>
                             {item.badge}
+                          </Box>
+                        )}
+                        {/* Named by its content, not an aria-label, so the name keeps the visible label for voice
+                            control users: "Time-off approvals 3 requests waiting". */}
+                        {item.badge && item.badgeLabel && (
+                          <Box component="span" sx={visuallyHiddenSx}>
+                            {item.badgeLabel}
                           </Box>
                         )}
                       </ButtonBase>

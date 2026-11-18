@@ -478,7 +478,8 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
                             event.stopPropagation()
                             setSelectedUid(item.person.uid)
                           }}
-                          aria-label={`Open timesheet for ${item.person.name}`}
+                          // Starts with the visible text, so voice control users can say "View".
+                          aria-label={`View timesheet for ${item.person.name}`}
                         >
                           View
                         </Button>
@@ -685,7 +686,13 @@ function DayCell({ seconds }: { seconds: number }) {
           isLong
             ? theme.palette.app.errorSoft
             : alpha(theme.palette.app.segment.billable, 0.08 + Math.min(seconds / (8 * 3600), 1) * 0.22),
-        color: isLong ? 'error.main' : 'primary.dark',
+        // primary.dark reads well on the light tints but is about 3:1 on the dark ones.
+        color: (theme) =>
+          isLong
+            ? theme.palette.error.main
+            : theme.palette.mode === 'dark'
+              ? theme.palette.primary.main
+              : theme.palette.primary.dark,
       }}
     >
       {formatHours(seconds)}

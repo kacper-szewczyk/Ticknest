@@ -51,6 +51,7 @@
     "workbox-window": "7.4.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@firebase/rules-unit-testing": "^6.0.0",
     "@playwright/test": "^1.65.0",
     "@testing-library/dom": "^10.4.2",

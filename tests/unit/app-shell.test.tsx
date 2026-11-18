@@ -149,7 +149,8 @@ describe('AppShell desktop sidebar', () => {
 
   it('reads the badge as text in the expanded sidebar', () => {
     const { sidebar } = renderShell()
-    const approvals = within(sidebar).getByRole('button', { name: 'Approvals, 3 requests waiting' })
+    // Named by its content (label + hidden badge text), not an aria-label, so it keeps the visible label.
+    const approvals = within(sidebar).getByRole('button', { name: 'Approvals 3 requests waiting' })
     // The visible count is hidden from assistive tech, so it isn't read twice.
     expect(within(approvals).getByText('3').closest('[aria-hidden="true"]')).toBeTruthy()
   })

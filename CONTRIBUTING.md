@@ -37,6 +37,22 @@ npx playwright test --headed --project chromium
 
 On CI, a failing run uploads the HTML report and traces as the `playwright-report` artifact. Open a downloaded trace with `npx playwright show-trace <path>/trace.zip`.
 
+### Accessibility checks
+
+`npm run test:e2e` also runs two accessibility specs, so they run on every pull request:
+
+- `tests/e2e/a11y.spec.ts` scans pages with [axe](https://github.com/dequelabs/axe-core) for WCAG 2.2 A and AA violations: the sign-in, sign-up and onboarding screens, the setup wizard, every main view, the Timesheet with a running timer, the entry, catalog and budget editors, and the leave request dialog. The main views and dialogs are scanned in the `forest` (light) and `forest-night` (dark) palettes, because contrast differs per palette. A `@mobile` test also scans the small-screen layout and the navigation drawer.
+- `tests/e2e/keyboard.spec.ts` starts and stops a timer and adds a manual entry using only the keyboard.
+
+To run just these against the emulators:
+
+```sh
+npm --prefix functions run build
+npx firebase emulators:exec --only auth,firestore,functions --project demo-ticknest "npx playwright test a11y keyboard"
+```
+
+A failure lists each violation with its rule, the elements it found and a link to the rule's documentation. Fix it rather than silencing it. If it can't be fixed in the same pull request, open an issue and add an entry for it to `KNOWN_VIOLATIONS` in `tests/e2e/axe.ts`, with the rule, a CSS selector that is as narrow as possible, and the issue link. Remove the entry when the fix lands. Don't disable a rule for the whole suite.
+
 ### Screenshots
 
 The README and launch screenshots in `docs/screenshots/<language>/` are generated from the demo data, so no real personal data appears in them. Regenerate them after a visible UI change:

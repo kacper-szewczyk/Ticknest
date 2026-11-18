@@ -243,7 +243,7 @@ describe('TimesheetDashboard for managers', () => {
     expect(screen.getByText('Active members')).toBeTruthy()
     expect(screen.queryByRole('group', { name: 'Show day' })).toBeNull()
 
-    await events.click(screen.getByRole('button', { name: 'Open timesheet for Grace Hopper' }))
+    await events.click(screen.getByRole('button', { name: 'View timesheet for Grace Hopper' }))
     const dialog = screen.getByRole('dialog', { name: 'Grace Hopper' })
     expect(within(dialog).getByRole('tab', { name: 'Entries (1)' })).toBeTruthy()
     expect(within(dialog).getByText(/^Week of /)).toBeTruthy()

@@ -501,7 +501,6 @@ function CatalogRow({
     >
       <ButtonBase
         onClick={onOpen}
-        aria-label={`Edit ${noun} ${record.name}${record.archived ? ' (archived)' : ''}`}
         sx={{
           flex: 1,
           minWidth: 0,
@@ -516,6 +515,11 @@ function CatalogRow({
           '&:hover': { bgcolor: 'action.hover' },
         }}
       >
+        {/* A hidden prefix, not an aria-label: the name keeps the visible text (and the Archived chip), for voice
+            control users. */}
+        <Box component="span" sx={visuallyHiddenSx}>
+          {`Edit ${noun} `}
+        </Box>
         {color && (
           <Box
             component="span"
@@ -565,3 +569,12 @@ function CatalogRow({
     </Box>
   )
 }
+
+const visuallyHiddenSx = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const
