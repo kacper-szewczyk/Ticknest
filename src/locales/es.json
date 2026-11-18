@@ -647,10 +647,15 @@
     "region": "Temporizador",
     "placeholder": "¿En qué estás trabajando?",
     "runningDescription": "Descripción del temporizador en marcha",
-    "elapsed": "Tiempo transcurrido {{time}}",
+    "elapsedLabel": "Tiempo transcurrido",
     "start": "Iniciar",
     "starting": "Iniciando…",
     "stop": "Detener",
+    "started": "Temporizador iniciado",
+    "stopped": "Temporizador detenido. Tiempo guardado: {{duration}}",
+    "durationHours": "{{hours}} h {{minutes}} min",
+    "durationMinutes": "{{minutes}} min",
+    "durationUnderMinute": "menos de un minuto",
     "autoStopped": "Tu temporizador «{{description}}» siguió en marcha pasada la medianoche, así que se detuvo al final del día en que empezó. Edita el registro si trabajaste más tarde."
   },
   "entries": {

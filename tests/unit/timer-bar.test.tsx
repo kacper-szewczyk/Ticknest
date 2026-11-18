@@ -15,6 +15,7 @@ import { TimerBar } from '../../src/TimerBar'
 let entries: TimeEntry[]
 let emitEntries: (entries: TimeEntry[]) => void = () => {}
 const startTimer = vi.fn()
+const stopTimer = vi.fn()
 const updateRunningTimerDescription = vi.fn()
 
 vi.mock('../../src/lib/timeEntries', () => ({
@@ -24,7 +25,7 @@ vi.mock('../../src/lib/timeEntries', () => ({
     return () => {}
   },
   startTimer: (...args: unknown[]) => startTimer(...args),
-  stopTimer: vi.fn(),
+  stopTimer: (...args: unknown[]) => stopTimer(...args),
   updateRunningTimer: vi.fn(),
   updateRunningTimerDescription: (...args: unknown[]) => updateRunningTimerDescription(...args),
 }))
@@ -60,6 +61,7 @@ const runningDescription = () =>
 beforeEach(() => {
   entries = []
   startTimer.mockReset().mockResolvedValue('running')
+  stopTimer.mockReset().mockResolvedValue(undefined)
   updateRunningTimerDescription.mockReset().mockResolvedValue(undefined)
 })
 
@@ -129,6 +131,61 @@ describe('TimerBar', () => {
     await userEvent.type(runningDescription(), ' edited{Enter}')
     expect(await screen.findByText('Could not save.')).toBeTruthy()
     expect(runningDescription().value).toBe('Original')
+    expect(document.activeElement).toBe(runningDescription())
+    expect(runningDescription().getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('moves focus to Stop and announces the start after starting', async () => {
+    renderBar()
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    emitEntries([runningEntry('')])
+    const stop = await screen.findByRole('button', { name: 'Stop' })
+    await waitFor(() => expect(document.activeElement).toBe(stop))
+    expect(screen.getByRole('status').textContent).toBe('Timer started')
+  })
+
+  it('moves focus to the description and announces the saved time after stopping', async () => {
+    entries = [runningEntry('Writing')]
+    renderBar()
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    expect(stopTimer).toHaveBeenCalledWith(user, 'w1', 'running')
+    emitEntries([])
+    const description = await screen.findByRole('textbox', { name: 'What are you working on?' })
+    await waitFor(() => expect(document.activeElement).toBe(description))
+    expect(screen.getByRole('status').textContent).toBe('Timer stopped, 1 min saved')
+  })
+
+  it('announces a stop under a minute without "0 min"', async () => {
+    entries = [{ ...runningEntry('Quick'), startAt: Timestamp.fromMillis(Date.now() - 5_000) } as TimeEntry]
+    renderBar()
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Timer stopped, under a minute saved'))
+  })
+
+  it('keeps focus on Start and announces nothing when starting fails', async () => {
+    startTimer.mockRejectedValue(new Error('Offline.'))
+    renderBar()
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    expect(await screen.findByText('Offline.')).toBeTruthy()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Start' }))
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it('does not move focus or announce when a timer starts elsewhere', async () => {
+    renderBar()
+    const idleDescription = screen.getByRole('textbox', { name: 'What are you working on?' })
+    idleDescription.focus()
+    emitEntries([runningEntry('From another tab')])
+    const stop = await screen.findByRole('button', { name: 'Stop' })
+    expect(document.activeElement).not.toBe(stop)
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it('names the elapsed time with visible text, not an aria-label', () => {
+    entries = [runningEntry('')]
+    renderBar()
+    expect(screen.getByText('Elapsed time')).toBeTruthy()
+    expect(document.querySelector('[aria-label^="Elapsed"]')).toBeNull()
   })
 
   it('follows a description saved elsewhere while not editing', async () => {

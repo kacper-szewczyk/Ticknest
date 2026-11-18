@@ -667,10 +667,15 @@
     "region": "Licznik czasu",
     "placeholder": "Nad czym pracujesz?",
     "runningDescription": "Opis włączonego licznika",
-    "elapsed": "Upłynęło {{time}}",
+    "elapsedLabel": "Upłynęło",
     "start": "Start",
     "starting": "Uruchamianie…",
     "stop": "Stop",
+    "started": "Licznik uruchomiony",
+    "stopped": "Licznik zatrzymany, zapisano {{duration}}",
+    "durationHours": "{{hours}} godz. {{minutes}} min",
+    "durationMinutes": "{{minutes}} min",
+    "durationUnderMinute": "mniej niż minutę",
     "autoStopped": "Twój licznik „{{description}}” działał po północy, więc został zatrzymany z końcem dnia, w którym go uruchomiono. Jeśli praca trwała dłużej, popraw wpis."
   },
   "entries": {

@@ -627,10 +627,15 @@
     "region": "Timer",
     "placeholder": "What are you working on?",
     "runningDescription": "Description of the running timer",
-    "elapsed": "Elapsed time {{time}}",
+    "elapsedLabel": "Elapsed time",
     "start": "Start",
     "starting": "Starting…",
     "stop": "Stop",
+    "started": "Timer started",
+    "stopped": "Timer stopped, {{duration}} saved",
+    "durationHours": "{{hours}} h {{minutes}} min",
+    "durationMinutes": "{{minutes}} min",
+    "durationUnderMinute": "under a minute",
     "autoStopped": "Your timer “{{description}}” ran past midnight, so it was stopped at the end of the day it started. Edit the entry if you worked later."
   },
   "entries": {
