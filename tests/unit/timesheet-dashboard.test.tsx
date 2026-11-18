@@ -185,6 +185,55 @@ describe('TimesheetDashboard for members', () => {
   })
 })
 
+describe('TimesheetDashboard day timeline', () => {
+  it('names each segment with its billable status and project, and opens the editor', async () => {
+    const events = userEvent.setup()
+    ranges.set('2026-10-26', [
+      timeEntry('a', '2026-11-02T09:00', '2026-11-02T11:00', {
+        billable: true,
+        clientName: 'Acme',
+        projectName: 'Website',
+        taskName: 'Design',
+      }),
+      timeEntry('b', '2026-11-03T13:00', '2026-11-03T14:00'),
+    ])
+    renderDashboard(false)
+
+    const billable = screen.getByRole('button', {
+      name: 'Edit Entry a, billable, Acme · Website · Design, 09:00 AM–11:00 AM, 2h',
+    })
+    expect(
+      screen.getByRole('button', { name: 'Edit Entry b, non-billable, no project, 01:00 PM–02:00 PM, 1h' }),
+    ).toBeTruthy()
+    await events.click(billable)
+    expect(screen.getByRole('dialog', { name: 'Entry editor' }).textContent).toBe('Editing Entry a on 2026-11-02')
+  })
+
+  it('shows a running entry as a labelled image instead of a button that does nothing', () => {
+    ranges.set('2026-10-26', [timeEntry('r', '2026-11-04T10:00', null, { billable: true, projectName: 'Website' })])
+    renderDashboard(false)
+    expect(screen.getByRole('img', { name: 'Entry r, running, billable, Website, 10:00 AM–now, 2h' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Entry r/ })).toBeNull()
+  })
+
+  it('points short entries to the Entries tab instead of rendering a tiny button', () => {
+    // A 600px track: a 2-hour entry is wide enough to click, a 5-minute one is not.
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(600)
+    ranges.set('2026-10-26', [
+      timeEntry('long', '2026-11-02T09:00', '2026-11-02T11:00'),
+      timeEntry('short', '2026-11-02T12:00', '2026-11-02T12:05'),
+    ])
+    renderDashboard(false)
+    expect(screen.getByRole('button', { name: /^Edit Entry long, / })).toBeTruthy()
+    expect(
+      screen.getByRole('img', {
+        name: 'Entry short, non-billable, no project, 12:00 PM–12:05 PM, 5m, too short to select here, edit it from the Entries tab',
+      }),
+    ).toBeTruthy()
+    expect(screen.getByText(/Entries too short to select here can be edited from the Entries tab/)).toBeTruthy()
+  })
+})
+
 describe('TimesheetDashboard for managers', () => {
   it('keeps the team table and opens a member in the dialog', async () => {
     const events = userEvent.setup()

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -52,12 +52,28 @@ type PersonStats = {
 
 const WEEKLY_TARGET_SECONDS = 40 * 3600
 const LONG_DAY_SECONDS = 10 * 3600
-// Theme palette paths, resolved by `sx` against the user's selected palette.
-const SEGMENT_COLORS = {
-  billable: 'app.segment.billable',
-  nonBillable: 'app.segment.nonBillable',
-  running: 'app.segment.running',
-  gap: 'app.segment.gap',
+// Timelines draw segments at least this wide and tall before they become buttons (WCAG 2.5.8 Target Size).
+const MIN_TARGET_PX = 24
+
+type SegmentKind = 'billable' | 'nonBillable' | 'running' | 'gap'
+
+/**
+ * Fill, outline and pattern for a timeline segment or its legend swatch. Non-billable time is hatched so it can be
+ * told apart from billable without colour, and light fills get an outline that reaches 3:1 against `app.track`.
+ */
+function segmentSx(kind: SegmentKind, nonBillable = kind === 'nonBillable') {
+  return (theme: Theme) => {
+    const { segment } = theme.palette.app
+    const edge = kind === 'running' ? segment.runningEdge : kind === 'nonBillable' ? segment.billable : undefined
+    return {
+      boxSizing: 'border-box' as const,
+      bgcolor: segment[kind],
+      border: edge ? `1px solid ${edge}` : 0,
+      backgroundImage: nonBillable
+        ? `repeating-linear-gradient(135deg, ${alpha(edge ?? segment.billable, 0.55)} 0 2px, transparent 2px 6px)`
+        : 'none',
+    }
+  }
 }
 const STATUS_LABELS: Record<Status, { label: string; color: 'default' | 'success' | 'warning' | 'error' }> = {
   running: { label: 'Running', color: 'warning' },
@@ -940,11 +956,15 @@ function MemberWeekDetail({
               spacing={2.25}
               sx={{ mt: 3, mb: 1, pt: 2.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap', rowGap: 1 }}
             >
-              <LegendDot color={SEGMENT_COLORS.billable} label="Billable" />
-              <LegendDot color={SEGMENT_COLORS.nonBillable} label="Non-billable" />
-              <LegendDot color={SEGMENT_COLORS.gap} label="Break" />
-              <LegendDot color={SEGMENT_COLORS.running} label="Running" />
+              <LegendDot kind="billable" label="Billable" />
+              <LegendDot kind="nonBillable" label="Non-billable" />
+              <LegendDot kind="gap" label="Break" />
+              <LegendDot kind="running" label="Running" />
             </Stack>
+            <Typography sx={visuallyHiddenSx}>
+              Select an entry in the timeline to edit it. Entries too short to select here can be edited from the
+              Entries tab.
+            </Typography>
             {timelineDays.length === 0 ? (
               <EmptyText>This week hasn’t started yet.</EmptyText>
             ) : (
@@ -1133,10 +1153,10 @@ const navButtonSx = {
   lineHeight: 1,
 }
 
-function LegendDot({ color, label }: { color: string; label: string }) {
+function LegendDot({ kind, label }: { kind: SegmentKind; label: string }) {
   return (
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-      <Box sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: color }} />
+      <Box sx={[{ width: 12, height: 12, borderRadius: '3px' }, segmentSx(kind)]} />
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
@@ -1148,6 +1168,23 @@ function dayLabel(day: string, today: string): string {
   if (day === today) return 'Today'
   if (day === shiftDayString(today, -1)) return 'Yesterday'
   return dayDate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
+/** A callback ref and the element's current width in px; 0 until measured or where layout is unavailable. */
+function useElementWidth(): [(element: HTMLElement | null) => void, number] {
+  const [element, setElement] = useState<HTMLElement | null>(null)
+  const [width, setWidth] = useState(0)
+  const ref = useCallback((node: HTMLElement | null) => {
+    setElement(node)
+    setWidth(node?.clientWidth ?? 0)
+  }, [])
+  useEffect(() => {
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element])
+  return [ref, width]
 }
 
 function DayTimeline({
@@ -1169,6 +1206,7 @@ function DayTimeline({
   canEdit: (entry: TimeEntry) => boolean
   onEdit: (entry: TimeEntry) => void
 }) {
+  const [trackRef, trackWidth] = useElementWidth()
   const sorted = [...entries].sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis())
   const dayStart = new Date(`${day}T00:00:00`).getTime()
   const axisFrom = dayStart + axisStart * 3_600_000
@@ -1236,7 +1274,10 @@ function DayTimeline({
               </Typography>
             ))}
           </Box>
-          <Box sx={{ position: 'relative', height: 26, borderRadius: '7px', bgcolor: 'app.track', overflow: 'hidden' }}>
+          <Box
+            ref={trackRef}
+            sx={{ position: 'relative', height: 30, borderRadius: '7px', bgcolor: 'app.track', overflow: 'hidden' }}
+          >
             {sorted.map((entry, index) => {
               const start = entry.startAt.toMillis()
               const end = entry.endAt?.toMillis() ?? now
@@ -1252,18 +1293,40 @@ function DayTimeline({
                       bottom: 0,
                       left: `${position(previousEnd)}%`,
                       width: `${position(start) - position(previousEnd)}%`,
-                      bgcolor: SEGMENT_COLORS.gap,
+                      bgcolor: 'app.segment.gap',
                     }}
                   />
                 ) : null
-              const color =
-                entry.endAt === null
-                  ? SEGMENT_COLORS.running
-                  : entry.billable
-                    ? SEGMENT_COLORS.billable
-                    : SEGMENT_COLORS.nonBillable
+              const running = entry.endAt === null
+              const kind: SegmentKind = running ? 'running' : entry.billable ? 'billable' : 'nonBillable'
+              const project = [entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ')
+              // Unmeasured (first render, or no layout in tests) counts as wide enough, so editing is never lost.
+              const widthPx = ((position(end) - position(start)) / 100) * trackWidth - 2
+              const tooNarrow = trackWidth > 0 && widthPx < MIN_TARGET_PX
               const editable = canEdit(entry)
-              const label = `${entry.description || 'Untitled entry'}, ${formatClock(new Date(start))}–${entry.endAt ? formatClock(new Date(end)) : 'running'}, ${formatHours(entrySeconds(entry, now))}`
+              const interactive = editable && !tooNarrow
+              const label = [
+                entry.description || 'Untitled entry',
+                [running && 'running', entry.billable ? 'billable' : 'non-billable'].filter(Boolean).join(', '),
+                project || 'no project',
+                `${formatClock(new Date(start))}–${running ? 'now' : formatClock(new Date(end))}`,
+                formatHours(entrySeconds(entry, now)),
+                editable && tooNarrow && 'too short to select here, edit it from the Entries tab',
+              ]
+                .filter(Boolean)
+                .join(', ')
+              const segmentStyle = [
+                {
+                  position: 'absolute',
+                  top: 3,
+                  bottom: 3,
+                  left: `${position(start)}%`,
+                  width: `max(4px, calc(${position(end) - position(start)}% - 2px))`,
+                  p: 0,
+                  borderRadius: '5px',
+                },
+                segmentSx(kind, !entry.billable),
+              ] as const
               return [
                 gap,
                 <Tooltip
@@ -1272,38 +1335,35 @@ function DayTimeline({
                     <>
                       <b>{entry.description || 'Untitled entry'}</b>
                       <br />
-                      {[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
-                        'No project'}
+                      {project || 'No project'} · {entry.billable ? 'Billable' : 'Non-billable'}
                       <br />
-                      {formatClock(new Date(start))} – {entry.endAt ? formatClock(new Date(end)) : 'running'} ·{' '}
+                      {formatClock(new Date(start))} – {running ? 'running' : formatClock(new Date(end))} ·{' '}
                       {formatHours(entrySeconds(entry, now))}
                     </>
                   }
                 >
-                  <Box
-                    component="button"
-                    type="button"
-                    aria-label={editable ? `Edit ${label}` : label}
-                    onClick={() => editable && onEdit(entry)}
-                    sx={{
-                      position: 'absolute',
-                      top: 3,
-                      bottom: 3,
-                      left: `${position(start)}%`,
-                      width: `max(4px, calc(${position(end) - position(start)}% - 2px))`,
-                      p: 0,
-                      border: 0,
-                      borderRadius: '5px',
-                      bgcolor: color,
-                      cursor: editable ? 'pointer' : 'default',
-                      transition: 'filter .15s',
-                      '&:hover': { filter: 'brightness(1.1)' },
-                      '&:focus-visible': {
-                        outline: (theme) => `3px solid ${theme.palette.app.focus}`,
-                        outlineOffset: 1,
-                      },
-                    }}
-                  />
+                  {interactive ? (
+                    <Box
+                      component="button"
+                      type="button"
+                      aria-label={`Edit ${label}`}
+                      onClick={() => onEdit(entry)}
+                      sx={[
+                        ...segmentStyle,
+                        {
+                          cursor: 'pointer',
+                          transition: 'filter .15s',
+                          '&:hover': { filter: 'brightness(1.1)' },
+                          '&:focus-visible': {
+                            outline: (theme) => `3px solid ${theme.palette.app.focus}`,
+                            outlineOffset: 1,
+                          },
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <Box role="img" aria-label={label} sx={segmentStyle} />
+                  )}
                 </Tooltip>,
               ]
             })}
