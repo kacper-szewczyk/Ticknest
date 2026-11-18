@@ -3,13 +3,22 @@ import { createRoot } from 'react-dom/client'
 import { AppErrorBoundary, ErrorPage } from './AppErrorBoundary'
 import { AppThemeProvider } from './AppThemeProvider'
 import { i18n, startI18n } from './i18n'
+import { startServiceWorker, watchPwaEvents } from './lib/pwa'
+import { PwaNotices } from './PwaNotices'
 
 const root = createRoot(document.getElementById('root')!)
+
+// Before the first render, so an early install prompt or offline state is not missed.
+watchPwaEvents()
+void startServiceWorker()
 
 function withProviders(children: ReactNode) {
   return (
     <StrictMode>
-      <AppThemeProvider>{children}</AppThemeProvider>
+      <AppThemeProvider>
+        {children}
+        <PwaNotices />
+      </AppThemeProvider>
     </StrictMode>
   )
 }

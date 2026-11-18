@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 // A time zone with DST, so local-day tests cover 23- and 25-hour days. Workers inherit it.
@@ -11,6 +12,12 @@ export default defineConfig({
           name: 'unit',
           include: ['tests/unit/**/*.test.{ts,tsx}'],
           environment: 'node',
+        },
+        // vite-plugin-pwa only runs in vite.config.ts, so its virtual module needs a stand-in here.
+        resolve: {
+          alias: {
+            'virtual:pwa-register': fileURLToPath(new URL('./tests/unit/stubs/pwa-register.ts', import.meta.url)),
+          },
         },
       },
       {

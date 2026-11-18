@@ -9,6 +9,12 @@
     "reload": "Odśwież",
     "demoBusy": "To publiczna wersja demo, więc może być przeciążona. Spróbuj ponownie za kilka minut albo <link>uruchom własną kopię z repozytorium na GitHubie</link>."
   },
+  "pwa": {
+    "offline": "Jesteś offline. Tickness połączy się ponownie, gdy wróci połączenie.",
+    "updateReady": "Dostępna jest nowa wersja Tickness.",
+    "reload": "Odśwież",
+    "later": "Później"
+  },
   "language": {
     "label": "Język",
     "kicker": "JĘZYK",
@@ -151,7 +157,8 @@
     "signedInAs": "Zalogowano jako {{account}}",
     "signOut": "Wyloguj się",
     "skipToContent": "Przejdź do treści głównej",
-    "documentTitle": "{{view}} · {{workspace}} · Tickness"
+    "documentTitle": "{{view}} · {{workspace}} · Tickness",
+    "installApp": "Zainstaluj aplikację"
   },
   "common": {
     "billable": "Płatny",
