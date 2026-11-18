@@ -17,6 +17,7 @@
   },
   "language": {
     "label": "Idioma",
+    "current": "Idioma: {{language}}",
     "kicker": "IDIOMA",
     "title": "Idioma de la interfaz",
     "intro": "Elige el idioma en el que Tickness se muestra para ti. Los demás miembros del espacio de trabajo conservan el suyo.",

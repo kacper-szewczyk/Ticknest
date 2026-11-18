@@ -112,7 +112,7 @@ Behind the build flag `VITE_FEATURE_TIME_OFF_ENABLED`, off unless set to `true`.
 - Workspace settings include name and default week start day.
 - User settings include display name and preferred timezone (default to browser-detected timezone, editable by the user).
 - User settings include a color palette chosen from predefined light and dark palettes, or one that follows the device's light/dark preference. The choice is stored on the user's profile and applies only to that user.
-- The interface is available in English, Spanish, and Polish. New visitors get the first of these their browser prefers, falling back to English; the language can be changed on the sign-in screen and in user settings, where it is stored on the user's profile.
+- The interface is available in English, Spanish, and Polish. New visitors get the first of these their browser prefers, falling back to English; the browser's preference keeps applying until someone picks a language. A language switcher is always visible: in the top-right corner of the sign-in screen and in the sidebar footer once signed in (also in user settings). A choice is remembered on the device and, once signed in, stored on the user's profile.
 - Do not collect activity history, screenshots, keystrokes, or location.
 - Provide a privacy notice explaining that data is stored in the Firebase project chosen by the deployer.
 

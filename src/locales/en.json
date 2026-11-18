@@ -17,6 +17,7 @@
   },
   "language": {
     "label": "Language",
+    "current": "Language: {{language}}",
     "kicker": "LANGUAGE",
     "title": "Interface language",
     "intro": "Choose the language Tickness uses for you. Other workspace members keep their own language.",

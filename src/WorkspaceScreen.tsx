@@ -47,6 +47,7 @@ import { AppShell, NavIcon, type NavItem } from './AppShell'
 import { useSidebarControls } from './sidebarControls'
 import { AppearancePanel } from './AppearancePanel'
 import { LanguagePanel } from './LanguagePanel'
+import { ProfileLanguageMenu } from './ProfileLanguageMenu'
 import { useTranslation } from './i18n'
 import { Brand } from './Brand'
 import { CatalogPanel } from './CatalogPanel'
@@ -582,6 +583,14 @@ export function WorkspaceScreen({ user }: { user: User }) {
         </Box>
       </Tooltip>
       <InstallAppButton compact />
+      <ProfileLanguageMenu
+        user={user}
+        iconOnly
+        sx={{
+          color: 'app.sidebar.text',
+          '&:hover': { bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.09) },
+        }}
+      />
       <Tooltip title={t('shell.signOut')} placement="right">
         <IconButton
           aria-label={t('shell.signOut')}
@@ -613,6 +622,16 @@ export function WorkspaceScreen({ user }: { user: User }) {
         </Box>
       </Stack>
       <InstallAppButton />
+      <ProfileLanguageMenu
+        user={user}
+        sx={{
+          minHeight: 36,
+          color: 'app.sidebar.text',
+          justifyContent: 'flex-start',
+          px: 1,
+          '&:hover': { bgcolor: (theme) => alpha(theme.palette.app.sidebar.strong, 0.09) },
+        }}
+      />
       <Button
         size="small"
         onClick={() => void signOutUser()}
