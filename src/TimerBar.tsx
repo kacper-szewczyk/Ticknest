@@ -5,6 +5,7 @@ import Snackbar from '@mui/material/Snackbar'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
+import type { TFunction } from 'i18next'
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from './i18n'
 import { autoStopNoticeEntry, markAutoStopNoticeSeen, readSeenAutoStopNotice } from './lib/autoStopNotice'
@@ -351,7 +352,7 @@ function RunningDescriptionField({
 }
 
 // Hours and minutes for the "timer stopped" announcement, such as "1 h 12 min".
-function spokenDuration(seconds: number, t: ReturnType<typeof useTranslation>['t']): string {
+function spokenDuration(seconds: number, t: TFunction): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
   if (hours > 0) return t('timer.durationHours', { hours, minutes })

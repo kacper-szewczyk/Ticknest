@@ -21,8 +21,10 @@ import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme, type Theme } from '@mui/material/styles'
 import type { User } from 'firebase/auth'
+import { useAppLanguage, useTranslation } from './i18n'
 import type { Catalog } from './lib/catalog'
-import { dayDate, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
+import { dayDate, formatWeekLabel, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
+import { readableError } from './lib/errors'
 import { deleteTimeEntry, subscribeToEntriesForRange, type TimeEntry } from './lib/timeEntries'
 import { subscribeToWorkspaceMembers, type WorkspaceMember } from './lib/workspaces'
 import { EntryEditor } from './EntryEditor'
@@ -75,35 +77,40 @@ function segmentSx(kind: SegmentKind, nonBillable = kind === 'nonBillable') {
     }
   }
 }
-const STATUS_LABELS: Record<Status, { label: string; color: 'default' | 'success' | 'warning' | 'error' }> = {
-  running: { label: 'Running', color: 'warning' },
-  'long-day': { label: 'Long day', color: 'error' },
-  overtime: { label: 'Overtime', color: 'warning' },
-  'no-time': { label: 'No time', color: 'default' },
-  'on-track': { label: 'On track', color: 'success' },
-}
+const STATUSES = {
+  running: { key: 'dashboard.status.running', color: 'warning' },
+  'long-day': { key: 'dashboard.status.longDay', color: 'error' },
+  overtime: { key: 'dashboard.status.overtime', color: 'warning' },
+  'no-time': { key: 'dashboard.status.noTime', color: 'default' },
+  'on-track': { key: 'dashboard.status.onTrack', color: 'success' },
+} as const satisfies Record<Status, { key: string; color: 'default' | 'success' | 'warning' | 'error' }>
 
 function entrySeconds(entry: TimeEntry, now: number): number {
   const end = entry.endAt ? entry.endAt.toMillis() : now
   return Math.max(0, Math.floor((end - entry.startAt.toMillis()) / 1000))
 }
 
-function formatHours(seconds: number): string {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (hours === 0) return `${minutes}m`
-  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`
-}
-
-function formatClock(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-function formatRange(startDay: string): string {
-  const start = dayDate(startDay)
-  const end = dayDate(shiftDayString(startDay, 6))
-  const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  return `${startLabel} – ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+/** Duration, clock and day formatting in the active language, shared by the dashboard's components. */
+function useDashboardFormat() {
+  const { t } = useTranslation()
+  const language = useAppLanguage()
+  return useMemo(() => {
+    const hours = (seconds: number): string => {
+      const wholeHours = Math.floor(seconds / 3600)
+      const minutes = Math.floor((seconds % 3600) / 60)
+      if (wholeHours === 0) return t('dashboard.durationMinutes', { minutes })
+      return minutes === 0
+        ? t('dashboard.durationHours', { hours: wholeHours })
+        : t('dashboard.durationHoursMinutes', { hours: wholeHours, minutes })
+    }
+    const clock = (date: Date) => date.toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })
+    const dayLabel = (day: string, today: string) => {
+      if (day === today) return t('entries.today')
+      if (day === shiftDayString(today, -1)) return t('dashboard.yesterday')
+      return dayDate(day).toLocaleDateString(language, { weekday: 'long', month: 'short', day: 'numeric' })
+    }
+    return { t, language, hours, clock, dayLabel }
+  }, [t, language])
 }
 
 function initials(name: string): string {
@@ -173,6 +180,7 @@ function buildStats(person: Person, entries: TimeEntry[], weekStart: string, now
 }
 
 export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwner, weekStartsOn, catalog }: Props) {
+  const { t, language, hours: formatHours } = useDashboardFormat()
   const [today] = useState(() => localDayString(new Date()))
   const [weekStart, setWeekStart] = useState(() => startOfWeekString(today, weekStartsOn))
   const previousWeekStart = shiftDayString(weekStart, -7)
@@ -197,13 +205,13 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
         previousWeekStart,
         14,
         (entries) => setEntryState({ key: rangeKey, entries }),
-        (loadError) => setError(loadError.message),
+        (loadError) => setError(readableError(loadError)),
       ),
     [workspaceId, user.uid, canSeeAllEntries, previousWeekStart, rangeKey],
   )
   useEffect(() => {
     if (!canSeeAllEntries) return
-    return subscribeToWorkspaceMembers(workspaceId, setMembers, (loadError) => setError(loadError.message))
+    return subscribeToWorkspaceMembers(workspaceId, setMembers, (loadError) => setError(readableError(loadError)))
   }, [workspaceId, canSeeAllEntries])
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 30_000)
@@ -213,7 +221,7 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
   const people = useMemo<Person[]>(() => {
     const self: Person = {
       uid: user.uid,
-      name: user.displayName?.trim() || user.email || 'You',
+      name: user.displayName?.trim() || user.email || t('dashboard.you'),
       email: user.email ?? '',
     }
     if (!canSeeAllEntries) return [self]
@@ -229,11 +237,15 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
     // Keep removed members visible while they still have time in the selected range.
     for (const entry of allEntries) {
       if (!found.has(entry.userId))
-        found.set(entry.userId, { uid: entry.userId, name: entry.userDisplayName || 'Former member', email: '' })
+        found.set(entry.userId, {
+          uid: entry.userId,
+          name: entry.userDisplayName || t('dashboard.formerMember'),
+          email: '',
+        })
     }
     if (!found.has(user.uid)) found.set(user.uid, self)
-    return [...found.values()].sort((a, b) => a.name.localeCompare(b.name))
-  }, [members, allEntries, canSeeAllEntries, user])
+    return [...found.values()].sort((a, b) => a.name.localeCompare(b.name, language))
+  }, [members, allEntries, canSeeAllEntries, user, t, language])
 
   const stats = useMemo(
     () =>
@@ -285,15 +297,13 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
       >
         <div>
           <Typography variant="overline" component="p">
-            {canSeeAllEntries ? 'TEAM TIMESHEET' : 'YOUR TIMESHEET'}
+            {canSeeAllEntries ? t('dashboard.kickerTeam') : t('dashboard.kickerSelf')}
           </Typography>
           <Typography variant="h2" component="h1" id="dashboard-heading" sx={{ fontSize: 32 }}>
-            Timesheet dashboard
+            {t('dashboard.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {canSeeAllEntries
-              ? 'Review, correct, and add time for everyone in this workspace.'
-              : 'Review and correct your tracked time.'}
+            {canSeeAllEntries ? t('dashboard.introTeam') : t('dashboard.introSelf')}
           </Typography>
         </div>
         <WeekPicker weekStart={weekStart} today={today} onChange={changeWeek} />
@@ -305,7 +315,7 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
         <>
           {isLoading && (
             <Typography variant="caption" color="text.secondary" aria-live="polite">
-              Loading entries…
+              {t('dashboard.loadingEntries')}
             </Typography>
           )}
           {stats[0] && (
@@ -345,31 +355,39 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
               gap: 1.5,
             }}
           >
-            <StatTile label="Tracked" value={formatHours(total)} change={percentChange(total, previousTotal)} />
             <StatTile
-              label="Billable"
-              value={formatHours(billable)}
-              caption={total ? `${Math.round((billable / total) * 100)}% of tracked` : 'No tracked time'}
+              label={t('dashboard.stats.tracked')}
+              value={formatHours(total)}
+              change={percentChange(total, previousTotal)}
             />
             <StatTile
-              label="Entries"
-              value={String(entryCount)}
+              label={t('dashboard.stats.billable')}
+              value={formatHours(billable)}
+              caption={
+                total
+                  ? t('dashboard.stats.billableShare', { percent: Math.round((billable / total) * 100) })
+                  : t('dashboard.stats.noTrackedTime')
+              }
+            />
+            <StatTile
+              label={t('dashboard.stats.entries')}
+              value={entryCount.toLocaleString(language)}
               change={percentChange(entryCount, previousEntryCount)}
             />
             <StatTile
-              label="Active members"
+              label={t('dashboard.stats.activeMembers')}
               value={`${activeCount} / ${stats.length}`}
-              caption="Tracked time this week"
+              caption={t('dashboard.stats.activeMembersCaption')}
             />
             <StatTile
-              label="Avg per member"
+              label={t('dashboard.stats.averagePerMember')}
               value={formatHours(activeCount ? total / activeCount : 0)}
-              caption="Among active members"
+              caption={t('dashboard.stats.averagePerMemberCaption')}
             />
             <StatTile
-              label="Long days"
-              value={String(longDays)}
-              caption="Days over 10 hours"
+              label={t('dashboard.stats.longDays')}
+              value={longDays.toLocaleString(language)}
+              caption={t('dashboard.stats.longDaysCaption')}
               tone={longDays > 0 ? 'error' : undefined}
             />
           </Box>
@@ -382,30 +400,30 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
             >
               <TextField
                 type="search"
-                placeholder="Search members…"
+                placeholder={t('dashboard.searchMembersPlaceholder')}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                slotProps={{ htmlInput: { 'aria-label': 'Search members' } }}
+                slotProps={{ htmlInput: { 'aria-label': t('dashboard.searchMembers') } }}
                 sx={{ maxWidth: { sm: 320 } }}
               />
               <SelectField
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as Status | '')}
                 fullWidth={false}
-                slotProps={{ htmlInput: { 'aria-label': 'Filter by status' } }}
+                slotProps={{ htmlInput: { 'aria-label': t('dashboard.filterByStatus') } }}
                 sx={{ minWidth: 160 }}
               >
-                <option value="">All statuses</option>
-                {(Object.keys(STATUS_LABELS) as Status[]).map((status) => (
+                <option value="">{t('dashboard.allStatuses')}</option>
+                {(Object.keys(STATUSES) as Status[]).map((status) => (
                   <option key={status} value={status}>
-                    {STATUS_LABELS[status].label}
+                    {t(STATUSES[status].key)}
                   </option>
                 ))}
               </SelectField>
               <Typography variant="caption" color="text.secondary" sx={{ ml: { sm: 'auto' } }} aria-live="polite">
                 {isLoading
-                  ? 'Loading entries…'
-                  : `${visibleStats.length} of ${stats.length} ${stats.length === 1 ? 'member' : 'members'}`}
+                  ? t('dashboard.loadingEntries')
+                  : t('dashboard.memberCount', { visible: visibleStats.length, count: stats.length })}
               </Typography>
             </Stack>
             <Box sx={{ overflowX: 'auto' }}>
@@ -417,7 +435,7 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
                       '& th': { color: 'text.secondary', fontSize: 12, fontWeight: 650, py: 1.25 },
                     }}
                   >
-                    <TableCell>Member</TableCell>
+                    <TableCell>{t('dashboard.columns.member')}</TableCell>
                     {weekDays.map((day) => (
                       <TableCell
                         key={day}
@@ -427,17 +445,19 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
                           ...(day === today && { color: 'primary.main !important' }),
                         }}
                       >
-                        {dayDate(day).toLocaleDateString(undefined, { weekday: 'short' })}
+                        {dayDate(day).toLocaleDateString(language, { weekday: 'short' })}
                         <Box component="span" sx={{ display: 'block', fontWeight: 400 }}>
                           {dayDate(day).getDate()}
                         </Box>
                       </TableCell>
                     ))}
-                    <TableCell align="right">Total</TableCell>
-                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Status</TableCell>
+                    <TableCell align="right">{t('dashboard.columns.total')}</TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      {t('dashboard.columns.status')}
+                    </TableCell>
                     <TableCell>
                       <Box component="span" sx={visuallyHiddenSx}>
-                        Actions
+                        {t('dashboard.columns.actions')}
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -479,9 +499,9 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
                             setSelectedUid(item.person.uid)
                           }}
                           // Starts with the visible text, so voice control users can say "View".
-                          aria-label={`View timesheet for ${item.person.name}`}
+                          aria-label={t('dashboard.viewTimesheetFor', { name: item.person.name })}
                         >
-                          View
+                          {t('dashboard.view')}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -490,7 +510,7 @@ export function TimesheetDashboard({ user, workspaceId, canSeeAllEntries, isOwne
               </Table>
               {!isLoading && visibleStats.length === 0 && (
                 <Box sx={{ px: 2 }}>
-                  <EmptyText>No members match these filters.</EmptyText>
+                  <EmptyText>{t('dashboard.noMatchingMembers')}</EmptyText>
                 </Box>
               )}
             </Box>
@@ -539,11 +559,12 @@ function WeekPicker({
   today: string
   onChange: (day: string) => void
 }) {
+  const { t } = useTranslation()
   return (
-    <Stack direction="row" spacing={1} aria-label="Week navigation" sx={{ alignItems: 'center' }}>
+    <Stack direction="row" spacing={1} aria-label={t('dashboard.weekNavigation')} sx={{ alignItems: 'center' }}>
       <Button
         variant="outlined"
-        aria-label="Previous week"
+        aria-label={t('entries.previousWeek')}
         onClick={() => onChange(shiftDayString(weekStart, -7))}
         sx={{ minWidth: 44, px: 1 }}
       >
@@ -554,19 +575,19 @@ function WeekPicker({
         value={weekStart}
         onChange={(event) => onChange(event.target.value)}
         fullWidth={false}
-        slotProps={{ htmlInput: { 'aria-label': 'Choose a week' } }}
+        slotProps={{ htmlInput: { 'aria-label': t('entries.chooseWeek') } }}
         sx={{ width: 160, bgcolor: 'background.paper' }}
       />
       <Button
         variant="outlined"
-        aria-label="Next week"
+        aria-label={t('entries.nextWeek')}
         onClick={() => onChange(shiftDayString(weekStart, 7))}
         sx={{ minWidth: 44, px: 1 }}
       >
         ›
       </Button>
       <Button onClick={() => onChange(today)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-        This week
+        {t('dashboard.thisWeek')}
       </Button>
     </Stack>
   )
@@ -585,6 +606,8 @@ function StatTile({
   caption?: string
   tone?: 'error'
 }) {
+  const { t } = useTranslation()
+  const language = useAppLanguage()
   return (
     <Paper variant="outlined" sx={{ p: 2, borderRadius: '14px', minWidth: 0 }}>
       <Typography variant="caption" color="text.secondary">
@@ -605,14 +628,17 @@ function StatTile({
         {change === undefined ? (
           caption
         ) : change === null ? (
-          '— vs previous week'
+          t('dashboard.stats.noBaseline')
         ) : (
           <>
             <Box component="span" sx={{ color: change >= 0 ? 'success.main' : 'error.main', fontWeight: 650 }}>
-              {change >= 0 ? '+' : ''}
-              {change}%
+              {new Intl.NumberFormat(language, {
+                style: 'percent',
+                signDisplay: 'exceptZero',
+                maximumFractionDigits: 1,
+              }).format(change / 100)}
             </Box>{' '}
-            vs previous week
+            {t('dashboard.stats.vsPreviousWeek')}
           </>
         )}
       </Typography>
@@ -639,6 +665,7 @@ function PersonAvatar({ person, size = 34 }: { person: Person; size?: number }) 
 }
 
 function PersonLabel({ person, isSelf }: { person: Person; isSelf?: boolean }) {
+  const { t } = useTranslation()
   return (
     <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
       <PersonAvatar person={person} />
@@ -648,7 +675,7 @@ function PersonLabel({ person, isSelf }: { person: Person; isSelf?: boolean }) {
           {isSelf && (
             <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400 }}>
               {' '}
-              (you)
+              {t('members.you')}
             </Box>
           )}
         </Typography>
@@ -663,6 +690,7 @@ function PersonLabel({ person, isSelf }: { person: Person; isSelf?: boolean }) {
 }
 
 function DayCell({ seconds }: { seconds: number }) {
+  const { hours: formatHours } = useDashboardFormat()
   if (seconds === 0)
     return (
       <Typography variant="caption" color="text.disabled">
@@ -701,11 +729,12 @@ function DayCell({ seconds }: { seconds: number }) {
 }
 
 function WeekProgress({ seconds }: { seconds: number }) {
+  const { t } = useTranslation()
   const ratio = Math.min(seconds / WEEKLY_TARGET_SECONDS, 1)
   return (
     <Box
       role="img"
-      aria-label={`${Math.round((seconds / WEEKLY_TARGET_SECONDS) * 100)}% of 40 hour week`}
+      aria-label={t('dashboard.weekTargetProgress', { percent: Math.round((seconds / WEEKLY_TARGET_SECONDS) * 100) })}
       sx={{ width: 72, height: 4, ml: 'auto', mt: 0.5, borderRadius: 2, bgcolor: 'app.track', overflow: 'hidden' }}
     >
       <Box
@@ -720,10 +749,11 @@ function WeekProgress({ seconds }: { seconds: number }) {
 }
 
 function StatusChip({ status }: { status: Status }) {
-  const { label, color } = STATUS_LABELS[status]
+  const { t } = useTranslation()
+  const { key, color } = STATUSES[status]
   return (
     <Chip
-      label={label}
+      label={t(key)}
       color={color}
       variant={color === 'default' ? 'outlined' : 'filled'}
       sx={
@@ -777,6 +807,7 @@ function MemberWeekDetail({
   selectedDay = null,
   onSelectDay,
 }: MemberWeekDetailProps) {
+  const { t, language, hours: formatHours } = useDashboardFormat()
   const [tab, setTab] = useState<'timeline' | 'entries'>('timeline')
   const [editor, setEditor] = useState<EditorState>(null)
   const [notice, setNotice] = useState('')
@@ -814,15 +845,16 @@ function MemberWeekDetail({
   }, [entries, now])
 
   async function handleDelete(entry: TimeEntry) {
-    if (!window.confirm(`Delete “${entry.description || 'Untitled entry'}”? This can’t be undone.`)) return
+    if (!window.confirm(t('entries.confirmDelete', { description: entry.description || t('common.untitledEntry') })))
+      return
     setPending(true)
     setError('')
     setNotice('')
     try {
       await deleteTimeEntry(workspaceId, entry)
-      setNotice('Time entry deleted.')
+      setNotice(t('entries.deleted'))
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not delete this entry.')
+      setError(readableError(requestError))
     } finally {
       setPending(false)
     }
@@ -880,8 +912,8 @@ function MemberWeekDetail({
           '& .MuiTab-root': { minHeight: 40, px: 0, mr: 3, minWidth: 0 },
         }}
       >
-        <Tab value="timeline" label="Timeline" />
-        <Tab value="entries" label={`Entries (${visibleEntries.length})`} />
+        <Tab value="timeline" label={t('dashboard.tabs.timeline')} />
+        <Tab value="entries" label={t('dashboard.tabs.entries', { count: visibleEntries.length })} />
       </Tabs>
       <Body sx={isPage ? { px: { xs: 2, sm: 3 }, pt: 2.5, pb: 3 } : { pt: '20px !important' }}>
         <Stack
@@ -899,7 +931,7 @@ function MemberWeekDetail({
           ) : (
             <Chip
               variant="outlined"
-              label={`Week of ${formatRange(weekStart)}`}
+              label={t('dashboard.weekOf', { range: formatWeekLabel(weekStart, language) })}
               sx={{ height: 34, borderRadius: '8px', fontWeight: 600 }}
             />
           )}
@@ -912,7 +944,7 @@ function MemberWeekDetail({
               }}
               sx={{ flexShrink: 0 }}
             >
-              + Add entry
+              {t('dashboard.addEntry')}
             </Button>
           )}
         </Stack>
@@ -933,29 +965,45 @@ function MemberWeekDetail({
               }}
             >
               <StatTile
-                label="Tracked"
+                label={t('dashboard.stats.tracked')}
                 value={formatHours(stats.total)}
                 change={percentChange(stats.total, stats.previousTotal)}
               />
               <StatTile
-                label="Billable"
+                label={t('dashboard.stats.billable')}
                 value={formatHours(stats.billable)}
                 caption={
-                  stats.total ? `${Math.round((stats.billable / stats.total) * 100)}% of tracked` : 'No tracked time'
+                  stats.total
+                    ? t('dashboard.stats.billableShare', { percent: Math.round((stats.billable / stats.total) * 100) })
+                    : t('dashboard.stats.noTrackedTime')
                 }
               />
-              <StatTile label="Entries" value={String(entries.length)} caption={`${daysTracked} of 7 days tracked`} />
               <StatTile
-                label="Longest day"
+                label={t('dashboard.stats.entries')}
+                value={entries.length.toLocaleString(language)}
+                caption={t('dashboard.stats.daysTracked', { tracked: daysTracked })}
+              />
+              <StatTile
+                label={t('dashboard.stats.longestDay')}
                 value={formatHours(stats.longestDay)}
-                caption={stats.longestDay > LONG_DAY_SECONDS ? 'Over 10 hours' : 'Within 10 hours'}
+                caption={
+                  stats.longestDay > LONG_DAY_SECONDS
+                    ? t('dashboard.stats.overTenHours')
+                    : t('dashboard.stats.withinTenHours')
+                }
                 tone={stats.longestDay > LONG_DAY_SECONDS ? 'error' : undefined}
               />
-              <StatTile label="Breaks" value={formatHours(totalBreaks)} caption="Gaps between entries" />
               <StatTile
-                label="Weekly target"
-                value={`${Math.round((stats.total / WEEKLY_TARGET_SECONDS) * 100)}%`}
-                caption="Of a 40 hour week"
+                label={t('dashboard.stats.breaks')}
+                value={formatHours(totalBreaks)}
+                caption={t('dashboard.stats.breaksCaption')}
+              />
+              <StatTile
+                label={t('dashboard.stats.weeklyTarget')}
+                value={new Intl.NumberFormat(language, { style: 'percent' }).format(
+                  Math.round((stats.total / WEEKLY_TARGET_SECONDS) * 100) / 100,
+                )}
+                caption={t('dashboard.stats.weeklyTargetCaption')}
               />
             </Box>
             <Stack
@@ -963,17 +1011,14 @@ function MemberWeekDetail({
               spacing={2.25}
               sx={{ mt: 3, mb: 1, pt: 2.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap', rowGap: 1 }}
             >
-              <LegendDot kind="billable" label="Billable" />
-              <LegendDot kind="nonBillable" label="Non-billable" />
-              <LegendDot kind="gap" label="Break" />
-              <LegendDot kind="running" label="Running" />
+              <LegendDot kind="billable" label={t('dashboard.legend.billable')} />
+              <LegendDot kind="nonBillable" label={t('dashboard.legend.nonBillable')} />
+              <LegendDot kind="gap" label={t('dashboard.legend.break')} />
+              <LegendDot kind="running" label={t('dashboard.legend.running')} />
             </Stack>
-            <Typography sx={visuallyHiddenSx}>
-              Select an entry in the timeline to edit it. Entries too short to select here can be edited from the
-              Entries tab.
-            </Typography>
+            <Typography sx={visuallyHiddenSx}>{t('dashboard.timelineHelp')}</Typography>
             {timelineDays.length === 0 ? (
-              <EmptyText>This week hasn’t started yet.</EmptyText>
+              <EmptyText>{t('dashboard.weekNotStarted')}</EmptyText>
             ) : (
               timelineDays.map((day) => (
                 <DayTimeline
@@ -996,7 +1041,7 @@ function MemberWeekDetail({
         ) : (
           <EntryList
             entries={visibleEntries}
-            emptyText={selectedDay ? 'No entries on this day.' : 'No entries this week.'}
+            emptyText={selectedDay ? t('dashboard.noEntriesDay') : t('dashboard.noEntriesWeek')}
             now={now}
             pending={pending}
             canEdit={canEdit}
@@ -1038,15 +1083,16 @@ function DayStrip({
   selectedDay: string | null
   onSelect: (day: string | null) => void
 }) {
+  const { t, language, hours: formatHours, dayLabel } = useDashboardFormat()
   const chipSx = { height: 'auto', minHeight: 34, borderRadius: '8px', fontWeight: 600 }
   return (
     <Box
       role="group"
-      aria-label="Show day"
+      aria-label={t('dashboard.showDay')}
       sx={{ display: 'flex', gap: 0.75, overflowX: 'auto', minWidth: 0, maxWidth: '100%', pb: 0.25 }}
     >
       <Chip
-        label="All week"
+        label={t('dashboard.allWeek')}
         clickable
         color={selectedDay === null ? 'primary' : 'default'}
         variant={selectedDay === null ? 'filled' : 'outlined'}
@@ -1057,7 +1103,7 @@ function DayStrip({
       {days.map((day, index) => {
         const date = dayDate(day)
         const isSelected = selectedDay === day
-        const weekday = date.toLocaleDateString(undefined, { weekday: 'short' })
+        const weekday = date.toLocaleDateString(language, { weekday: 'short' })
         return (
           <Chip
             key={day}
@@ -1065,7 +1111,10 @@ function DayStrip({
             color={isSelected ? 'primary' : 'default'}
             variant={isSelected ? 'filled' : 'outlined'}
             aria-pressed={isSelected}
-            aria-label={`${dayLabel(day, today)}, ${formatHours(byDay[index] ?? 0)} tracked`}
+            aria-label={t('dashboard.dayTracked', {
+              day: dayLabel(day, today),
+              time: formatHours(byDay[index] ?? 0),
+            })}
             onClick={() => onSelect(isSelected ? null : day)}
             label={
               <Box component="span" sx={{ display: 'block', textAlign: 'center', lineHeight: 1.25, py: 0.25 }}>
@@ -1098,6 +1147,7 @@ function MemberDialog({
   onNavigate: (offset: number) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const theme = useTheme()
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
 
@@ -1120,7 +1170,7 @@ function MemberDialog({
             {position && position.count > 1 && (
               <>
                 <IconButton
-                  aria-label="Previous member"
+                  aria-label={t('dashboard.previousMember')}
                   onClick={() => onNavigate(-1)}
                   disabled={position.index === 0}
                   sx={navButtonSx}
@@ -1128,7 +1178,7 @@ function MemberDialog({
                   ‹
                 </IconButton>
                 <IconButton
-                  aria-label="Next member"
+                  aria-label={t('dashboard.nextMember')}
                   onClick={() => onNavigate(1)}
                   disabled={position.index >= position.count - 1}
                   sx={navButtonSx}
@@ -1136,11 +1186,11 @@ function MemberDialog({
                   ›
                 </IconButton>
                 <Typography variant="body2" color="text.secondary" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-                  {position.index + 1} of {position.count}
+                  {t('dashboard.memberPosition', { position: position.index + 1, count: position.count })}
                 </Typography>
               </>
             )}
-            <IconButton aria-label="Close" onClick={onClose} sx={navButtonSx}>
+            <IconButton aria-label={t('dashboard.close')} onClick={onClose} sx={navButtonSx}>
               ×
             </IconButton>
           </Stack>
@@ -1169,12 +1219,6 @@ function LegendDot({ kind, label }: { kind: SegmentKind; label: string }) {
       </Typography>
     </Stack>
   )
-}
-
-function dayLabel(day: string, today: string): string {
-  if (day === today) return 'Today'
-  if (day === shiftDayString(today, -1)) return 'Yesterday'
-  return dayDate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
 /** A callback ref and the element's current width in px; 0 until measured or where layout is unavailable. */
@@ -1213,6 +1257,7 @@ function DayTimeline({
   canEdit: (entry: TimeEntry) => boolean
   onEdit: (entry: TimeEntry) => void
 }) {
+  const { t, hours: formatHours, clock: formatClock, dayLabel } = useDashboardFormat()
   const [trackRef, trackWidth] = useElementWidth()
   const sorted = [...entries].sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis())
   const dayStart = new Date(`${day}T00:00:00`).getTime()
@@ -1231,13 +1276,13 @@ function DayTimeline({
   return (
     <Box
       component="section"
-      aria-label={`${dayLabel(day, today)}, ${formatHours(total)} tracked`}
+      aria-label={t('dashboard.dayTracked', { day: dayLabel(day, today), time: formatHours(total) })}
       sx={{ py: 2, borderBottom: 1, borderColor: 'divider', borderBottomStyle: 'dashed' }}
     >
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline', mb: 1.25 }}>
         <Typography sx={{ fontWeight: 650 }}>{dayLabel(day, today)}</Typography>
         <Typography variant="body2" color="text.secondary">
-          Duration:{' '}
+          {t('dashboard.duration')}{' '}
           <Box
             component="span"
             sx={{ color: total > LONG_DAY_SECONDS ? 'error.main' : 'text.primary', fontWeight: 700 }}
@@ -1256,7 +1301,7 @@ function DayTimeline({
       >
         <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Typography variant="caption" color="text.secondary">
-            First in
+            {t('dashboard.firstIn')}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
             {first ? formatClock(first.startAt.toDate()) : '—'}
@@ -1313,12 +1358,17 @@ function DayTimeline({
               const editable = canEdit(entry)
               const interactive = editable && !tooNarrow
               const label = [
-                entry.description || 'Untitled entry',
-                [running && 'running', entry.billable ? 'billable' : 'non-billable'].filter(Boolean).join(', '),
-                project || 'no project',
-                `${formatClock(new Date(start))}–${running ? 'now' : formatClock(new Date(end))}`,
+                entry.description || t('common.untitledEntry'),
+                [
+                  running && t('dashboard.segment.running'),
+                  entry.billable ? t('dashboard.segment.billable') : t('dashboard.segment.nonBillable'),
+                ]
+                  .filter(Boolean)
+                  .join(', '),
+                project || t('dashboard.segment.noProject'),
+                `${formatClock(new Date(start))}–${running ? t('dashboard.segment.now') : formatClock(new Date(end))}`,
                 formatHours(entrySeconds(entry, now)),
-                editable && tooNarrow && 'too short to select here, edit it from the Entries tab',
+                editable && tooNarrow && t('dashboard.segment.tooShort'),
               ]
                 .filter(Boolean)
                 .join(', ')
@@ -1340,11 +1390,13 @@ function DayTimeline({
                   key={entry.id}
                   title={
                     <>
-                      <b>{entry.description || 'Untitled entry'}</b>
+                      <b>{entry.description || t('common.untitledEntry')}</b>
                       <br />
-                      {project || 'No project'} · {entry.billable ? 'Billable' : 'Non-billable'}
+                      {project || t('dashboard.noProject')} ·{' '}
+                      {entry.billable ? t('dashboard.billable') : t('dashboard.nonBillable')}
                       <br />
-                      {formatClock(new Date(start))} – {running ? 'running' : formatClock(new Date(end))} ·{' '}
+                      {formatClock(new Date(start))} –{' '}
+                      {running ? t('dashboard.runningLower') : formatClock(new Date(end))} ·{' '}
                       {formatHours(entrySeconds(entry, now))}
                     </>
                   }
@@ -1353,7 +1405,7 @@ function DayTimeline({
                     <Box
                       component="button"
                       type="button"
-                      aria-label={`Edit ${label}`}
+                      aria-label={t('dashboard.segment.edit', { label })}
                       onClick={() => onEdit(entry)}
                       sx={[
                         ...segmentStyle,
@@ -1378,16 +1430,16 @@ function DayTimeline({
         </Box>
         <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
           <Typography variant="caption" color="text.secondary">
-            Last out
+            {t('dashboard.lastOut')}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
-            {!last ? '—' : last.endAt ? formatClock(last.endAt.toDate()) : 'Running'}
+            {!last ? '—' : last.endAt ? formatClock(last.endAt.toDate()) : t('common.running')}
           </Typography>
         </Box>
       </Box>
       {sorted.length === 0 && (
         <Typography variant="caption" color="text.secondary">
-          No time tracked
+          {t('dashboard.noTimeTracked')}
         </Typography>
       )}
     </Box>
@@ -1411,6 +1463,7 @@ function EntryList({
   onEdit: (entry: TimeEntry) => void
   onDelete: (entry: TimeEntry) => void
 }) {
+  const { t, language, hours: formatHours, clock: formatClock } = useDashboardFormat()
   if (entries.length === 0) return <EmptyText>{emptyText}</EmptyText>
   const sorted = [...entries].sort((a, b) => b.startAt.toMillis() - a.startAt.toMillis())
   return (
@@ -1433,19 +1486,19 @@ function EntryList({
           >
             <Box sx={{ display: { xs: 'none', sm: 'block' }, fontVariantNumeric: 'tabular-nums' }}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                {start.toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' })}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {formatClock(start)} – {entry.endAt ? formatClock(entry.endAt.toDate()) : 'running'}
+                {formatClock(start)} – {entry.endAt ? formatClock(entry.endAt.toDate()) : t('dashboard.runningLower')}
               </Typography>
             </Box>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                {entry.description || 'Untitled entry'}
+                {entry.description || t('common.untitledEntry')}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
                 {[entry.clientName, entry.projectName, entry.taskName].filter(Boolean).join(' · ') ||
-                  'No client, project, or task'}
+                  t('entries.noWork')}
               </Typography>
             </Box>
             <Typography
@@ -1459,16 +1512,16 @@ function EntryList({
               spacing={0.5}
               sx={{ alignItems: 'center', justifyContent: 'flex-end', gridColumn: { xs: '1 / -1', sm: 'auto' } }}
             >
-              {entry.endAt === null && <Chip label="Running" color="warning" variant="outlined" />}
+              {entry.endAt === null && <Chip label={t('common.running')} color="warning" variant="outlined" />}
               {entry.autoStopped === true && <AutoStoppedChip />}
               {entry.billable && <BillableChip />}
               {canEdit(entry) && (
                 <>
                   <Button size="small" onClick={() => onEdit(entry)} disabled={pending}>
-                    Edit
+                    {t('entries.edit')}
                   </Button>
                   <Button size="small" color="error" onClick={() => onDelete(entry)} disabled={pending}>
-                    Delete
+                    {t('entries.delete')}
                   </Button>
                 </>
               )}
