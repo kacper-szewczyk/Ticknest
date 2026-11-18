@@ -346,7 +346,7 @@ export function BudgetEditor({
                   {option.type === 'client' ? 'Whole client' : option.name}
                   {option.archived ? ' (archived)' : ''}
                 </Typography>
-                <Typography variant="overline" color="text.disabled" sx={{ fontSize: 10, lineHeight: 1 }}>
+                <Typography variant="overline" color="text.secondary" sx={{ fontSize: 10, lineHeight: 1 }}>
                   {option.type === 'client' ? 'Client' : 'Project'}
                 </Typography>
               </Box>
