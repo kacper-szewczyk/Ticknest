@@ -39,16 +39,20 @@ For a bug:
 
 ```markdown
 ## Problem
+
 <what happens vs. what should happen; where (file/component); who is affected>
 
 ## Steps to reproduce
+
 1. …
 
 ## Scope
+
 - <what to change, and where it should be fixed (root cause, not a one-off patch)>
 - <related places to check>
 
 ## Acceptance criteria
+
 - [ ] <observable outcome>
 - [ ] A test covers it.
 ```
@@ -59,15 +63,19 @@ For an enhancement / follow-up:
 <optional: Follow-up to #<n>, …>
 
 ## Problem
+
 <what the user is trying to do and what gets in the way today>
 
 ## Proposal
+
 <how Tickness should handle it>
 
 ## To decide / check
+
 - <open questions: UX, data model, Firestore rules, costs, privacy, bundle size, i18n (EN + PL), tests>
 
 ## Acceptance criteria
+
 - [ ] …
 ```
 
