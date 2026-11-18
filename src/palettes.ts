@@ -45,7 +45,8 @@ export type PaletteDefinition = {
   id: PaletteId
   mode: 'light' | 'dark'
   primary: { main: string; light: string; dark: string; contrastText: string }
-  error: string
+  /** `dark` is the contained-button hover background; `contrastText` must meet 4.5:1 on both shades. */
+  error: { main: string; dark: string; contrastText: string }
   success: string
   warning: string
   background: { default: string; paper: string }
@@ -67,7 +68,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
     id: 'forest',
     mode: 'light',
     primary: { main: '#254332', light: '#416b4c', dark: '#1d3728', contrastText: '#fff' },
-    error: '#984b3e',
+    error: { main: '#984b3e', dark: '#6a342b', contrastText: '#fff' },
     success: '#386b43',
     warning: '#94651f',
     background: { default: '#f8f8f5', paper: '#fff' },
@@ -115,7 +116,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
     id: 'ocean',
     mode: 'light',
     primary: { main: '#1f4e79', light: '#3a6f9e', dark: '#163a5c', contrastText: '#fff' },
-    error: '#a4443b',
+    error: { main: '#a4443b', dark: '#722f29', contrastText: '#fff' },
     success: '#2f6f57',
     warning: '#946419',
     background: { default: '#f6f8fa', paper: '#fff' },
@@ -163,7 +164,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
     id: 'plum',
     mode: 'light',
     primary: { main: '#5b3a6e', light: '#7a5890', dark: '#462c56', contrastText: '#fff' },
-    error: '#9d4141',
+    error: { main: '#9d4141', dark: '#6d2d2d', contrastText: '#fff' },
     success: '#3d6f4a',
     warning: '#946419',
     background: { default: '#f9f7f9', paper: '#fff' },
@@ -211,7 +212,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
     id: 'terracotta',
     mode: 'light',
     primary: { main: '#8a3f24', light: '#a85c3f', dark: '#6e311c', contrastText: '#fff' },
-    error: '#a23b2b',
+    error: { main: '#a23b2b', dark: '#71291e', contrastText: '#fff' },
     success: '#4b6b35',
     warning: '#8f6115',
     background: { default: '#faf7f3', paper: '#fff' },
@@ -259,7 +260,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
     id: 'forest-night',
     mode: 'dark',
     primary: { main: '#8cc796', light: '#b0dcb6', dark: '#5e9c69', contrastText: '#10201a' },
-    error: '#e58f80',
+    error: { main: '#e58f80', dark: '#c37a6d', contrastText: '#1f0d0a' },
     success: '#8cc796',
     warning: '#e0b36a',
     background: { default: '#121a16', paper: '#18231d' },
@@ -307,7 +308,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
     id: 'midnight',
     mode: 'dark',
     primary: { main: '#8ab4f8', light: '#b3cefb', dark: '#5c8fd6', contrastText: '#0b1726' },
-    error: '#f28b82',
+    error: { main: '#f28b82', dark: '#ce766f', contrastText: '#1f0c0b' },
     success: '#81c995',
     warning: '#fdd663',
     background: { default: '#0f1620', paper: '#16202c' },
@@ -355,7 +356,7 @@ export const PALETTES: Record<PaletteId, PaletteDefinition> = {
     id: 'graphite',
     mode: 'dark',
     primary: { main: '#f2b05e', light: '#f6c98d', dark: '#c98a3a', contrastText: '#1b1408' },
-    error: '#ef8a7c',
+    error: { main: '#ef8a7c', dark: '#cb7569', contrastText: '#1f0d0a' },
     success: '#8fcf9a',
     warning: '#f2b05e',
     background: { default: '#141414', paper: '#1c1c1c' },
