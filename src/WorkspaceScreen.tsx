@@ -20,6 +20,7 @@ import { localeWeekStart, type WeekStart } from './lib/dates'
 import { setPageTitle } from './lib/documentTitle'
 import { readableError } from './lib/errors'
 import { isFeatureEnabled } from './lib/featureFlags'
+import { isGoogleCalendarAvailable } from './lib/googleCalendar'
 import { usePendingLeaveCount } from './usePendingLeaveCount'
 import { InstallAppButton } from './InstallAppButton'
 import { clearInviteParamsFromAddressBar, hasInviteParams } from './lib/inviteLink'
@@ -61,6 +62,9 @@ import { useEmailVerified } from './useEmailVerified'
 import { useFocusViewHeading } from './useFocusViewHeading'
 
 // Reports, budgets, and member management are visited less often, so they load on demand to keep the initial bundle small.
+const GoogleCalendarPanel = lazy(() =>
+  import('./GoogleCalendarPanel').then((module) => ({ default: module.GoogleCalendarPanel })),
+)
 const ReportsPanel = lazy(() => import('./ReportsPanel').then((module) => ({ default: module.ReportsPanel })))
 const MemberManagementPanel = lazy(() =>
   import('./MemberManagementPanel').then((module) => ({ default: module.MemberManagementPanel })),
@@ -876,6 +880,11 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 )}
                 <AppearancePanel user={user} />
                 <LanguagePanel user={user} />
+                {isGoogleCalendarAvailable() && (
+                  <Suspense fallback={null}>
+                    <GoogleCalendarPanel key={activeWorkspace.id} user={user} workspaceId={activeWorkspace.id} />
+                  </Suspense>
+                )}
                 {joinWorkspaceForm}
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}

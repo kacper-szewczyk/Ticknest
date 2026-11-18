@@ -76,6 +76,7 @@ jobs:
           VITE_DEMO_PAUSED: ${{ vars.VITE_DEMO_PAUSED }}
           VITE_FEATURE_BUDGETS_ENABLED: ${{ vars.VITE_FEATURE_BUDGETS_ENABLED }}
           VITE_FEATURE_TIME_OFF_ENABLED: ${{ vars.VITE_FEATURE_TIME_OFF_ENABLED }}
+          VITE_GOOGLE_CALENDAR_CLIENT_ID: ${{ vars.VITE_GOOGLE_CALENDAR_CLIENT_ID }}
       # functions/.env is ignored by Git, so write the Functions params from repository variables.
       # Unset variables are left out and the params keep their defaults.
       - name: Write Functions params

@@ -16,10 +16,13 @@ import { BillableChip, FormMessage } from './ui'
 import { useManualEntryFieldErrors } from './useManualEntryFieldErrors'
 import { WorkPicker } from './WorkPicker'
 
+export type EntryDraft = { description: string; start: Date; end: Date; work?: WorkDetails }
+
 export function EntryEditor({
   workspaceId,
   catalog,
   entry,
+  draft,
   day,
   onClose,
   onSaved,
@@ -27,13 +30,15 @@ export function EntryEditor({
   workspaceId: string
   catalog: Catalog
   entry?: TimeEntry
+  /** Prefills a new entry, for example from a calendar event. Ignored when `entry` is given. */
+  draft?: EntryDraft
   day: string
   onClose: () => void
-  /** Called after a save with the day the entry was saved on, which the date field may have changed. */
-  onSaved: (message: string, day: string) => void
+  /** Called after a save with the day the entry was saved on, which the date field may have changed, and its work. */
+  onSaved: (message: string, day: string, work: WorkDetails) => void
 }) {
   const { t } = useTranslation()
-  const [description, setDescription] = useState(entry?.description ?? '')
+  const [description, setDescription] = useState(entry?.description ?? draft?.description ?? '')
   const [work, setWork] = useState<WorkDetails>(() =>
     entry
       ? {
@@ -45,11 +50,19 @@ export function EntryEditor({
           taskName: entry.taskName,
           billable: entry.billable,
         }
-      : workDetails(null),
+      : (draft?.work ?? workDetails(null)),
   )
   // An entry sits on one day: the start and end times share the date field.
-  const initialStart = entry ? localDateTimeValue(entry.startAt.toDate()) : `${day}T09:00`
-  const initialEnd = entry?.endAt ? localDateTimeValue(entry.endAt.toDate()) : `${day}T10:00`
+  const initialStart = entry
+    ? localDateTimeValue(entry.startAt.toDate())
+    : draft
+      ? localDateTimeValue(draft.start)
+      : `${day}T09:00`
+  const initialEnd = entry?.endAt
+    ? localDateTimeValue(entry.endAt.toDate())
+    : draft
+      ? localDateTimeValue(draft.end)
+      : `${day}T10:00`
   const [date, setDate] = useState(initialStart.slice(0, 10))
   const [startTime, setStartTime] = useState(initialStart.slice(11))
   const [endTime, setEndTime] = useState(initialEnd.slice(11))
@@ -76,7 +89,7 @@ export function EntryEditor({
         },
         entry?.id,
       )
-      onSaved(entry ? t('entryEditor.updated') : t('entryEditor.added'), date)
+      onSaved(entry ? t('entryEditor.updated') : t('entryEditor.added'), date, work)
     } catch (requestError) {
       if (!showFieldError(requestError)) setError(readableError(requestError))
       setPending(false)

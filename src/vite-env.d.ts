@@ -20,4 +20,6 @@ interface ImportMetaEnv {
   readonly VITE_FEATURE_BUDGETS_ENABLED?: string
   /** `true` shows the time-off feature (Time off, Time-off approvals, leave settings). Anything else (or unset) hides it. */
   readonly VITE_FEATURE_TIME_OFF_ENABLED?: string
+  /** OAuth client ID for Google Calendar suggestions. Unset hides the feature; it is always hidden in demo mode. */
+  readonly VITE_GOOGLE_CALENDAR_CLIENT_ID?: string
 }

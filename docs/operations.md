@@ -129,6 +129,7 @@ The project must be on the Blaze plan, as for a manual deploy.
 | `ENFORCE_APP_CHECK`                                                  | Optional. `true` to enforce App Check on the callable Functions.                                                                                                                                                                                 |
 | `VITE_DEMO_MODE`, `VITE_DEMO_PAUSED`, `DEMO_MODE`, `DEMO_PROJECT_ID` | Optional. See [Demo mode](#demo-mode-optional).                                                                                                                                                                                                  |
 | `VITE_FEATURE_BUDGETS_ENABLED`                                       | Optional. See [Feature flags](#feature-flags-optional).                                                                                                                                                                                          |
+| `VITE_GOOGLE_CALENDAR_CLIENT_ID`                                     | Optional. See [Google Calendar suggestions](#google-calendar-suggestions-optional).                                                                                                                                                              |
 | `FIREBASE_DEPLOY_ONLY`                                               | Optional. What `deploy.yml` deploys; defaults to `hosting,firestore:rules,firestore:indexes,functions`. Set it to `firestore:rules,firestore:indexes,functions` when the web app is [hosted on Vercel](#hosting-the-web-app-on-vercel-optional). |
 | `FIREBASE_PREVIEW_CHANNELS`                                          | Optional. `false` turns off preview channels, for example when Vercel already builds a preview for each pull request.                                                                                                                            |
 | `FIREBASE_SITE_URL`                                                  | Optional. The production URL the smoke check fetches, such as a custom domain; defaults to `https://<FIREBASE_PROJECT_ID>.web.app`.                                                                                                              |
@@ -259,6 +260,27 @@ Feature flags hide whole features from the web app. Each has a default: budgets 
 
 A flag only hides the feature in the web app. It does not delete data or change Firestore rules or Functions: existing budgets and time off stay in Firestore and come back when the flag is turned on again. The time-off rules and callables deploy with the rest, whatever the flag says. In code, read flags through `isFeatureEnabled` in `src/lib/featureFlags.ts`.
 
+### Google Calendar suggestions (optional)
+
+Members can connect their Google Calendar and see the week's meetings as suggested entries on the Timesheet. Each suggestion shows the event's title, time and duration; **Accept** opens the entry dialog filled in with them, and **Dismiss** hides the event for good. Nothing is logged automatically. When a member accepts an occurrence of a recurring meeting and picks a project, later occurrences arrive with that project and task already chosen.
+
+Only events that have ended, start and end on the same day, and do not overlap one of the member's entries are suggested. All-day events, declined events, events marked "free", cancelled events, out-of-office and working-location entries are skipped, and so are days of approved full-day leave when [time off](#feature-flags-optional) is on. Only the member's primary calendar is read.
+
+**Privacy.** The browser asks Google for the read-only `calendar.events.readonly` scope with the [Google Identity Services token client](https://developers.google.com/identity/oauth2/web/guides/use-token-model) and calls the Calendar API itself, requesting only each event's ID, series ID, title, times, status, free/busy flag and the member's own response. No Cloud Function is involved, no refresh token exists, and no event content is stored: the short-lived access token (about an hour) stays in the tab's session storage, and Firestore keeps only the dismissed event IDs and recurring-event projects in `calendarPreferences/{uid}` (see the [data model](firestore-data-model.md)). After the token expires, the member clicks **Reconnect**; Google skips the consent screen once access was granted. Disconnecting in Settings revokes the token with Google when the tab still holds one, and deletes the stored IDs and mappings.
+
+The feature is hidden until you set an OAuth client ID, and it is always hidden in [demo mode](#demo-mode-optional). To turn it on:
+
+1. In the [Google Cloud console](https://console.cloud.google.com/), select the Google Cloud project behind your Firebase project (or any project you control) and enable the **Google Calendar API**.
+2. Under **Google Auth Platform** (APIs & Services → OAuth consent screen), set up the consent screen if you have not already. Add the `.../auth/calendar.events.readonly` scope under **Data access**.
+   - **Internal** (Google Workspace only): every account in your Workspace domain can connect, with no Google verification.
+   - **External, Testing**: up to 100 test users you list under **Audience** can connect, with no verification. Good for a small team with Gmail accounts.
+   - **External, In production**: calendar scopes are "sensitive", so until Google [verifies the app](https://support.google.com/cloud/answer/13463073) users see an "unverified app" warning and the app is limited to 100 users. Public instances should go through verification.
+3. Under **Clients**, create an OAuth client of type **Web application**. Add every origin the app is served from under **Authorized JavaScript origins**, for example `https://<project-id>.web.app` and your custom or Vercel domain. No redirect URI is needed. A Vercel preview's hostname changes per deployment, so the feature works only on origins you list.
+4. Set `VITE_GOOGLE_CALENDAR_CLIENT_ID` to the client ID (it ends in `.apps.googleusercontent.com`) in `.env.local`, as a Vercel environment variable, or as a repository variable for the deploy workflow, and rebuild the web app. The client ID is public; there is no client secret to store.
+5. Deploy the Firestore rules (`npx firebase deploy --only firestore:rules`) so members can save their calendar settings.
+
+Members then connect from **Settings → Google Calendar suggestions**, separately in each workspace. Signing in to Tickness with Google does not grant Calendar access; it is always a separate consent.
+
 ### Functions region
 
 Callable Functions deploy to `europe-west1` unless you choose another [Cloud Functions location](https://firebase.google.com/docs/functions/locations). The web app and the Functions must use the same region, or every callable request fails. To change it:
@@ -288,7 +310,7 @@ The Emulator Suite does not emulate App Check. With the default `demo-ticknest` 
 `firebase.json` sends these headers on every Hosting response:
 
 - `X-Frame-Options: DENY` stops other sites from framing the app, which protects against clickjacking. This header is enforced.
-- `Content-Security-Policy-Report-Only` lists where the app may load scripts, styles, frames, and network requests from: the Hosting origin, Firebase Auth (`apis.google.com` and the auth domain's `/__/auth/iframe`), Firestore, Auth, and App Check APIs (`*.googleapis.com`), callable Functions (`*.cloudfunctions.net`), and reCAPTCHA Enterprise. It also limits service workers and the web app manifest to the Hosting origin (`worker-src 'self'`, `manifest-src 'self'`) and sets `frame-ancestors 'none'`. Browsers only report violations of this policy in the developer console; they block nothing yet. `frame-ancestors` has no effect in a report-only policy, which is why `X-Frame-Options` is also set.
+- `Content-Security-Policy-Report-Only` lists where the app may load scripts, styles, frames, and network requests from: the Hosting origin, Firebase Auth (`apis.google.com` and the auth domain's `/__/auth/iframe`), Firestore, Auth, App Check, and Google Calendar APIs (`*.googleapis.com`), callable Functions (`*.cloudfunctions.net`), Google Identity Services for [Google Calendar suggestions](#google-calendar-suggestions-optional) (`accounts.google.com/gsi/`), and reCAPTCHA Enterprise. It also limits service workers and the web app manifest to the Hosting origin (`worker-src 'self'`, `manifest-src 'self'`) and sets `frame-ancestors 'none'`. Browsers only report violations of this policy in the developer console; they block nothing yet. `frame-ancestors` has no effect in a report-only policy, which is why `X-Frame-Options` is also set.
 
 MUI injects its styles at runtime, so `style-src` allows `'unsafe-inline'`. Scripts are restricted to files and the listed hosts; no inline scripts or `eval` are allowed.
 
@@ -338,6 +360,7 @@ Tickness stores or processes the following application data in Firebase:
 - Workspaces, membership roles/status and email, invitation metadata and token hashes, and client/project/task names.
 - Time entries, including descriptions, user display snapshots, date/time timestamps, duration, billable state, and optional client/project/task labels.
 - Operational metadata such as document IDs and creation/update timestamps.
+- With [Google Calendar suggestions](#google-calendar-suggestions-optional) set up and connected: the Google event IDs a member dismissed and the project and task chosen for their recurring meetings. Event titles and times are read from Google by the member's browser and are not stored.
 
 The browser stores the selected workspace ID in local storage, keyed by the signed-in user ID, and remembers whether the desktop sidebar is collapsed (`ticknest.sidebarCollapsed`, no user data). Firestore keeps workspace data in memory only, so nothing from it stays on the device after the tab is closed; [offline-persistence.md](offline-persistence.md) explains why the persistent cache is not used. The app does not include analytics or telemetry. Report CSV and PDF exports download completed time-entry details matching the selected filters and date range (the PDF is generated in the browser; nothing is sent to a third party); treat downloaded reports as sensitive data and store/share them accordingly. A CSV is not a full database backup.
 
@@ -377,6 +400,8 @@ Measured with `npm run measure:costs` (see [Re-measure](#re-measure)), for the d
 | europe-west1, no free quota         |    $0.02 |     $0.13 |
 | us-central1, within the free quota  |    $0.00 |     $0.00 |
 | us-central1, no free quota          |    $0.02 |     $0.12 |
+
+Google Calendar suggestions are not in the measurement. When a member has connected a calendar, opening the Timesheet reads one more document (their `calendarPreferences`), and each dismissal or newly remembered project writes it once; the Calendar API itself is free and called from the browser. That is a few hundred extra reads a workday for 25 people at most, including the security-rule lookups.
 
 Reads dominate, and most of them come from opening the app (its listeners load the week's entries, the catalog and the workspace) and from owners and managers running reports, which read every entry in the range. The team adds about 105 entries per person per month. A year of entries for 25 people is about 32,000 small documents, far below the 1 GiB of free storage.
 

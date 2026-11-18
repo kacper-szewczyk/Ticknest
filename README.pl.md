@@ -46,7 +46,7 @@ Dla zespołu od 5 do 25 osób, które codziennie rejestrują czas, **zwykle 0 z�
 
 ## Czego (jeszcze) nie ma
 
-- Integracji z innymi narzędziami, publicznego API, aplikacji mobilnej ani rozszerzenia przeglądarki. Aplikacja webowa działa w przeglądarkach mobilnych.
+- Integracji z innymi narzędziami (poza opcjonalnymi podpowiedziami z Kalendarza Google, tylko do odczytu), publicznego API, aplikacji mobilnej ani rozszerzenia przeglądarki. Aplikacja webowa działa w przeglądarkach mobilnych.
 - Fakturowania i stawek godzinowych.
 
 ## Wdrożenie

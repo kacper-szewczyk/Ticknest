@@ -894,5 +894,44 @@
     "loading": "Cargando miembros…",
     "pastMembers": "Miembros anteriores",
     "removedMember": "{{email}} · Quitado"
+  },
+  "calendar": {
+    "settings": {
+      "kicker": "CALENDARIO",
+      "title": "Sugerencias de Google Calendar",
+      "intro": "Conecta tu Google Calendar para ver tus reuniones como entradas de tiempo sugeridas en la hoja de horas. Tú revisas cada una: nada se registra automáticamente.",
+      "privacy": "Tickness solo pide acceso de lectura. Tus eventos van directamente de Google a este navegador y no se guardan; el espacio de trabajo solo conserva los ID de los eventos que descartas y el proyecto que elegiste para las reuniones periódicas. El acceso dura alrededor de una hora; después te vuelves a conectar con un clic.",
+      "statusConnected": "Conectado en este espacio de trabajo.",
+      "statusDisconnected": "Sin conectar.",
+      "connect": "Conectar Google Calendar",
+      "disconnect": "Desconectar",
+      "connected": "Google Calendar conectado. Las sugerencias ya aparecen en la hoja de horas.",
+      "disconnected": "Google Calendar desconectado y acceso revocado.",
+      "disconnectedLocally": "Google Calendar desconectado. Para revocar el acceso que concediste antes, quita Tickness en las <link>conexiones de tu cuenta de Google</link>.",
+      "confirmDisconnect": "¿Desconectar Google Calendar? También se eliminan los eventos descartados y los proyectos recordados de este espacio de trabajo.",
+      "disconnectFailed": "No pudimos desconectar Google Calendar. Revisa tu conexión e inténtalo de nuevo."
+    },
+    "suggestions": {
+      "title": "Sugerencias del calendario",
+      "refresh": "Actualizar",
+      "reconnectPrompt": "Vuelve a conectar Google Calendar para ver las sugerencias de esta semana.",
+      "reconnect": "Volver a conectar",
+      "loading": "Cargando tu calendario…",
+      "empty": "No hay eventos del calendario que sugerir esta semana.",
+      "untitled": "(Sin título)",
+      "timeRange": "{{start}}–{{end}} · {{duration}}",
+      "accept": "Aceptar",
+      "acceptLabel": "Aceptar {{title}}",
+      "dismiss": "Descartar",
+      "dismissLabel": "Descartar {{title}}"
+    },
+    "dismissFailed": "No pudimos descartar ese evento. Revisa tu conexión e inténtalo de nuevo.",
+    "errors": {
+      "popupClosed": "La ventana de Google se cerró antes de conceder el acceso.",
+      "scopeDenied": "No se concedió el acceso a Google Calendar. Marca el permiso del calendario e inténtalo de nuevo.",
+      "authExpired": "Tu acceso a Google Calendar caducó. Vuelve a conectarte para continuar.",
+      "unavailable": "No se pudo cargar el inicio de sesión de Google. Revisa tu conexión o las extensiones del navegador e inténtalo de nuevo.",
+      "requestFailed": "No pudimos cargar tu Google Calendar. Inténtalo de nuevo en un momento."
+    }
   }
 }

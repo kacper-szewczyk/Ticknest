@@ -47,7 +47,7 @@ Para un equipo de 5 a 25 personas que registran su tiempo cada día laborable, *
 
 ## Lo que (todavía) no hace
 
-- No tiene integraciones con otras herramientas, API pública, aplicación móvil ni extensión de navegador. La aplicación web funciona en navegadores móviles.
+- No tiene integraciones con otras herramientas (salvo las sugerencias opcionales de Google Calendar, de solo lectura), API pública, aplicación móvil ni extensión de navegador. La aplicación web funciona en navegadores móviles.
 - No tiene facturación ni tarifas por hora.
 
 ## Despliegue

@@ -20,7 +20,7 @@ This is an independent product. It must not use Clockify branding, proprietary a
 
 - Scheduling, resource capacity planning, expenses, invoices, payroll, and kiosk mode.
 - Automatic activity monitoring, screenshots, location tracking, or employee surveillance.
-- External integrations, public API, webhooks, and calendar sync.
+- External integrations, public API, webhooks, and two-way calendar sync. The one exception is optional, read-only Google Calendar suggestions: the browser reads the member's events from Google and offers them as draft entries the member reviews; nothing is logged automatically and no event content is stored.
 - Advanced approval workflows, multiple rate hierarchies, and accounting exports.
 - A central hosted multi-tenant service managed by the maintainers.
 

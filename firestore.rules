@@ -45,6 +45,18 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    // Rules cannot iterate over the list or the map, so the client also checks each ID and mapping it reads.
+    function validCalendarPreferences(data) {
+      return data.keys().hasAll(['connected', 'dismissedEventIds', 'seriesWork', 'updatedAt'])
+        && data.keys().hasOnly(['connected', 'dismissedEventIds', 'seriesWork', 'updatedAt'])
+        && data.connected is bool
+        && data.dismissedEventIds is list
+        && data.dismissedEventIds.size() <= 500
+        && data.seriesWork is map
+        && data.seriesWork.size() <= 200
+        && data.updatedAt == request.time;
+    }
+
     function validUserProfile(data) {
       return data.keys().hasOnly(['displayName', 'email', 'timezone', 'palette', 'language', 'createdAt', 'updatedAt'])
         && data.displayName is string
@@ -363,6 +375,16 @@ service cloud.firestore {
         allow get, list: if isMember(workspaceId)
           && (canSeeAllEntries(workspaceId) || resource.data.uid == request.auth.uid);
         allow create, update, delete: if false;
+      }
+
+      // A member's own calendar-suggestion settings: event IDs they dismissed and the project chosen for each
+      // recurring event. No calendar event content is stored. Nobody else, owners included, may read them.
+      match /calendarPreferences/{uid} {
+        allow get, delete: if isMember(workspaceId) && request.auth.uid == uid;
+        allow list: if false;
+        allow create, update: if isMember(workspaceId)
+          && request.auth.uid == uid
+          && validCalendarPreferences(request.resource.data);
       }
 
       match /{collection}/{documentId} {
