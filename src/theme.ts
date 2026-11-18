@@ -18,7 +18,7 @@ export function createAppTheme(palette: PaletteDefinition): Theme {
     palette: {
       mode: palette.mode,
       primary: palette.primary,
-      error: { main: palette.error },
+      error: palette.error,
       success: { main: palette.success },
       warning: { main: palette.warning },
       background: palette.background,
