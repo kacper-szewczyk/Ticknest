@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import type { User } from 'firebase/auth'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Catalog } from '../../src/lib/catalog'
+import type { CalendarPreferences } from '../../src/lib/calendarPreferences'
 import type { CalendarEvent } from '../../src/lib/calendarSuggestions'
 import type { LeaveRequest } from '../../src/lib/leave'
 import type { TimeEntry } from '../../src/lib/timeEntries'
@@ -14,8 +15,10 @@ import { createAppTheme } from '../../src/theme'
 const calendar = vi.hoisted(() => ({
   token: 'token' as string | null,
   events: [] as CalendarEvent[] | Error,
+  calendarIds: [] as readonly string[],
   connectGoogleCalendar: vi.fn(async () => {}),
 }))
+const saveManualTimeEntry = vi.hoisted(() => vi.fn(async (..._args: unknown[]) => 'entry'))
 const leave = vi.hoisted(() => ({ requests: [] as Partial<LeaveRequest>[] }))
 const saveCalendarPreferences = vi.hoisted(() => vi.fn(async () => {}))
 
@@ -25,7 +28,8 @@ vi.mock('../../src/lib/googleCalendar', async (importOriginal) => ({
   currentCalendarToken: () => calendar.token,
   subscribeToCalendarToken: () => () => {},
   connectGoogleCalendar: calendar.connectGoogleCalendar,
-  fetchGoogleCalendarEvents: async () => {
+  fetchGoogleCalendarEvents: async (_from: Date, _to: Date, calendarIds: readonly string[] = []) => {
+    calendar.calendarIds = calendarIds
     if (calendar.events instanceof Error) throw calendar.events
     return calendar.events
   },
@@ -33,6 +37,10 @@ vi.mock('../../src/lib/googleCalendar', async (importOriginal) => ({
 vi.mock('../../src/lib/calendarPreferences', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/lib/calendarPreferences')>()),
   saveCalendarPreferences,
+}))
+vi.mock('../../src/lib/timeEntries', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/lib/timeEntries')>()),
+  saveManualTimeEntry,
 }))
 vi.mock('../../src/lib/timeOff', () => ({
   subscribeToLeaveRequests: (_workspaceId: string, _filter: unknown, onChange: (requests: unknown[]) => void) => {
@@ -82,7 +90,19 @@ function entry(start: string, end: string, userId = 'u1'): TimeEntry {
   }
 }
 
-function renderSuggestions(entries: TimeEntry[] = [], onAccept = vi.fn()) {
+const basePreferences: CalendarPreferences = {
+  connected: true,
+  calendarIds: [],
+  dismissedEventIds: ['old'],
+  seriesWork: { standup: { projectId: 'p1', taskId: null } },
+  keywordRules: [],
+}
+
+function renderSuggestions(
+  entries: TimeEntry[] = [],
+  onAccept = vi.fn(),
+  preferences: Partial<CalendarPreferences> = {},
+) {
   render(
     <ThemeProvider theme={createAppTheme(PALETTES.forest)}>
       <CalendarSuggestions
@@ -91,11 +111,7 @@ function renderSuggestions(entries: TimeEntry[] = [], onAccept = vi.fn()) {
         weekStart="2026-11-16"
         entries={entries}
         catalog={catalog}
-        preferences={{
-          connected: true,
-          dismissedEventIds: ['old'],
-          seriesWork: { standup: { projectId: 'p1', taskId: null } },
-        }}
+        preferences={{ ...basePreferences, ...preferences }}
         now={new Date('2026-11-20T12:00:00').getTime()}
         onAccept={onAccept}
       />
@@ -113,13 +129,17 @@ beforeEach(() => {
     event('old', '2026-11-19T13:00:00', '2026-11-19T14:00:00', { title: 'Dismissed before' }),
   ]
   leave.requests = []
+  calendar.calendarIds = []
   calendar.connectGoogleCalendar.mockClear()
   saveCalendarPreferences.mockClear()
+  saveManualTimeEntry.mockReset()
+  saveManualTimeEntry.mockResolvedValue('entry')
 })
 
 afterEach(() => {
   cleanup()
   vi.unstubAllEnvs()
+  vi.restoreAllMocks()
 })
 
 describe('CalendarSuggestions', () => {
@@ -152,10 +172,79 @@ describe('CalendarSuggestions', () => {
     renderSuggestions()
     await userEvent.click(await screen.findByRole('button', { name: 'Dismiss Design review' }))
     expect(saveCalendarPreferences).toHaveBeenCalledWith('w1', 'u1', {
-      connected: true,
+      ...basePreferences,
       dismissedEventIds: ['old', 'review'],
-      seriesWork: { standup: { projectId: 'p1', taskId: null } },
     })
+  })
+
+  it('fetches from the chosen calendars', async () => {
+    renderSuggestions([], vi.fn(), { calendarIds: ['me@example.com', 'team@example.com'] })
+    expect(await screen.findByText('Design review')).toBeTruthy()
+    expect(calendar.calendarIds).toEqual(['me@example.com', 'team@example.com'])
+  })
+
+  it('pre-fills the project from a keyword rule', async () => {
+    const onAccept = renderSuggestions([], vi.fn(), {
+      keywordRules: [{ keyword: 'REVIEW', projectId: 'p1', taskId: null }],
+    })
+    const review = await screen.findByRole('article', { name: 'Design review' })
+    expect(within(review).getByText('Internal')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'Accept Design review' }))
+    expect(onAccept).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'review' }),
+      expect.objectContaining({ projectId: 'p1' }),
+    )
+  })
+
+  it('accepts all of a day’s suggestions that have a project, after a confirmation', async () => {
+    calendar.events = [
+      event('standup_1', '2026-11-17T09:00:00', '2026-11-17T09:15:00', { seriesId: 'standup', title: 'Stand-up' }),
+      event('sync', '2026-11-17T10:00:00', '2026-11-17T11:00:00', { title: 'Team sync' }),
+      event('lunch', '2026-11-17T12:00:00', '2026-11-17T13:00:00', { title: 'Lunch' }),
+    ]
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderSuggestions([], vi.fn(), { keywordRules: [{ keyword: 'sync', projectId: 'p1', taskId: null }] })
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: 'Accept all 2 suggestions with a project on Tuesday, November 17',
+      }),
+    )
+    expect(confirm).toHaveBeenCalledWith('Create 2 entries for Tuesday, November 17, totalling 1:15?')
+    await waitFor(() => expect(screen.getByText('Added 2 entries for Tuesday, November 17.')).toBeTruthy())
+    expect(saveManualTimeEntry).toHaveBeenCalledTimes(2)
+    expect(saveManualTimeEntry).toHaveBeenNthCalledWith(
+      1,
+      'w1',
+      expect.objectContaining({
+        description: 'Stand-up',
+        projectId: 'p1',
+        startAt: new Date('2026-11-17T09:00:00'),
+        endAt: new Date('2026-11-17T09:15:00'),
+      }),
+    )
+    // Lunch has no project, so it is left for the user to decide.
+    expect(saveManualTimeEntry).not.toHaveBeenCalledWith('w1', expect.objectContaining({ description: 'Lunch' }))
+  })
+
+  it('reports the suggestions Accept all skipped', async () => {
+    calendar.events = [
+      event('a', '2026-11-17T09:00:00', '2026-11-17T10:00:00', { title: 'Sync A' }),
+      event('b', '2026-11-17T09:30:00', '2026-11-17T10:30:00', { title: 'Sync B' }),
+    ]
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    saveManualTimeEntry.mockResolvedValueOnce('entry').mockRejectedValueOnce(new Error('This entry overlaps another.'))
+    renderSuggestions([], vi.fn(), { keywordRules: [{ keyword: 'sync', projectId: 'p1', taskId: null }] })
+    await userEvent.click(await screen.findByRole('button', { name: /Accept all 2 suggestions/ }))
+    await waitFor(() => expect(screen.getByText('Skipped 1 suggestion:')).toBeTruthy())
+    expect(screen.getByText('Added 1 entry for Tuesday, November 17.')).toBeTruthy()
+    expect(screen.getByText('Sync B: This entry overlaps another.')).toBeTruthy()
+  })
+
+  it('creates nothing when Accept all is cancelled', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderSuggestions()
+    await userEvent.click(await screen.findByRole('button', { name: /Accept the 1 suggestion/ }))
+    expect(saveManualTimeEntry).not.toHaveBeenCalled()
   })
 
   it('leaves out days of approved time off when time off is on', async () => {

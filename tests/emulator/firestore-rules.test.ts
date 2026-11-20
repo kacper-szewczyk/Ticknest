@@ -226,8 +226,10 @@ function newTask(overrides: Record<string, unknown> = {}) {
 function calendarPreferences(overrides: Record<string, unknown> = {}) {
   return {
     connected: true,
+    calendarIds: ['primary'],
     dismissedEventIds: ['event_1'],
     seriesWork: { series_1: { projectId: PROJECT_ID_IN_WORKSPACE, taskId: null } },
+    keywordRules: [{ keyword: 'standup', projectId: PROJECT_ID_IN_WORKSPACE, taskId: null }],
     updatedAt: serverTimestamp(),
     ...overrides,
   }
@@ -963,9 +965,20 @@ describe('boundary validation', () => {
             seriesWork: Object.fromEntries(
               Array.from({ length: 200 }, (_, index) => [`series_${index}`, { projectId: 'p', taskId: null }]),
             ),
+            calendarIds: Array.from({ length: 20 }, (_, index) => `calendar_${index}`),
+            keywordRules: Array.from({ length: 50 }, (_, index) => ({
+              keyword: `keyword ${index}`,
+              projectId: 'p',
+              taskId: null,
+            })),
           }),
         ),
       )
+    })
+
+    it('accepts a document saved before calendars and keyword rules existed', async () => {
+      const { calendarIds: _calendarIds, keywordRules: _keywordRules, ...older } = calendarPreferences()
+      await assertSucceeds(save(older))
     })
 
     it.each<[string, Record<string, unknown>]>([
@@ -986,6 +999,15 @@ describe('boundary validation', () => {
         }),
       ],
       ['mappings that are not a map', calendarPreferences({ seriesWork: ['series_1'] })],
+      ['more than 20 calendars', calendarPreferences({ calendarIds: Array.from({ length: 21 }, (_, i) => `c${i}`) })],
+      ['calendars that are not a list', calendarPreferences({ calendarIds: 'primary' })],
+      [
+        'more than 50 keyword rules',
+        calendarPreferences({
+          keywordRules: Array.from({ length: 51 }, (_, i) => ({ keyword: `k${i}`, projectId: 'p', taskId: null })),
+        }),
+      ],
+      ['keyword rules that are not a list', calendarPreferences({ keywordRules: { standup: 'p' } })],
       ['a client-chosen update time', calendarPreferences({ updatedAt: PAST })],
     ])('denies %s', async (_, data) => {
       await assertFails(save(data))

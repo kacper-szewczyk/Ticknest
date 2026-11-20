@@ -1,15 +1,10 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import {
   EMPTY_CALENDAR_PREFERENCES,
   subscribeToCalendarPreferences,
   type CalendarPreferences,
 } from './lib/calendarPreferences'
-import { currentCalendarToken, isGoogleCalendarAvailable, subscribeToCalendarToken } from './lib/googleCalendar'
-
-/** The Google Calendar access token held by this tab, or null; re-renders when it is granted or dropped. */
-export function useCalendarToken(): string | null {
-  return useSyncExternalStore(subscribeToCalendarToken, () => currentCalendarToken())
-}
+import { isGoogleCalendarAvailable } from './lib/googleCalendarConfig'
 
 /**
  * Follows the member's calendar settings for the workspace. Returns undefined while loading, and the empty settings

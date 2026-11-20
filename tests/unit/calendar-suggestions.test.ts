@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   calendarSuggestions,
   fullLeaveDays,
+  matchKeywordRule,
   workForSeries,
   type CalendarEvent,
   type SuggestionContext,
@@ -158,5 +159,50 @@ describe('workForSeries', () => {
     expect(workForSeries(options, { projectId: 'p2', taskId: null })).toBeUndefined()
     expect(workForSeries(options, { projectId: 'p1', taskId: 'missing' })).toBeUndefined()
     expect(workForSeries(options, null)).toBeUndefined()
+  })
+})
+
+describe('keyword rules', () => {
+  const rules = [
+    { keyword: 'standup', projectId: 'internal', taskId: 'meetings' },
+    { keyword: 'Review', projectId: 'client', taskId: null },
+  ]
+
+  it('matches the first rule whose keyword the title contains, ignoring case', () => {
+    expect(matchKeywordRule('Daily STANDUP', rules)?.projectId).toBe('internal')
+    expect(matchKeywordRule('Design review + standup', rules)?.projectId).toBe('internal')
+    expect(matchKeywordRule('Code review', rules)?.projectId).toBe('client')
+    expect(matchKeywordRule('Lunch', rules)).toBeNull()
+    expect(matchKeywordRule('', rules)).toBeNull()
+  })
+
+  it('pre-fills work from a keyword only when no recurring mapping exists', () => {
+    const suggestions = calendarSuggestions(
+      [
+        event('a', '2026-11-17T09:00:00+01:00', '2026-11-17T09:15:00+01:00', { title: 'Standup', seriesId: 's1' }),
+        event('b', '2026-11-17T10:00:00+01:00', '2026-11-17T10:15:00+01:00', { title: 'Standup', seriesId: 's2' }),
+        event('c', '2026-11-17T11:00:00+01:00', '2026-11-17T11:15:00+01:00', { title: 'Lunch' }),
+      ],
+      context({ seriesWork: { s1: { projectId: 'remembered', taskId: null } }, keywordRules: rules }),
+    )
+    expect(suggestions.map((item) => item.work)).toEqual([
+      { projectId: 'remembered', taskId: null },
+      { projectId: 'internal', taskId: 'meetings' },
+      null,
+    ])
+  })
+})
+
+describe('the same meeting in several calendars', () => {
+  it('is suggested once, from the first calendar it appeared in', () => {
+    const suggestions = calendarSuggestions(
+      [
+        event('primary-copy', '2026-11-17T09:00:00+01:00', '2026-11-17T10:00:00+01:00', { occurrenceKey: 'uid|1' }),
+        event('team-copy', '2026-11-17T09:00:00+01:00', '2026-11-17T10:00:00+01:00', { occurrenceKey: 'uid|1' }),
+        event('next-week', '2026-11-18T09:00:00+01:00', '2026-11-18T10:00:00+01:00', { occurrenceKey: 'uid|2' }),
+      ],
+      context(),
+    )
+    expect(suggestions.map((item) => item.id)).toEqual(['primary-copy', 'next-week'])
   })
 })

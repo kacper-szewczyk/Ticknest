@@ -2,13 +2,28 @@
 // straight from Google to this browser: no Cloud Function sees it and no refresh token is stored anywhere. The access
 // token lasts about an hour and is kept for this browser tab only; after that the user reconnects with one click.
 import type { CalendarEvent } from './calendarSuggestions'
-import { GOOGLE_EVENT_FIELDS, parseGoogleEventsPage } from './googleCalendarEvents'
+import {
+  type CalendarListItem,
+  GOOGLE_CALENDAR_LIST_FIELDS,
+  GOOGLE_EVENT_FIELDS,
+  parseGoogleCalendarListPage,
+  parseGoogleEventsPage,
+} from './googleCalendarEvents'
+import { googleCalendarClientId, isGoogleCalendarAvailable } from './googleCalendarConfig'
 
 const GIS_SCRIPT_URL = 'https://accounts.google.com/gsi/client'
 /** Read-only access to events; Tickness never writes to the calendar. */
 export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly'
-const EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-const TOKEN_STORAGE_KEY = 'tickness.googleCalendarToken'
+/** Read-only access to the list of the user's calendars, so they can choose which ones are suggested from. */
+export const GOOGLE_CALENDAR_LIST_SCOPE = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly'
+const GOOGLE_SCOPES = [GOOGLE_CALENDAR_SCOPE, GOOGLE_CALENDAR_LIST_SCOPE] as const
+/** The calendar read when the user has not chosen any. */
+export const PRIMARY_CALENDAR_ID = 'primary'
+const API_URL = 'https://www.googleapis.com/calendar/v3'
+const eventsUrl = (calendarId: string) => `${API_URL}/calendars/${encodeURIComponent(calendarId)}/events`
+const CALENDAR_LIST_URL = `${API_URL}/users/me/calendarList`
+// Versioned because tokens granted before the calendar list scope was added cannot read the list.
+const TOKEN_STORAGE_KEY = 'tickness.googleCalendarToken.v2'
 // Treat the token as expired a minute early, so a request never starts with a token about to lapse.
 const EXPIRY_MARGIN_MS = 60_000
 const MAX_PAGES = 4
@@ -24,15 +39,7 @@ export class CalendarError extends Error {
   }
 }
 
-/** The OAuth client ID the instance owner created for Calendar access; empty when the feature is not set up. */
-export function googleCalendarClientId(): string {
-  return (import.meta.env.VITE_GOOGLE_CALENDAR_CLIENT_ID ?? '').trim()
-}
-
-/** The feature shows only when an OAuth client is configured, and never in the public demo. */
-export function isGoogleCalendarAvailable(): boolean {
-  return googleCalendarClientId() !== '' && import.meta.env.VITE_DEMO_MODE !== 'true'
-}
+export { googleCalendarClientId, isGoogleCalendarAvailable }
 
 // ---- Minimal typing of the Google Identity Services token client. ----
 
@@ -46,7 +53,7 @@ type GoogleOAuth2 = {
     callback: (response: TokenResponse) => void
     error_callback?: (error: { type?: string }) => void
   }) => TokenClient
-  hasGrantedAllScopes: (response: TokenResponse, scope: string) => boolean
+  hasGrantedAllScopes: (response: TokenResponse, ...scopes: string[]) => boolean
   revoke: (token: string, done?: () => void) => void
 }
 
@@ -148,14 +155,14 @@ export async function connectGoogleCalendar(prompt: '' | 'consent' = ''): Promis
   await new Promise<void>((resolve, reject) => {
     const client = oauth2.initTokenClient({
       client_id: clientId,
-      scope: GOOGLE_CALENDAR_SCOPE,
+      scope: GOOGLE_SCOPES.join(' '),
       include_granted_scopes: false,
       callback: (response) => {
         if (response.error || !response.access_token) {
           reject(new CalendarError('scope-denied', 'Google Calendar access was not granted.'))
           return
         }
-        if (!oauth2.hasGrantedAllScopes(response, GOOGLE_CALENDAR_SCOPE)) {
+        if (!oauth2.hasGrantedAllScopes(response, ...GOOGLE_SCOPES)) {
           oauth2.revoke(response.access_token)
           reject(new CalendarError('scope-denied', 'Google Calendar access was not granted.'))
           return
@@ -187,10 +194,32 @@ export async function disconnectGoogleCalendar(): Promise<boolean> {
   }
 }
 
-/** Fetches the timed events of the user's primary calendar that overlap `[from, to)`. */
-export async function fetchGoogleCalendarEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+/** Thrown for a 404, so a calendar the user has since unsubscribed from can be skipped. */
+class NotFoundError extends Error {}
+
+async function getJson(url: string, accessToken: string): Promise<unknown> {
+  let response: Response
+  try {
+    response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+  } catch {
+    throw new CalendarError('request-failed', 'Google Calendar could not be reached.')
+  }
+  if (response.status === 401) {
+    setToken(null)
+    throw new CalendarError('auth-expired', 'Reconnect Google Calendar.')
+  }
+  if (response.status === 404) throw new NotFoundError('Not found.')
+  if (!response.ok) throw new CalendarError('request-failed', `Google Calendar answered ${response.status}.`)
+  return response.json().catch(() => null)
+}
+
+function requireToken(): string {
   const accessToken = currentCalendarToken()
   if (!accessToken) throw new CalendarError('auth-expired', 'Reconnect Google Calendar.')
+  return accessToken
+}
+
+async function fetchCalendarEvents(calendarId: string, from: Date, to: Date, accessToken: string) {
   const events: CalendarEvent[] = []
   let pageToken: string | null = null
   for (let page = 0; page < MAX_PAGES; page += 1) {
@@ -203,23 +232,60 @@ export async function fetchGoogleCalendarEvents(from: Date, to: Date): Promise<C
       fields: GOOGLE_EVENT_FIELDS,
     })
     if (pageToken) params.set('pageToken', pageToken)
-    let response: Response
-    try {
-      response = await fetch(`${EVENTS_URL}?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-    } catch {
-      throw new CalendarError('request-failed', 'Google Calendar could not be reached.')
-    }
-    if (response.status === 401) {
-      setToken(null)
-      throw new CalendarError('auth-expired', 'Reconnect Google Calendar.')
-    }
-    if (!response.ok) throw new CalendarError('request-failed', `Google Calendar answered ${response.status}.`)
-    const parsed = parseGoogleEventsPage(await response.json().catch(() => null))
+    const parsed = parseGoogleEventsPage(await getJson(`${eventsUrl(calendarId)}?${params.toString()}`, accessToken))
     events.push(...parsed.events)
     pageToken = parsed.nextPageToken
     if (!pageToken) break
   }
   return events
 }
+
+/**
+ * Fetches the timed events that overlap `[from, to)` from each chosen calendar, or the primary calendar when none
+ * is chosen. Events come back in calendar order; the suggestions drop the same meeting found in a second calendar.
+ */
+export async function fetchGoogleCalendarEvents(
+  from: Date,
+  to: Date,
+  calendarIds: readonly string[] = [],
+): Promise<CalendarEvent[]> {
+  const accessToken = requireToken()
+  const ids = calendarIds.length > 0 ? calendarIds : [PRIMARY_CALENDAR_ID]
+  const perCalendar = await Promise.all(
+    ids.map((id) =>
+      // A chosen calendar that was deleted or unsubscribed from since is skipped rather than failing the others.
+      fetchCalendarEvents(id, from, to, accessToken).catch((error: unknown) => {
+        if (error instanceof NotFoundError) return []
+        throw error
+      }),
+    ),
+  )
+  return perCalendar.flat()
+}
+
+/** Lists the calendars the user can choose from, primary first. */
+export async function fetchGoogleCalendarList(): Promise<CalendarListItem[]> {
+  const accessToken = requireToken()
+  const calendars: CalendarListItem[] = []
+  let pageToken: string | null = null
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const params = new URLSearchParams({
+      maxResults: '250',
+      minAccessRole: 'reader',
+      fields: GOOGLE_CALENDAR_LIST_FIELDS,
+    })
+    if (pageToken) params.set('pageToken', pageToken)
+    const response = await getJson(`${CALENDAR_LIST_URL}?${params.toString()}`, accessToken).catch((error: unknown) => {
+      throw error instanceof NotFoundError
+        ? new CalendarError('request-failed', 'Google Calendar answered 404.')
+        : error
+    })
+    const parsed = parseGoogleCalendarListPage(response)
+    calendars.push(...parsed.calendars)
+    pageToken = parsed.nextPageToken
+    if (!pageToken) break
+  }
+  return calendars.sort((a, b) => Number(b.primary) - Number(a.primary))
+}
+
+export type { CalendarListItem }

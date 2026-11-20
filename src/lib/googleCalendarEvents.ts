@@ -4,7 +4,7 @@ import type { CalendarEvent } from './calendarSuggestions'
 
 /** The only event fields requested from Google, which keeps descriptions, attendees' names and links out of the browser. */
 export const GOOGLE_EVENT_FIELDS =
-  'nextPageToken,items(id,recurringEventId,summary,status,transparency,eventType,start(dateTime),end(dateTime),attendees(self,responseStatus))'
+  'nextPageToken,items(id,iCalUID,recurringEventId,summary,status,transparency,eventType,start(dateTime),end(dateTime),attendees(self,responseStatus))'
 
 // Working location, out-of-office and birthday entries are calendar bookkeeping, not meetings.
 const SKIPPED_EVENT_TYPES = new Set(['workingLocation', 'outOfOffice', 'birthday'])
@@ -42,8 +42,11 @@ export function parseGoogleEventsPage(response: unknown): { events: CalendarEven
     const end = dateTimeOf(item.end)
     if (!start || !end || end <= start) continue
     const title = typeof item.summary === 'string' ? item.summary.trim().slice(0, MAX_TITLE_LENGTH) : ''
+    const iCalUID = typeof item.iCalUID === 'string' && item.iCalUID ? item.iCalUID : null
     events.push({
       id: item.id,
+      // Every occurrence of a recurring event shares its iCalUID, so the start tells occurrences apart.
+      ...(iCalUID ? { occurrenceKey: `${iCalUID}|${start.getTime()}` } : {}),
       seriesId: typeof item.recurringEventId === 'string' && item.recurringEventId ? item.recurringEventId : null,
       title,
       start,
@@ -53,4 +56,36 @@ export function parseGoogleEventsPage(response: unknown): { events: CalendarEven
   const nextPageToken =
     typeof response.nextPageToken === 'string' && response.nextPageToken ? response.nextPageToken : null
   return { events, nextPageToken }
+}
+
+/** The only calendar-list fields requested: the ID to store, the name to show, and whether it is the primary one. */
+export const GOOGLE_CALENDAR_LIST_FIELDS = 'nextPageToken,items(id,summary,summaryOverride,primary,deleted,hidden)'
+
+/** A calendar the user can choose. The name is shown in the picker and never stored. */
+export type CalendarListItem = { id: string; name: string; primary: boolean }
+
+const MAX_CALENDAR_ID_LENGTH = 1024
+
+/** Reads one page of `calendarList.list`, skipping deleted and hidden calendars. */
+export function parseGoogleCalendarListPage(response: unknown): {
+  calendars: CalendarListItem[]
+  nextPageToken: string | null
+} {
+  if (!isRecord(response)) return { calendars: [], nextPageToken: null }
+  const items = Array.isArray(response.items) ? response.items : []
+  const calendars: CalendarListItem[] = []
+  for (const item of items) {
+    if (!isRecord(item) || typeof item.id !== 'string' || !item.id || item.id.length > MAX_CALENDAR_ID_LENGTH) continue
+    if (item.deleted === true || item.hidden === true) continue
+    const override = typeof item.summaryOverride === 'string' ? item.summaryOverride.trim() : ''
+    const summary = typeof item.summary === 'string' ? item.summary.trim() : ''
+    calendars.push({
+      id: item.id,
+      name: (override || summary || item.id).slice(0, MAX_TITLE_LENGTH),
+      primary: item.primary === true,
+    })
+  }
+  const nextPageToken =
+    typeof response.nextPageToken === 'string' && response.nextPageToken ? response.nextPageToken : null
+  return { calendars, nextPageToken }
 }

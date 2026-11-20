@@ -48,8 +48,11 @@ service cloud.firestore {
     // Rules cannot iterate over the list or the map, so the client also checks each ID and mapping it reads.
     function validCalendarPreferences(data) {
       return data.keys().hasAll(['connected', 'dismissedEventIds', 'seriesWork', 'updatedAt'])
-        && data.keys().hasOnly(['connected', 'dismissedEventIds', 'seriesWork', 'updatedAt'])
+        && data.keys().hasOnly(['connected', 'calendarIds', 'dismissedEventIds', 'seriesWork', 'keywordRules', 'updatedAt'])
         && data.connected is bool
+        // Optional, so an app version cached from before they existed can still save.
+        && (!('calendarIds' in data) || (data.calendarIds is list && data.calendarIds.size() <= 20))
+        && (!('keywordRules' in data) || (data.keywordRules is list && data.keywordRules.size() <= 50))
         && data.dismissedEventIds is list
         && data.dismissedEventIds.size() <= 500
         && data.seriesWork is map
