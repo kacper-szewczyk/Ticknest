@@ -20,7 +20,7 @@ import { localeWeekStart, type WeekStart } from './lib/dates'
 import { setPageTitle } from './lib/documentTitle'
 import { readableError } from './lib/errors'
 import { isFeatureEnabled } from './lib/featureFlags'
-import { isGoogleCalendarAvailable } from './lib/googleCalendar'
+import { isGoogleCalendarAvailable } from './lib/googleCalendarConfig'
 import { usePendingLeaveCount } from './usePendingLeaveCount'
 import { InstallAppButton } from './InstallAppButton'
 import { clearInviteParamsFromAddressBar, hasInviteParams } from './lib/inviteLink'
@@ -882,7 +882,12 @@ export function WorkspaceScreen({ user }: { user: User }) {
                 <LanguagePanel user={user} />
                 {isGoogleCalendarAvailable() && (
                   <Suspense fallback={null}>
-                    <GoogleCalendarPanel key={activeWorkspace.id} user={user} workspaceId={activeWorkspace.id} />
+                    <GoogleCalendarPanel
+                      key={activeWorkspace.id}
+                      user={user}
+                      workspaceId={activeWorkspace.id}
+                      catalog={catalog}
+                    />
                   </Suspense>
                 )}
                 {joinWorkspaceForm}

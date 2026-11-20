@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseGoogleEventsPage } from '../../src/lib/googleCalendarEvents'
+import { parseGoogleCalendarListPage, parseGoogleEventsPage } from '../../src/lib/googleCalendarEvents'
 
 const timed = (id: string, overrides: Record<string, unknown> = {}) => ({
   id,
@@ -65,5 +65,53 @@ describe('parseGoogleEventsPage', () => {
   it('shortens very long titles', () => {
     const [item] = parseGoogleEventsPage({ items: [timed('a', { summary: 'x'.repeat(600) })] }).events
     expect(item.title).toHaveLength(500)
+  })
+})
+
+describe('iCalUID', () => {
+  it('becomes an occurrence key that tells recurring occurrences apart', () => {
+    const { events } = parseGoogleEventsPage({
+      items: [
+        timed('a', { iCalUID: 'uid@google.com' }),
+        timed('b', {
+          iCalUID: 'uid@google.com',
+          start: { dateTime: '2026-11-18T09:00:00+01:00' },
+          end: { dateTime: '2026-11-18T10:00:00+01:00' },
+        }),
+        timed('c'),
+      ],
+    })
+    expect(events.map((item) => item.occurrenceKey)).toEqual([
+      `uid@google.com|${new Date('2026-11-17T09:00:00+01:00').getTime()}`,
+      `uid@google.com|${new Date('2026-11-18T09:00:00+01:00').getTime()}`,
+      undefined,
+    ])
+  })
+})
+
+describe('parseGoogleCalendarListPage', () => {
+  it('keeps visible calendars with their display name', () => {
+    expect(
+      parseGoogleCalendarListPage({
+        nextPageToken: 'next',
+        items: [
+          { id: 'me@example.com', summary: 'me@example.com', primary: true },
+          { id: 'team', summary: 'Team', summaryOverride: ' Our team ' },
+          { id: 'hidden', summary: 'Hidden', hidden: true },
+          { id: 'gone', summary: 'Gone', deleted: true },
+          { id: 'unnamed' },
+          { summary: 'No ID' },
+          'junk',
+        ],
+      }),
+    ).toEqual({
+      nextPageToken: 'next',
+      calendars: [
+        { id: 'me@example.com', name: 'me@example.com', primary: true },
+        { id: 'team', name: 'Our team', primary: false },
+        { id: 'unnamed', name: 'unnamed', primary: false },
+      ],
+    })
+    expect(parseGoogleCalendarListPage(null)).toEqual({ calendars: [], nextPageToken: null })
   })
 })

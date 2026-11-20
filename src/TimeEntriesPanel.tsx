@@ -17,7 +17,7 @@ import { useAppLanguage, useTranslation } from './i18n'
 import { dayDate, formatElapsed, formatWeekLabel, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
 import { saveCalendarPreferences, withSeriesWork } from './lib/calendarPreferences'
 import { readableError } from './lib/errors'
-import { isGoogleCalendarAvailable } from './lib/googleCalendar'
+import { isGoogleCalendarAvailable } from './lib/googleCalendarConfig'
 import { type TimeEntry, continueTimer, deleteTimeEntry, subscribeToEntriesForRange } from './lib/timeEntries'
 import {
   entrySeconds,

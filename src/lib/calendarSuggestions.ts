@@ -9,6 +9,11 @@ export type CalendarEvent = {
   id: string
   /** Shared by every occurrence of a recurring event; `null` for a one-off event. */
   seriesId: string | null
+  /**
+   * Identifies the same occurrence across calendars, so a meeting in two chosen calendars is suggested once. Google
+   * shares an `iCalUID` across every occurrence of a recurring event, so the provider combines it with the start.
+   */
+  occurrenceKey?: string
   title: string
   start: Date
   end: Date
@@ -17,11 +22,17 @@ export type CalendarEvent = {
 /** The project and task remembered for a recurring event. */
 export type SeriesWork = Pick<WorkSelection, 'projectId' | 'taskId'>
 
+/** Pre-fills the project and task for events whose title contains `keyword`, ignoring case. */
+export type KeywordRule = SeriesWork & { keyword: string }
+
 export type CalendarSuggestion = CalendarEvent & {
   /** Local calendar date (`YYYY-MM-DD`) the event falls on. */
   day: string
   durationSeconds: number
-  /** The project and task chosen for an earlier occurrence of the same recurring event, if any. */
+  /**
+   * The project and task chosen for an earlier occurrence of the same recurring event, or else the first keyword rule
+   * that matches the title; null when neither applies.
+   */
   work: SeriesWork | null
 }
 
@@ -34,7 +45,33 @@ export type SuggestionContext = {
   /** Local dates fully covered by approved time off. */
   timeOffDays: ReadonlySet<string>
   seriesWork: Readonly<Record<string, SeriesWork>>
+  /** Checked in order; used only when the event has no remembered recurring-event work. */
+  keywordRules?: readonly KeywordRule[]
   now: Date
+}
+
+const normalizeText = (text: string) => text.trim().toLocaleLowerCase()
+
+/** The first rule whose keyword appears in the title, ignoring case and surrounding spaces. */
+export function matchKeywordRule(title: string, rules: readonly KeywordRule[]): KeywordRule | null {
+  const normalizedTitle = normalizeText(title)
+  if (!normalizedTitle) return null
+  return (
+    rules.find(
+      (rule) => rule.projectId && normalizeText(rule.keyword) && normalizedTitle.includes(normalizeText(rule.keyword)),
+    ) ?? null
+  )
+}
+
+/** Keeps the first event of each occurrence, so one meeting found in several calendars is suggested once. */
+export function uniqueOccurrences(events: readonly CalendarEvent[]): CalendarEvent[] {
+  const seen = new Set<string>()
+  return events.filter((event) => {
+    const key = event.occurrenceKey ?? `id:${event.id}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 /**
@@ -52,7 +89,7 @@ export function calendarSuggestions(
   }))
   const seen = new Set<string>()
   const suggestions: CalendarSuggestion[] = []
-  for (const event of events) {
+  for (const event of uniqueOccurrences(events)) {
     const start = event.start.getTime()
     const end = event.end.getTime()
     if (!(end > start) || end > nowMs || seen.has(event.id)) continue
@@ -65,10 +102,15 @@ export function calendarSuggestions(
       ...event,
       day,
       durationSeconds: Math.round((end - start) / 1000),
-      work: (event.seriesId && context.seriesWork[event.seriesId]) || null,
+      work: (event.seriesId && context.seriesWork[event.seriesId]) || workFromRule(event.title, context.keywordRules),
     })
   }
   return suggestions.sort((a, b) => a.start.getTime() - b.start.getTime())
+}
+
+function workFromRule(title: string, rules: readonly KeywordRule[] = []): SeriesWork | null {
+  const rule = matchKeywordRule(title, rules)
+  return rule ? { projectId: rule.projectId, taskId: rule.taskId } : null
 }
 
 /** Local dates covered by whole days of leave; half days at either end of a request still have working time. */

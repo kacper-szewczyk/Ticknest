@@ -4,7 +4,9 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
 import { useEffect, useState } from 'react'
+import { CalendarPicker, KeywordRulesEditor } from './CalendarSuggestionSettings'
 import { Trans, useTranslation } from './i18n'
+import type { Catalog } from './lib/catalog'
 import { calendarErrorMessage } from './lib/calendarErrors'
 import { deleteCalendarPreferences, saveCalendarPreferences } from './lib/calendarPreferences'
 import { connectGoogleCalendar, disconnectGoogleCalendar, preloadGoogleCalendar } from './lib/googleCalendar'
@@ -15,8 +17,19 @@ const GOOGLE_CONNECTIONS_URL = 'https://myaccount.google.com/connections'
 
 type Outcome = 'connected' | 'disconnected' | 'disconnectedLocally' | null
 
-/** Settings card to connect or disconnect Google Calendar suggestions for this workspace. */
-export function GoogleCalendarPanel({ user, workspaceId }: { user: User; workspaceId: string }) {
+/**
+ * Settings card to connect or disconnect Google Calendar suggestions for this workspace, and once connected, to choose
+ * calendars and set up keyword rules.
+ */
+export function GoogleCalendarPanel({
+  user,
+  workspaceId,
+  catalog,
+}: {
+  user: User
+  workspaceId: string
+  catalog: Catalog
+}) {
   const { t } = useTranslation()
   const preferences = useCalendarPreferences(workspaceId, user.uid)
   const [pending, setPending] = useState(false)
@@ -112,6 +125,12 @@ export function GoogleCalendarPanel({ user, workspaceId }: { user: User; workspa
           </Button>
         )}
       </Stack>
+      {isConnected && preferences && (
+        <>
+          <CalendarPicker user={user} workspaceId={workspaceId} preferences={preferences} />
+          <KeywordRulesEditor user={user} workspaceId={workspaceId} preferences={preferences} catalog={catalog} />
+        </>
+      )}
     </SectionCard>
   )
 }
