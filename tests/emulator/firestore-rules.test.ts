@@ -223,6 +223,24 @@ function newTask(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function calendarPreferences(overrides: Record<string, unknown> = {}) {
+  return {
+    connected: true,
+    dismissedEventIds: ['event_1'],
+    seriesWork: { series_1: { projectId: PROJECT_ID_IN_WORKSPACE, taskId: null } },
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  }
+}
+
+/** Seeds a member's calendar preferences, as if they had saved them earlier. */
+async function seedCalendarPreferences(uid: string) {
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore() as unknown as Firestore
+    await setDoc(doc(db, WS, 'calendarPreferences', uid), calendarPreferences({ updatedAt: PAST }))
+  })
+}
+
 function newClient(overrides: Record<string, unknown> = {}) {
   return {
     name: 'New client',
@@ -548,6 +566,32 @@ describe('Firestore rules matrix', () => {
     )
   })
 
+  matrix('create, read, update, and delete own calendar preferences', MEMBERS, async ({ db, uid }) => {
+    const ref = doc(db, WS, 'calendarPreferences', uid)
+    await setDoc(ref, calendarPreferences())
+    await getDoc(ref)
+    await setDoc(ref, calendarPreferences({ connected: false, dismissedEventIds: [] }))
+    await deleteDoc(ref)
+  })
+
+  matrix("read another member's calendar preferences", DENY_ALL, async (subject) => {
+    const other = otherUserOf(subject).uid
+    await seedCalendarPreferences(other)
+    await getDoc(doc(subject.db, WS, 'calendarPreferences', other))
+  })
+
+  matrix("write or delete another member's calendar preferences", DENY_ALL, async (subject) => {
+    const other = otherUserOf(subject).uid
+    await seedCalendarPreferences(other)
+    const ref = doc(subject.db, WS, 'calendarPreferences', other)
+    await assertFails(deleteDoc(ref))
+    await setDoc(ref, calendarPreferences())
+  })
+
+  matrix('list calendar preferences', DENY_ALL, async ({ db }) => {
+    await getDocs(collection(db, WS, 'calendarPreferences'))
+  })
+
   matrix('access an unknown workspace collection', DENY_ALL, async ({ db }) => {
     await getDoc(doc(db, WS, 'secrets', 'config'))
   })
@@ -585,6 +629,7 @@ describe('removed members', () => {
     await assertFails(getDoc(doc(db, WS, 'leaveRequests', leaveRequestId(REMOVED_MEMBER.uid))))
     await assertFails(getDoc(doc(db, WS, 'leaveAllowances', leaveAllowanceId(REMOVED_MEMBER.uid))))
     await assertFails(getDocs(collection(db, WS, 'leaveTypes')))
+    await assertFails(setDoc(doc(db, WS, 'calendarPreferences', REMOVED_MEMBER.uid), calendarPreferences()))
   })
 
   it('can still find their own membership record', async () => {
@@ -904,6 +949,46 @@ describe('boundary validation', () => {
       ['a client-chosen updatedAt', { updatedAt: PAST }],
     ])('denies %s', async (_, changes) => {
       await assertFails(updateDoc(doc(ownerDb(), WS), { updatedAt: serverTimestamp(), ...changes }))
+    })
+  })
+
+  describe('calendar preferences', () => {
+    const save = (data: Record<string, unknown>) => setDoc(doc(memberDb(), WS, 'calendarPreferences', MEMBER.uid), data)
+
+    it('accepts the largest allowed lists', async () => {
+      await assertSucceeds(
+        save(
+          calendarPreferences({
+            dismissedEventIds: Array.from({ length: 500 }, (_, index) => `event_${index}`),
+            seriesWork: Object.fromEntries(
+              Array.from({ length: 200 }, (_, index) => [`series_${index}`, { projectId: 'p', taskId: null }]),
+            ),
+          }),
+        ),
+      )
+    })
+
+    it.each<[string, Record<string, unknown>]>([
+      ['an unknown field', calendarPreferences({ eventTitles: ['Board meeting'] })],
+      ['a missing field', { connected: true, dismissedEventIds: [], updatedAt: serverTimestamp() }],
+      ['a connected flag that is not a boolean', calendarPreferences({ connected: 'yes' })],
+      [
+        'more than 500 dismissed events',
+        calendarPreferences({ dismissedEventIds: Array.from({ length: 501 }, (_, i) => `e${i}`) }),
+      ],
+      ['dismissed events that are not a list', calendarPreferences({ dismissedEventIds: 'event_1' })],
+      [
+        'more than 200 recurring-event mappings',
+        calendarPreferences({
+          seriesWork: Object.fromEntries(
+            Array.from({ length: 201 }, (_, i) => [`s${i}`, { projectId: 'p', taskId: null }]),
+          ),
+        }),
+      ],
+      ['mappings that are not a map', calendarPreferences({ seriesWork: ['series_1'] })],
+      ['a client-chosen update time', calendarPreferences({ updatedAt: PAST })],
+    ])('denies %s', async (_, data) => {
+      await assertFails(save(data))
     })
   })
 

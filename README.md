@@ -42,7 +42,7 @@ New here? The **[landing page](https://ticknest-landing.vercel.app/?utm_source=g
 
 Tickness covers the core of a hosted time tracker, with different trade-offs:
 
-- **You own the data.** Everything lives in your own Firebase project. The maintainers run no backend and never see your entries.
+- **You own the data.** Everything lives in your own Firebase project. The maintainers run no backend and never see your entries. The optional Google Calendar suggestions read events straight from Google into the user's browser and store none of them.
 - **No seat fees.** There are no per-user plans. You pay only Firebase's usage-based charges.
 - **No monitoring.** No screenshots, activity tracking, keystroke or app logging, and no analytics or telemetry in the app. It records the time people enter, nothing else.
 - **Open source** under the MIT licence, so you can read, change and audit all of it.
@@ -53,7 +53,7 @@ For a team of 5 to 25 people tracking time every workday, **usually $0 a month**
 
 ## What Tickness doesn't do (yet)
 
-- No integrations with other tools (calendars, issue trackers, invoicing).
+- No integrations with other tools (issue trackers, invoicing), apart from optional read-only [Google Calendar suggestions](docs/operations.md#google-calendar-suggestions-optional). No Outlook or CalDAV calendars.
 - No public API.
 - No mobile app or browser extension. The web app works in mobile browsers.
 - No invoicing or billable-rate calculations.
