@@ -80,14 +80,19 @@ test('a member requests holiday, a manager approves it, and the balance goes dow
     const toApprove = page.getByRole('button', { name: /^\d+ requests? to approve$/ })
     await expect(toApprove).toBeVisible()
 
-    // The calendar opens on the current month; step forward to the leave's month.
+    // The calendar opens on the current month. Near New Year the leave is earlier in the year, so step back or
+    // forward to the leave's month.
     const leaveMonth = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
       new Date(`${start}T00:00:00Z`),
     )
     const table = page.getByRole('table', { name: `Time off in ${leaveMonth}` })
     await expect(page.getByRole('table', { name: /^Time off in / })).toBeVisible()
-    for (let step = 0; step < 2 && !(await table.isVisible()); step += 1) {
-      await page.getByRole('button', { name: 'Next month' }).click()
+    const today = new Date()
+    const monthsAway =
+      (Number(start.slice(0, 4)) - today.getUTCFullYear()) * 12 + Number(start.slice(5, 7)) - 1 - today.getUTCMonth()
+    const step = page.getByRole('button', { name: monthsAway < 0 ? 'Previous month' : 'Next month' })
+    for (let clicks = 0; clicks <= Math.abs(monthsAway) && !(await table.isVisible()); clicks += 1) {
+      await step.click()
     }
     // The week can run into the next month, so count only its days in the month shown.
     const daysInMonth = [0, 1, 2].filter(
