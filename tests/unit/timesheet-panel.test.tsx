@@ -30,6 +30,9 @@ vi.mock('../../src/lib/timeEntries', () => ({
   deleteTimeEntry: vi.fn(),
 }))
 
+// Calendar suggestions reach Firestore through this module; they stay hidden here without an OAuth client ID.
+vi.mock('../../src/lib/firebase', () => ({ db: {}, callFunction: vi.fn() }))
+
 // A stand-in editor that saves straight away on the day it was opened for.
 vi.mock('../../src/EntryEditor', () => ({
   EntryEditor: ({ day, onSaved }: { day: string; onSaved: (message: string, day: string) => void }) => (

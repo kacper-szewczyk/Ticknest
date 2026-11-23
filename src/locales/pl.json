@@ -918,5 +918,44 @@
     "loading": "Wczytywanie członków…",
     "pastMembers": "Byli członkowie",
     "removedMember": "{{email}} · Usunięto"
+  },
+  "calendar": {
+    "settings": {
+      "kicker": "KALENDARZ",
+      "title": "Podpowiedzi z Kalendarza Google",
+      "intro": "Połącz Kalendarz Google, aby widzieć swoje spotkania jako podpowiedzi wpisów czasu w karcie czasu. Każdą przeglądasz sam: nic nie jest zapisywane automatycznie.",
+      "privacy": "Tickness prosi tylko o dostęp do odczytu. Twoje wydarzenia trafiają prosto z Google do tej przeglądarki i nie są zapisywane; obszar roboczy przechowuje tylko identyfikatory odrzuconych wydarzeń i projekt wybrany dla spotkań cyklicznych. Dostęp działa około godziny, potem łączysz się ponownie jednym kliknięciem.",
+      "statusConnected": "Połączono w tym obszarze roboczym.",
+      "statusDisconnected": "Nie połączono.",
+      "connect": "Połącz Kalendarz Google",
+      "disconnect": "Odłącz",
+      "connected": "Kalendarz Google połączony. Podpowiedzi pojawiają się teraz w karcie czasu.",
+      "disconnected": "Kalendarz Google odłączony, a dostęp cofnięty.",
+      "disconnectedLocally": "Kalendarz Google odłączony. Aby cofnąć wcześniej przyznany dostęp, usuń Tickness w <link>połączeniach konta Google</link>.",
+      "confirmDisconnect": "Odłączyć Kalendarz Google? Odrzucone wydarzenia i zapamiętane projekty w tym obszarze roboczym też zostaną usunięte.",
+      "disconnectFailed": "Nie udało się odłączyć Kalendarza Google. Sprawdź połączenie i spróbuj ponownie."
+    },
+    "suggestions": {
+      "title": "Podpowiedzi z kalendarza",
+      "refresh": "Odśwież",
+      "reconnectPrompt": "Połącz ponownie Kalendarz Google, aby zobaczyć podpowiedzi na ten tydzień.",
+      "reconnect": "Połącz ponownie",
+      "loading": "Wczytywanie kalendarza…",
+      "empty": "Brak wydarzeń z kalendarza do podpowiedzenia w tym tygodniu.",
+      "untitled": "(Bez tytułu)",
+      "timeRange": "{{start}}–{{end}} · {{duration}}",
+      "accept": "Akceptuj",
+      "acceptLabel": "Akceptuj: {{title}}",
+      "dismiss": "Odrzuć",
+      "dismissLabel": "Odrzuć: {{title}}"
+    },
+    "dismissFailed": "Nie udało się odrzucić tego wydarzenia. Sprawdź połączenie i spróbuj ponownie.",
+    "errors": {
+      "popupClosed": "Okno Google zostało zamknięte przed przyznaniem dostępu.",
+      "scopeDenied": "Nie przyznano dostępu do Kalendarza Google. Zaznacz uprawnienie do kalendarza i spróbuj ponownie.",
+      "authExpired": "Dostęp do Kalendarza Google wygasł. Połącz się ponownie, aby kontynuować.",
+      "unavailable": "Nie udało się wczytać logowania Google. Sprawdź połączenie lub rozszerzenia przeglądarki i spróbuj ponownie.",
+      "requestFailed": "Nie udało się wczytać Kalendarza Google. Spróbuj ponownie za chwilę."
+    }
   }
 }

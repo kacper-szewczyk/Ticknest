@@ -9,13 +9,15 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { User } from 'firebase/auth'
-import { type ReactNode, useEffect, useState } from 'react'
+import { lazy, type ReactNode, Suspense, useEffect, useState } from 'react'
 import type { Catalog } from './lib/catalog'
 import { NavIcon } from './AppShell'
-import { EntryEditor } from './EntryEditor'
+import { EntryEditor, type EntryDraft } from './EntryEditor'
 import { useAppLanguage, useTranslation } from './i18n'
 import { dayDate, formatElapsed, formatWeekLabel, localDayString, shiftDayString, startOfWeekString } from './lib/dates'
+import { saveCalendarPreferences, withSeriesWork } from './lib/calendarPreferences'
 import { readableError } from './lib/errors'
+import { isGoogleCalendarAvailable } from './lib/googleCalendar'
 import { type TimeEntry, continueTimer, deleteTimeEntry, subscribeToEntriesForRange } from './lib/timeEntries'
 import {
   entrySeconds,
@@ -26,7 +28,13 @@ import {
   summarizeDay,
   type DaySummary,
 } from './lib/timesheetSummary'
+import { useCalendarPreferences } from './useCalendarConnection'
 import { AutoStoppedChip, BillableChip, EmptyText, FormMessage, LiveStatus, SectionCard, SectionHeading } from './ui'
+
+// Loaded only for members who connected a calendar, so everyone else downloads none of it.
+const CalendarSuggestions = lazy(() =>
+  import('./CalendarSuggestions').then((module) => ({ default: module.CalendarSuggestions })),
+)
 
 export function TimeEntriesPanel({
   user,
@@ -52,7 +60,14 @@ export function TimeEntriesPanel({
   })
   const isLoaded = entryState.workspaceId === workspaceId && entryState.weekStart === weekStart
   const entries = isLoaded ? entryState.entries : []
-  const [editor, setEditor] = useState<{ entry?: TimeEntry; day: string } | null>(null)
+  const [editor, setEditor] = useState<{
+    entry?: TimeEntry
+    draft?: EntryDraft
+    /** The recurring calendar event an accepted suggestion came from, to remember its project. */
+    seriesId?: string | null
+    day: string
+  } | null>(null)
+  const calendarPreferences = useCalendarPreferences(workspaceId, user.uid)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -76,8 +91,8 @@ export function TimeEntriesPanel({
     return () => window.clearInterval(interval)
   }, [])
 
-  function openEditor(day: string, entry?: TimeEntry) {
-    setEditor({ entry, day })
+  function openEditor(day: string, entry?: TimeEntry, draft?: EntryDraft, seriesId?: string | null) {
+    setEditor({ entry, draft, seriesId, day })
     setError('')
     setNotice('')
   }
@@ -251,6 +266,27 @@ export function TimeEntriesPanel({
           )}
         </Stack>
       </Paper>
+      {isGoogleCalendarAvailable() && calendarPreferences?.connected && (
+        <Suspense fallback={null}>
+          <CalendarSuggestions
+            user={user}
+            workspaceId={workspaceId}
+            weekStart={weekStart}
+            entries={entries}
+            catalog={catalog}
+            preferences={calendarPreferences}
+            now={now}
+            onAccept={(suggestion, work) =>
+              openEditor(
+                suggestion.day,
+                undefined,
+                { description: suggestion.title, start: suggestion.start, end: suggestion.end, work },
+                suggestion.seriesId,
+              )
+            }
+          />
+        </Suspense>
+      )}
       <Box sx={{ mt: 2.25 }}>
         {weekDays.map((weekDay) => {
           const dayEntries = entriesByDay.get(weekDay) ?? []
@@ -375,11 +411,28 @@ export function TimeEntriesPanel({
           workspaceId={workspaceId}
           catalog={catalog}
           entry={editor.entry}
+          draft={editor.draft}
           day={editor.day}
           onClose={() => setEditor(null)}
-          onSaved={(message, day) => {
+          onSaved={(message, day, work) => {
+            const seriesId = editor.seriesId
             setEditor(null)
             setNotice(message)
+            // Remember the project for the next occurrences of an accepted recurring meeting.
+            if (seriesId && work.projectId && calendarPreferences) {
+              const remembered = calendarPreferences.seriesWork[seriesId]
+              if (remembered?.projectId !== work.projectId || remembered?.taskId !== work.taskId) {
+                saveCalendarPreferences(workspaceId, user.uid, {
+                  ...calendarPreferences,
+                  seriesWork: withSeriesWork(calendarPreferences.seriesWork, seriesId, {
+                    projectId: work.projectId,
+                    taskId: work.taskId,
+                  }),
+                }).catch((saveError: unknown) =>
+                  console.error('Could not remember the project.', saveError instanceof Error ? saveError.name : ''),
+                )
+              }
+            }
             // Show the saved entry: open its day if it falls in the week on screen.
             if (weekDays.includes(day)) setDayExpanded(day, true)
           }}

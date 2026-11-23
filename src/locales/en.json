@@ -870,5 +870,44 @@
     "loading": "Loading members…",
     "pastMembers": "Past members",
     "removedMember": "{{email}} · Removed"
+  },
+  "calendar": {
+    "settings": {
+      "kicker": "CALENDAR",
+      "title": "Google Calendar suggestions",
+      "intro": "Connect your Google Calendar to see your meetings as suggested time entries on the Timesheet. You review each one: nothing is logged automatically.",
+      "privacy": "Tickness asks only for read-only access. Your events go straight from Google to this browser and are not stored; the workspace keeps only the IDs of events you dismiss and the project you chose for recurring meetings. Access lasts about an hour, then you reconnect with one click.",
+      "statusConnected": "Connected for this workspace.",
+      "statusDisconnected": "Not connected.",
+      "connect": "Connect Google Calendar",
+      "disconnect": "Disconnect",
+      "connected": "Google Calendar connected. Suggestions now appear on the Timesheet.",
+      "disconnected": "Google Calendar disconnected and access revoked.",
+      "disconnectedLocally": "Google Calendar disconnected. To revoke the access you granted earlier, remove Tickness in your <link>Google account connections</link>.",
+      "confirmDisconnect": "Disconnect Google Calendar? Your dismissed events and remembered projects for this workspace are deleted too.",
+      "disconnectFailed": "We couldn’t disconnect Google Calendar. Check your connection and try again."
+    },
+    "suggestions": {
+      "title": "Calendar suggestions",
+      "refresh": "Refresh",
+      "reconnectPrompt": "Reconnect Google Calendar to see this week’s suggestions.",
+      "reconnect": "Reconnect",
+      "loading": "Loading your calendar…",
+      "empty": "No calendar events to suggest for this week.",
+      "untitled": "(No title)",
+      "timeRange": "{{start}}–{{end}} · {{duration}}",
+      "accept": "Accept",
+      "acceptLabel": "Accept {{title}}",
+      "dismiss": "Dismiss",
+      "dismissLabel": "Dismiss {{title}}"
+    },
+    "dismissFailed": "We couldn’t dismiss that event. Check your connection and try again.",
+    "errors": {
+      "popupClosed": "The Google window was closed before access was granted.",
+      "scopeDenied": "Google Calendar access wasn’t granted. Tick the calendar permission and try again.",
+      "authExpired": "Your Google Calendar access expired. Reconnect to continue.",
+      "unavailable": "Google sign-in couldn’t be loaded. Check your connection or browser extensions and try again.",
+      "requestFailed": "We couldn’t load your Google Calendar. Try again in a moment."
+    }
   }
 }
